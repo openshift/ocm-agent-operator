@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM quay.io/app-sre/boilerplate:image-v2.1.0 AS builder
 
 ENV OPERATOR=/usr/local/bin/ocm-agent-operator \
     USER_UID=1001 \
