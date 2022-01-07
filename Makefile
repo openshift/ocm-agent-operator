@@ -1,6 +1,6 @@
 include boilerplate/generated-includes.mk
 
-OPERATOR_NAME=managed-upgrade-operator
+OPERATOR_NAME=ocm-agent-operator
 
 .PHONY: boilerplate-update
 boilerplate-update: ## Make boilerplate update itself
