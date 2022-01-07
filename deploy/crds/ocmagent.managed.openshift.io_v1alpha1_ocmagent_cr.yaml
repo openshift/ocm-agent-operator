@@ -1,0 +1,7 @@
+apiVersion: ocmagent.managed.openshift.io/v1alpha1
+kind: OCMAgent
+metadata:
+  name: example-ocmagent
+spec:
+  # Add fields here
+  size: 3
