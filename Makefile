@@ -23,7 +23,7 @@ run-standard-routes: ## Run locally with openshift-ocm-agent-operator as OPERATO
 	OPERATOR_NAMESPACE=openshift-ocm-agent-operator ROUTES=true operator-sdk run --local --watch-namespace ""
 
 .PHONY: tools
-tools: ## Install local go tools for MUO
+tools: ## Install local go tools for OAO
 	cat tools.go | grep _ | awk -F'"' '{print $$2}' | xargs -tI % go install %
 
 .PHONY: help
