@@ -10,8 +10,8 @@ metadata:
 spec:
   group: ocmagent.managed.openshift.io
   names:
-    kind: OCMAgent
-    listKind: OCMAgentList
+    kind: OcmAgent
+    listKind: OcmAgentList
     plural: ocmagents
     singular: ocmagent
   scope: Namespaced
@@ -19,7 +19,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: OCMAgent is the Schema for the ocmagents API
+        description: OcmAgent is the Schema for the ocmagents API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -34,10 +34,55 @@ spec:
           metadata:
             type: object
           spec:
-            description: OCMAgentSpec defines the desired state of OCMAgent
+            description: OcmAgentSpec defines the desired state of OcmAgent
+            properties:
+              ocmAgentConfig:
+                description: OcmAgentConfig defines the configmap name which generated
+                  by operator and consumed by OCM Agent service
+                type: string
+              ocmAgentImage:
+                description: OcmAgentImage defines the image which will be used by
+                  the OCM Agent
+                type: string
+              ocmBaseUrl:
+                description: OcmBaseUrl defines the OCM api endpoint for OCM agent
+                  to access
+                type: string
+              replicas:
+                description: Replicas defines the replica count for the OCM Agent
+                  service
+                format: int32
+                type: integer
+              services:
+                description: Services defines the supported OCM services, eg, service_log,
+                  cluster_management
+                items:
+                  type: string
+                type: array
+              tokenSecret:
+                description: TokenSecret points to the secret name which stores the
+                  access token to OCM server
+                type: string
+            required:
+            - ocmAgentConfig
+            - ocmAgentImage
+            - ocmBaseUrl
+            - replicas
+            - services
+            - tokenSecret
             type: object
           status:
-            description: OCMAgentStatus defines the observed state of OCMAgent
+            description: OcmAgentStatus defines the observed state of OcmAgent
+            properties:
+              availableReplicas:
+                format: int32
+                type: integer
+              serviceStatus:
+                description: ServiceStatus indicates the status of OCM Agent service
+                type: string
+            required:
+            - availableReplicas
+            - serviceStatus
             type: object
         type: object
     served: true
