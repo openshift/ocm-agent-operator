@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -16,6 +17,7 @@ import (
 	"github.com/openshift/ocm-agent-operator/pkg/apis"
 	"github.com/openshift/ocm-agent-operator/pkg/controller"
 	"github.com/openshift/ocm-agent-operator/version"
+	controllerconst "github.com/openshift/ocm-agent-operator/pkg/consts/controller"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
@@ -92,10 +94,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Set a default sync interval
+	syncPeriod := time.Duration(controllerconst.SyncPeriodDefault)
+
 	// Set default manager options
 	options := manager.Options{
 		Namespace:          namespace,
 		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
+		SyncPeriod:         &syncPeriod,
 	}
 
 	// Add support for MultiNamespace set in WATCH_NAMESPACE (e.g ns1,ns2)
