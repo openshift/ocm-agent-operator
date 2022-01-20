@@ -33,7 +33,7 @@ spec:
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
-              value: ""
+              value: "openshift-ocm-agent-operator,openshift-config"
             - name: POD_NAME
               valueFrom:
                 fieldRef:

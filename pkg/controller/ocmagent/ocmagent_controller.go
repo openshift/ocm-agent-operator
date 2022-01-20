@@ -2,7 +2,6 @@ package ocmagent
 
 import (
 	"context"
-
 	"github.com/go-logr/logr"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -75,11 +74,19 @@ func add(mgr manager.Manager, r *ReconcileOCMAgent) error {
 		return err
 	}
 
+	// Watch for changes to pull secret
+	oaPredicate := predicate.Funcs{
+		UpdateFunc:  func(e event.UpdateEvent) bool { return handleOCMAgentResources(e.ObjectNew) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return handleOCMAgentResources(e.Object) },
+		CreateFunc:  func(e event.CreateEvent) bool { return handleOCMAgentResources(e.Object) },
+		GenericFunc: func(e event.GenericEvent) bool { return false },
+	}
+
 	// Watch for changes to Deployments
 	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &ocmagentv1alpha1.OcmAgent{},
-	})
+	}, oaPredicate)
 	if err != nil {
 		return err
 	}
@@ -88,7 +95,7 @@ func add(mgr manager.Manager, r *ReconcileOCMAgent) error {
 	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &ocmagentv1alpha1.OcmAgent{},
-	})
+	}, oaPredicate)
 	if err != nil {
 		return err
 	}
@@ -97,7 +104,7 @@ func add(mgr manager.Manager, r *ReconcileOCMAgent) error {
 	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &ocmagentv1alpha1.OcmAgent{},
-	})
+	}, oaPredicate)
 	if err != nil {
 		return err
 	}
@@ -106,7 +113,7 @@ func add(mgr manager.Manager, r *ReconcileOCMAgent) error {
 	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &ocmagentv1alpha1.OcmAgent{},
-	})
+	}, oaPredicate)
 	if err != nil {
 		return err
 	}
@@ -199,4 +206,10 @@ func handlePullSecret(meta metav1.Object) bool {
 	pullSecretNamespacedName := oahconst.BuildPullSecretNamespacedName()
 	return meta.GetNamespace() == pullSecretNamespacedName.Namespace &&
 		meta.GetName() == pullSecretNamespacedName.Name
+}
+
+// handleOCMAgentResources returns true if meta indicates it is an OCM Agent-related resource
+func handleOCMAgentResources(meta metav1.Object) bool {
+	agentNamespacedName := oahconst.BuildNamespacedName()
+	return meta.GetNamespace() == agentNamespacedName.Namespace
 }
