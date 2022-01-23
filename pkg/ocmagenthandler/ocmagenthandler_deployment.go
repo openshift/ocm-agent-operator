@@ -72,6 +72,9 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 		return volumeMounts[i].Name < volumeMounts[j].Name
 	})
 
+	// Construct the command arguments of the agent
+	ocmAgentCommand := buildOCMAgentArgs(ocmAgent)
+
 	replicas := int32(ocmAgent.Spec.Replicas)
 	dep := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -110,7 +113,7 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 					Containers: []corev1.Container{{
 						VolumeMounts: volumeMounts,
 						Image:        ocmAgent.Spec.OcmAgentImage,
-						Command:      []string{"ocm-agent"},
+						Command:      ocmAgentCommand,
 						Name:         oahconst.OCMAgentName,
 						Ports: []corev1.ContainerPort{{
 							ContainerPort: oahconst.OCMAgentPort,
@@ -122,6 +125,26 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 		},
 	}
 	return dep
+}
+
+// buildOCMAgentArgs returns the full command argument list to run the OCM Agent
+// in a deployment.
+func buildOCMAgentArgs(ocmAgent ocmagentv1alpha1.OcmAgent) []string {
+	accessTokenPath := filepath.Join(oahconst.OCMAgentSecretMountPath, ocmAgent.Spec.TokenSecret,
+		oahconst.OCMAgentAccessTokenSecretKey)
+	configServicesPath := filepath.Join(oahconst.OCMAgentConfigMountPath, ocmAgent.Spec.OcmAgentConfig,
+		oahconst.OCMAgentConfigServicesKey)
+	configURLPath := filepath.Join(oahconst.OCMAgentConfigMountPath, ocmAgent.Spec.OcmAgentConfig,
+		oahconst.OCMAgentConfigURLKey)
+
+	command := []string {
+		oahconst.OCMAgentCommand,
+		"serve",
+		fmt.Sprintf("--access-token=@%s", accessTokenPath),
+		fmt.Sprintf("--services=@%s", configServicesPath),
+		fmt.Sprintf("--ocm-url=@%s", configURLPath),
+	}
+	return command
 }
 
 // ensureDeployment ensures that an OCMAgent Deployment exists on the cluster

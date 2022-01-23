@@ -89,8 +89,8 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 	Context("When building an OCM Agent Access Token Secret", func() {
 		It("Sets a correct name", func() {
 			cm := buildOCMAgentAccessTokenSecret(testOcmAccessTokenSecretValue, testOcmAgent)
-			Expect(cm.Data).Should(HaveKey("access_token"))
-			Expect(bytes.Compare(cm.Data["access_token"], testOcmAccessTokenSecretValue)).To(BeZero())
+			Expect(cm.Data).Should(HaveKey(oahconst.OCMAgentAccessTokenSecretKey))
+			Expect(bytes.Compare(cm.Data[oahconst.OCMAgentAccessTokenSecretKey], testOcmAccessTokenSecretValue)).To(BeZero())
 			Expect(cm.Name).To(Equal(testOcmAgent.Spec.TokenSecret))
 		})
 	})
@@ -115,8 +115,8 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Times(1).SetArg(2, testSecret),
 						mockClient.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(
 							func(ctx context.Context, d *corev1.Secret, opts ...client.UpdateOptions) error {
-								Expect(d.Data).Should(HaveKey("access_token"))
-								Expect(bytes.Compare(d.Data["access_token"], goldenSecret.Data["access_token"])).To(BeZero())
+								Expect(d.Data).Should(HaveKey(oahconst.OCMAgentAccessTokenSecretKey))
+								Expect(bytes.Compare(d.Data[oahconst.OCMAgentAccessTokenSecretKey], goldenSecret.Data[oahconst.OCMAgentAccessTokenSecretKey])).To(BeZero())
 								return nil
 							}),
 					)

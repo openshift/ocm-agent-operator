@@ -22,7 +22,7 @@ func buildOCMAgentAccessTokenSecret(accessToken []byte, ocmAgent ocmagentv1alpha
 			Namespace: namespacedName.Namespace,
 		},
 		Data: map[string][]byte{
-			"access_token": accessToken,
+			oahconst.OCMAgentAccessTokenSecretKey: accessToken,
 		},
 	}
 	return secret

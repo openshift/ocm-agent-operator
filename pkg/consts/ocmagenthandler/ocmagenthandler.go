@@ -14,18 +14,27 @@ const (
 	OCMAgentPortName = "ocm-agent"
 	// OCMAgentPort is the container port number used by the agent for exposing its services
 	OCMAgentPort = 8081
-	// OCMAgentSecretMountPath is the base mount path for secrets in the OCM Agent container
-	OCMAgentSecretMountPath = "/secrets"
-	// OCMAgentConfigMountPath is the base mount path for configs in the OCM Agent container
-	OCMAgentConfigMountPath = "/configs"
-
 	// OCMAgentServiceAccount is the name of the service account that will run the OCM Agent
 	OCMAgentServiceAccount = "ocm-agent"
+	// OCMAgentCommand is the name of the OCM Agent binary to run in the deployment
+	OCMAgentCommand = "ocm-agent"
 
 	// OCMAgentServiceName is the name of the Service that serves the OCM Agent
 	OCMAgentServiceName = "ocm-agent"
 	// OCMAgentServicePort is the port number to use for the OCM Agent Service
 	OCMAgentServicePort = 8081
+
+	// OCMAgentSecretMountPath is the base mount path for secrets in the OCM Agent container
+	OCMAgentSecretMountPath = "/secrets"
+	// OCMAgentAccessTokenSecretKey is the name of the key used in the access token secret
+	OCMAgentAccessTokenSecretKey = "access_token"
+
+	// OCMAgentConfigMountPath is the base mount path for configs in the OCM Agent container
+	OCMAgentConfigMountPath = "/configs"
+	// OCMAgentConfigServicesKey is the name of the key used for the services configmap entry
+	OCMAgentConfigServicesKey = "services"
+	// OCMAgentConfigURLKey is the name of the key used for the OCM URL configmap entry
+	OCMAgentConfigURLKey = "ocmBaseURL"
 
 	// PullSecretKey defines the key in the pull secret containing the auth tokens
 	PullSecretKey = ".dockerconfigjson"

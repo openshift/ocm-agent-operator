@@ -2,27 +2,28 @@ package ocmagenthandler
 
 import (
 	"context"
+	"reflect"
+	"strings"
+
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"strings"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
-	"github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
+	oahconst "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 )
 
 func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) corev1.ConfigMap {
-	namespacedName := ocmagenthandler.BuildNamespacedName()
+	namespacedName := oahconst.BuildNamespacedName()
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ocmAgent.Spec.OcmAgentConfig,
 			Namespace: namespacedName.Namespace,
 		},
 		Data: map[string]string{
-			"services": strings.Join(ocmAgent.Spec.Services, ","),
-			"ocmBaseURL": ocmAgent.Spec.OcmBaseUrl,
+			oahconst.OCMAgentConfigServicesKey: strings.Join(ocmAgent.Spec.Services, ","),
+			oahconst.OCMAgentConfigURLKey:      ocmAgent.Spec.OcmBaseUrl,
 		},
 	}
 	return cm
@@ -31,7 +32,7 @@ func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) corev1.ConfigMap
 // ensureConfigMap ensures that an OCMAgent ConfigMap exists on the cluster
 // and that its configuration matches what is expected.
 func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := ocmagenthandler.BuildNamespacedName()
+	namespacedName := oahconst.BuildNamespacedName()
 	namespacedName.Name = ocmAgent.Spec.OcmAgentConfig
 	foundResource := &corev1.ConfigMap{}
 	populationFunc := func() corev1.ConfigMap {
@@ -73,7 +74,7 @@ func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) er
 }
 
 func (o *ocmAgentHandler) ensureConfigMapDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := ocmagenthandler.BuildNamespacedName()
+	namespacedName := oahconst.BuildNamespacedName()
 	namespacedName.Name = ocmAgent.Spec.OcmAgentConfig
 	foundResource := &corev1.ConfigMap{}
 	// Does the resource already exist?
