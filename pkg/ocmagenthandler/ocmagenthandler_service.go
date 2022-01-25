@@ -47,6 +47,7 @@ func (o *ocmAgentHandler) ensureService(ocmAgent ocmagentv1alpha1.OcmAgent) erro
 		return buildOCMAgentService(ocmAgent)
 	}
 	// Does the resource already exist?
+	o.Log.Info("ensuring service exists", "resource", namespacedName.String())
 	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
 		if k8serrors.IsNotFound(err) {
 			// It does not exist, so must be created.
@@ -81,10 +82,11 @@ func (o *ocmAgentHandler) ensureService(ocmAgent ocmagentv1alpha1.OcmAgent) erro
 	return nil
 }
 
-func (o *ocmAgentHandler) ensureServiceDeleted() error {
+func (o *ocmAgentHandler) ensureServiceDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	namespacedName := oah.BuildNamespacedName(oah.OCMAgentServiceName)
 	foundResource := &corev1.Service{}
 	// Does the resource already exist?
+	o.Log.Info("ensuring service removed", "resource", namespacedName.String())
 	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
 		if !k8serrors.IsNotFound(err) {
 			// Return unexpected error

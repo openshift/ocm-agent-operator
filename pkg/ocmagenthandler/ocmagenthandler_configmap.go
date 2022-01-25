@@ -38,6 +38,7 @@ func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) er
 		return buildOCMAgentConfigMap(ocmAgent)
 	}
 	// Does the resource already exist?
+	o.Log.Info("ensuring configmap exists", "resource", namespacedName.String())
 	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
 		if k8serrors.IsNotFound(err) {
 			// It does not exist, so must be created.
@@ -76,6 +77,7 @@ func (o *ocmAgentHandler) ensureConfigMapDeleted(ocmAgent ocmagentv1alpha1.OcmAg
 	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.OcmAgentConfig)
 	foundResource := &corev1.ConfigMap{}
 	// Does the resource already exist?
+	o.Log.Info("ensuring configmap removed", "resource", namespacedName.String())
 	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
 		if !k8serrors.IsNotFound(err) {
 			// Return unexpected error

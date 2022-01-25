@@ -42,6 +42,7 @@ func (o *ocmAgentHandler) ensureAccessTokenSecret(ocmAgent ocmagentv1alpha1.OcmA
 		return buildOCMAgentAccessTokenSecret(clusterPullSecret, ocmAgent)
 	}
 	// Does the resource already exist?
+	o.Log.Info("ensuring secret exists", "resource", namespacedName.String())
 	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
 		if k8serrors.IsNotFound(err) {
 			// It does not exist, so must be created.
@@ -80,6 +81,7 @@ func (o *ocmAgentHandler) ensureAccessTokenSecretDeleted(ocmAgent ocmagentv1alph
 	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.TokenSecret)
 	foundResource := &corev1.Secret{}
 	// Does the resource already exist?
+	o.Log.Info("ensuring secret removed", "resource", namespacedName.String())
 	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
 		if !k8serrors.IsNotFound(err) {
 			// Return unexpected error

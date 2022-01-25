@@ -140,7 +140,7 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 					gomock.InOrder(
 						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(notFound),
 					)
-					err := testOcmAgentHandler.ensureDeploymentDeleted()
+					err := testOcmAgentHandler.ensureDeploymentDeleted(testOcmAgent)
 					Expect(err).To(BeNil())
 				})
 			})
@@ -150,7 +150,7 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).SetArg(2, testDeployment),
 						mockClient.EXPECT().Delete(gomock.Any(), &testDeployment),
 					)
-					err := testOcmAgentHandler.ensureDeploymentDeleted()
+					err := testOcmAgentHandler.ensureDeploymentDeleted(testOcmAgent)
 					Expect(err).To(BeNil())
 				})
 			})

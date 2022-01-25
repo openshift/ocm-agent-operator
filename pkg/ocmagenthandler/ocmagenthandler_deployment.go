@@ -156,6 +156,7 @@ func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) e
 		return buildOCMAgentDeployment(ocmAgent)
 	}
 	// Does the resource already exist?
+	o.Log.Info("ensuring deployment exists", "resource", namespacedName.String())
 	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
 		if k8serrors.IsNotFound(err) {
 			// It does not exist, so must be created.
@@ -191,10 +192,11 @@ func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) e
 }
 
 // ensureDeploymentDeleted removes the deployment from the cluster
-func (o *ocmAgentHandler) ensureDeploymentDeleted() error {
+func (o *ocmAgentHandler) ensureDeploymentDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	namespacedName := oah.BuildNamespacedName(oah.OCMAgentName)
 	foundResource := &appsv1.Deployment{}
 	// Does the resource already exist?
+	o.Log.Info("ensuring deployment removed", "resource", namespacedName.String())
 	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
 		if !k8serrors.IsNotFound(err) {
 			// Return unexpected error
