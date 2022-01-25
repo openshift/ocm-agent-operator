@@ -16,7 +16,7 @@ spec:
       serviceAccountName: ocm-agent-operator
       affinity:
         nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
+          preferredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
                   - key: node-role.kubernetes.io/infra
