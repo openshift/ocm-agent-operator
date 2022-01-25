@@ -7,7 +7,7 @@
 The [OCMAgent Controller](https://github.com/openshift/ocm-agent-operator/tree/master/pkg/controller/ocmagent/ocmagent_controller.go) is responsible for ensuring the deployment or removal of an OCM Agent based upon the presence of an `OCMAgent` Custom Resource.
 
 An `OcmAgent` deployment consists of:
-- A `ServiceAccount` (namd `ocm-agent`)
+- A `ServiceAccount` (named `ocm-agent`)
 - A `Role` and `RoleBinding` (both named `ocm-agent`) that defines the OCM Agent's API  permissions.
 - A `Deployment` (named `ocm-agent`) which runs the [ocm-agent](https://quay.io/openshift/ocm-agent)
 - A `ConfigMap` (name defined in the `OcmAgent` CR) which contains the agent's configuration.

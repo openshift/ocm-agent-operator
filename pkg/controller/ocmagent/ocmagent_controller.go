@@ -203,13 +203,13 @@ func (r *ReconcileOCMAgent) Reconcile(ctx context.Context, request reconcile.Req
 
 // handlePullSecret returns true if meta indicates it is the cluster pull secret
 func handlePullSecret(meta metav1.Object) bool {
-	pullSecretNamespacedName := oahconst.BuildPullSecretNamespacedName()
+	pullSecretNamespacedName := oahconst.PullSecretNamespacedName
 	return meta.GetNamespace() == pullSecretNamespacedName.Namespace &&
 		meta.GetName() == pullSecretNamespacedName.Name
 }
 
 // handleOCMAgentResources returns true if meta indicates it is an OCM Agent-related resource
 func handleOCMAgentResources(meta metav1.Object) bool {
-	agentNamespacedName := oahconst.BuildNamespacedName()
+	agentNamespacedName := oahconst.BuildNamespacedName(oahconst.OCMAgentName)
 	return meta.GetNamespace() == agentNamespacedName.Namespace
 }

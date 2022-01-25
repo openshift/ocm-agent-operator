@@ -12,25 +12,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
-	oahconst "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
+	oah "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 )
 
 func buildOCMAgentService(ocmAgent ocmagentv1alpha1.OcmAgent) corev1.Service {
-	namespacedName := oahconst.BuildNamespacedName()
+	namespacedName := oah.BuildNamespacedName(oah.OCMAgentServiceName)
 	labels := map[string]string{
-		"app": oahconst.OCMAgentName,
+		"app": oah.OCMAgentName,
 	}
 	cm := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      oahconst.OCMAgentServiceName,
+			Name:      namespacedName.Name,
 			Namespace: namespacedName.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: labels,
 			Ports: []corev1.ServicePort{{
-				TargetPort: intstr.FromInt(oahconst.OCMAgentServicePort),
-				Name:       oahconst.OCMAgentPortName,
-				Port:       oahconst.OCMAgentServicePort,
+				TargetPort: intstr.FromInt(oah.OCMAgentServicePort),
+				Name:       oah.OCMAgentPortName,
+				Port:       oah.OCMAgentServicePort,
 				Protocol:   corev1.ProtocolTCP,
 			}},
 		},
@@ -41,8 +41,7 @@ func buildOCMAgentService(ocmAgent ocmagentv1alpha1.OcmAgent) corev1.Service {
 // ensureConfigMap ensures that an OCMAgent ConfigMap exists on the cluster
 // and that its configuration matches what is expected.
 func (o *ocmAgentHandler) ensureService(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := oahconst.BuildNamespacedName()
-	namespacedName.Name = oahconst.OCMAgentServiceName
+	namespacedName := oah.BuildNamespacedName(oah.OCMAgentServiceName)
 	foundResource := &corev1.Service{}
 	populationFunc := func() corev1.Service {
 		return buildOCMAgentService(ocmAgent)
@@ -83,8 +82,7 @@ func (o *ocmAgentHandler) ensureService(ocmAgent ocmagentv1alpha1.OcmAgent) erro
 }
 
 func (o *ocmAgentHandler) ensureServiceDeleted() error {
-	namespacedName := oahconst.BuildNamespacedName()
-	namespacedName.Name = oahconst.OCMAgentServiceName
+	namespacedName := oah.BuildNamespacedName(oah.OCMAgentServiceName)
 	foundResource := &corev1.Service{}
 	// Does the resource already exist?
 	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {

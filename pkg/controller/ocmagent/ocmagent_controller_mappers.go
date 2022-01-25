@@ -17,7 +17,7 @@ func pullSecretToOCMAgent(c client.Client, ctx context.Context, log logr.Logger)
 	return func (o client.Object) []reconcile.Request {
 		var requests []reconcile.Request
 		ocmagentlist := &ocmagentv1alpha1.OcmAgentList{}
-		namespacedName := oahconst.BuildNamespacedName()
+		namespacedName := oahconst.BuildNamespacedName(oahconst.OCMAgentName)
 		if err := c.List(ctx, ocmagentlist, client.InNamespace(namespacedName.Namespace)); err != nil {
 			log.Error(err,"failed to list ocmagents for pull secret")
 			return requests

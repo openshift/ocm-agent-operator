@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
-	oahconst "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
+	oah "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 	testconst "github.com/openshift/ocm-agent-operator/pkg/consts/test/init"
 	clientmocks "github.com/openshift/ocm-agent-operator/pkg/util/test/generated/mocks/client"
 
@@ -60,8 +60,7 @@ var _ = Describe("OCM Agent Service Handler", func() {
 		var testService corev1.Service
 		var testNamespacedName types.NamespacedName
 		BeforeEach(func() {
-			testNamespacedName = oahconst.BuildNamespacedName()
-			testNamespacedName.Name = oahconst.OCMAgentServiceName
+			testNamespacedName = oah.BuildNamespacedName(oah.OCMAgentServiceName)
 			testService = buildOCMAgentService(testOcmAgent)
 		})
 		When("the OCM Agent service already exists", func() {

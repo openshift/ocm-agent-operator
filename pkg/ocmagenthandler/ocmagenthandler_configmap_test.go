@@ -67,8 +67,7 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 		var testConfigMap corev1.ConfigMap
 		var testNamespacedName types.NamespacedName
 		BeforeEach(func() {
-			testNamespacedName = ocmagenthandler.BuildNamespacedName()
-			testNamespacedName.Name = testOcmAgent.Spec.OcmAgentConfig
+			testNamespacedName = ocmagenthandler.BuildNamespacedName(testOcmAgent.Spec.OcmAgentConfig)
 			testConfigMap = buildOCMAgentConfigMap(testOcmAgent)
 		})
 		When("the OCM Agent config already exists", func() {

@@ -15,13 +15,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
-	oahconst "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
+	oah "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 )
 
 func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployment {
-	namespacedName := oahconst.BuildNamespacedName()
+	namespacedName := oah.BuildNamespacedName(oah.OCMAgentName)
 	labels := map[string]string{
-		"app": oahconst.OCMAgentName,
+		"app": oah.OCMAgentName,
 	}
 	labelSelectors := metav1.LabelSelector{
 		MatchLabels: labels,
@@ -43,7 +43,7 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 	})
 	volumeMounts = append(volumeMounts, corev1.VolumeMount{
 		Name:      tokenSecretVolumeName,
-		MountPath: filepath.Join(oahconst.OCMAgentSecretMountPath, tokenSecretVolumeName),
+		MountPath: filepath.Join(oah.OCMAgentSecretMountPath, tokenSecretVolumeName),
 	})
 
 	// Define a volume/volume mount for the config
@@ -62,7 +62,7 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 	})
 	volumeMounts = append(volumeMounts, corev1.VolumeMount{
 		Name:      configVolumeName,
-		MountPath: filepath.Join(oahconst.OCMAgentConfigMountPath, configVolumeName),
+		MountPath: filepath.Join(oah.OCMAgentConfigMountPath, configVolumeName),
 	})
 	// Sort volume slices by name to keep the sequence stable.
 	sort.Slice(volumes, func(i, j int) bool {
@@ -91,7 +91,7 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 				},
 				Spec: corev1.PodSpec{
 					Volumes:            volumes,
-					ServiceAccountName: oahconst.OCMAgentServiceAccount,
+					ServiceAccountName: oah.OCMAgentServiceAccount,
 					Affinity: &corev1.Affinity{
 						NodeAffinity: &corev1.NodeAffinity{
 							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.PreferredSchedulingTerm{{
@@ -114,10 +114,10 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 						VolumeMounts: volumeMounts,
 						Image:        ocmAgent.Spec.OcmAgentImage,
 						Command:      ocmAgentCommand,
-						Name:         oahconst.OCMAgentName,
+						Name:         oah.OCMAgentName,
 						Ports: []corev1.ContainerPort{{
-							ContainerPort: oahconst.OCMAgentPort,
-							Name:          oahconst.OCMAgentPortName,
+							ContainerPort: oah.OCMAgentPort,
+							Name:          oah.OCMAgentPortName,
 						}},
 					}},
 				},
@@ -130,15 +130,15 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 // buildOCMAgentArgs returns the full command argument list to run the OCM Agent
 // in a deployment.
 func buildOCMAgentArgs(ocmAgent ocmagentv1alpha1.OcmAgent) []string {
-	accessTokenPath := filepath.Join(oahconst.OCMAgentSecretMountPath, ocmAgent.Spec.TokenSecret,
-		oahconst.OCMAgentAccessTokenSecretKey)
-	configServicesPath := filepath.Join(oahconst.OCMAgentConfigMountPath, ocmAgent.Spec.OcmAgentConfig,
-		oahconst.OCMAgentConfigServicesKey)
-	configURLPath := filepath.Join(oahconst.OCMAgentConfigMountPath, ocmAgent.Spec.OcmAgentConfig,
-		oahconst.OCMAgentConfigURLKey)
+	accessTokenPath := filepath.Join(oah.OCMAgentSecretMountPath, ocmAgent.Spec.TokenSecret,
+		oah.OCMAgentAccessTokenSecretKey)
+	configServicesPath := filepath.Join(oah.OCMAgentConfigMountPath, ocmAgent.Spec.OcmAgentConfig,
+		oah.OCMAgentConfigServicesKey)
+	configURLPath := filepath.Join(oah.OCMAgentConfigMountPath, ocmAgent.Spec.OcmAgentConfig,
+		oah.OCMAgentConfigURLKey)
 
 	command := []string {
-		oahconst.OCMAgentCommand,
+		oah.OCMAgentCommand,
 		"serve",
 		fmt.Sprintf("--access-token=@%s", accessTokenPath),
 		fmt.Sprintf("--services=@%s", configServicesPath),
@@ -150,7 +150,7 @@ func buildOCMAgentArgs(ocmAgent ocmagentv1alpha1.OcmAgent) []string {
 // ensureDeployment ensures that an OCMAgent Deployment exists on the cluster
 // and that its configuration matches what is expected.
 func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := oahconst.BuildNamespacedName()
+	namespacedName := oah.BuildNamespacedName(oah.OCMAgentName)
 	foundResource := &appsv1.Deployment{}
 	populationFunc := func() appsv1.Deployment {
 		return buildOCMAgentDeployment(ocmAgent)
@@ -192,7 +192,7 @@ func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) e
 
 // ensureDeploymentDeleted removes the deployment from the cluster
 func (o *ocmAgentHandler) ensureDeploymentDeleted() error {
-	namespacedName := oahconst.BuildNamespacedName()
+	namespacedName := oah.BuildNamespacedName(oah.OCMAgentName)
 	foundResource := &appsv1.Deployment{}
 	// Does the resource already exist?
 	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
@@ -217,7 +217,7 @@ func deploymentConfigChanged(current, expected *appsv1.Deployment, log logr.Logg
 	changed := false
 
 	// There may be multiple containers eventually, so let's do a loop
-	for _, name := range []string{oahconst.OCMAgentName} {
+	for _, name := range []string{oah.OCMAgentName} {
 		var curImage, expImage string
 
 		for i, c := range current.Spec.Template.Spec.Containers {

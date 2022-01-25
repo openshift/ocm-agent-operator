@@ -13,7 +13,9 @@ const (
 	// OCMAgentPortName is the name of the OCM Agent service port used in the OCM Agent Deployment
 	OCMAgentPortName = "ocm-agent"
 	// OCMAgentPort is the container port number used by the agent for exposing its services
-	OCMAgentPort = 8081
+	OCMAgentPort = 8080
+	// OCMAgentMetricsPort is the container port number used by the agent for exposing metrics
+	OCMAgentMetricsPort = 8081
 	// OCMAgentServiceAccount is the name of the service account that will run the OCM Agent
 	OCMAgentServiceAccount = "ocm-agent"
 	// OCMAgentCommand is the name of the OCM Agent binary to run in the deployment
@@ -42,21 +44,20 @@ const (
 	PullSecretAuthTokenKey = "cloud.openshift.com"
 )
 
-// BuildPullSecretNamespacedName returns the namespaced name of the pull secret
-func BuildPullSecretNamespacedName() types.NamespacedName {
-	pullSecretNamespacedName := types.NamespacedName{
-		Name:      "pull-secret",
+var (
+	// PullSecretNamespacedName defines the namespaced name of the cluster pull secret
+	PullSecretNamespacedName = types.NamespacedName{
 		Namespace: "openshift-config",
+		Name:      "pull-secret",
 	}
-	return pullSecretNamespacedName
-}
+)
 
 // BuildNamespacedName returns the name and namespace intended for OCM Agent deployment resources
-func BuildNamespacedName() types.NamespacedName {
+func BuildNamespacedName(name string) types.NamespacedName {
 	namespace, err := ns.GetOperatorNamespace()
 	if err != nil {
 		namespace = OCMAgentNamespace
 	}
-	namespacedName := types.NamespacedName{Name: OCMAgentName, Namespace: namespace}
+	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
 	return namespacedName
 }

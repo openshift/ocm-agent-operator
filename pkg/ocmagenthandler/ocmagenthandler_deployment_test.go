@@ -2,7 +2,8 @@ package ocmagenthandler
 
 import (
 	"context"
-	"github.com/golang/mock/gomock"
+	"reflect"
+
 	testconst "github.com/openshift/ocm-agent-operator/pkg/consts/test/init"
 	clientmocks "github.com/openshift/ocm-agent-operator/pkg/util/test/generated/mocks/client"
 	appsv1 "k8s.io/api/apps/v1"
@@ -10,8 +11,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/golang/mock/gomock"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
 	"github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
@@ -75,7 +77,7 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 		var testDeployment appsv1.Deployment
 		var testNamespacedName types.NamespacedName
 		BeforeEach(func() {
-			testNamespacedName = ocmagenthandler.BuildNamespacedName()
+			testNamespacedName = ocmagenthandler.BuildNamespacedName(ocmagenthandler.OCMAgentName)
 			testDeployment = buildOCMAgentDeployment(testOcmAgent)
 		})
 		

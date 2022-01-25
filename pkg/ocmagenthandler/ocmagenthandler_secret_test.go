@@ -74,7 +74,7 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 			}
 		}`, testAccessTokenValue))
 		testOcmAccessTokenSecretValue = []byte(testAccessTokenValue)
-		pullSecretNamespacedName := oahconst.BuildPullSecretNamespacedName()
+		pullSecretNamespacedName := oahconst.PullSecretNamespacedName
 		testPullSecret = corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      pullSecretNamespacedName.Name,
@@ -99,8 +99,7 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 		var testSecret corev1.Secret
 		var testNamespacedName types.NamespacedName
 		BeforeEach(func() {
-			testNamespacedName = oahconst.BuildNamespacedName()
-			testNamespacedName.Name = testOcmAgent.Spec.TokenSecret
+			testNamespacedName = oahconst.BuildNamespacedName(testOcmAgent.Spec.TokenSecret)
 			testSecret = buildOCMAgentAccessTokenSecret(testOcmAccessTokenSecretValue, testOcmAgent)
 		})
 		When("the OCM Agent secret already exists", func() {
@@ -111,7 +110,7 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 				It("updates the secret", func() {
 					goldenSecret := buildOCMAgentAccessTokenSecret(testOcmAccessTokenSecretValue, testOcmAgent)
 					gomock.InOrder(
-						mockClient.EXPECT().Get(gomock.Any(), oahconst.BuildPullSecretNamespacedName(), gomock.Any()).Times(1).SetArg(2, testPullSecret),
+						mockClient.EXPECT().Get(gomock.Any(), oahconst.PullSecretNamespacedName, gomock.Any()).Times(1).SetArg(2, testPullSecret),
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Times(1).SetArg(2, testSecret),
 						mockClient.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(
 							func(ctx context.Context, d *corev1.Secret, opts ...client.UpdateOptions) error {
@@ -127,7 +126,7 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 			When("the secret matches what is expected", func() {
 				It("does not update the secret", func() {
 					gomock.InOrder(
-						mockClient.EXPECT().Get(gomock.Any(), oahconst.BuildPullSecretNamespacedName(), gomock.Any()).Times(1).SetArg(2, testPullSecret),
+						mockClient.EXPECT().Get(gomock.Any(), oahconst.PullSecretNamespacedName, gomock.Any()).Times(1).SetArg(2, testPullSecret),
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Times(1).SetArg(2, testSecret),
 					)
 					err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
@@ -139,7 +138,7 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 			It("creates the secret", func() {
 				notFound := k8serrs.NewNotFound(schema.GroupResource{}, testSecret.Name)
 				gomock.InOrder(
-					mockClient.EXPECT().Get(gomock.Any(), oahconst.BuildPullSecretNamespacedName(), gomock.Any()).Times(1).SetArg(2, testPullSecret),
+					mockClient.EXPECT().Get(gomock.Any(), oahconst.PullSecretNamespacedName, gomock.Any()).Times(1).SetArg(2, testPullSecret),
 					mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Times(1).Return(notFound),
 					mockClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
 						func(ctx context.Context, d *corev1.Secret, opts ...client.CreateOptions) error {

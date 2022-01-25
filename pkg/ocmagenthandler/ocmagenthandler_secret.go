@@ -11,18 +11,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
-	oahconst "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
+	oah "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 )
 
 func buildOCMAgentAccessTokenSecret(accessToken []byte, ocmAgent ocmagentv1alpha1.OcmAgent) corev1.Secret {
-	namespacedName := oahconst.BuildNamespacedName()
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.TokenSecret)
 	secret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ocmAgent.Spec.TokenSecret,
+			Name:      namespacedName.Name,
 			Namespace: namespacedName.Namespace,
 		},
 		Data: map[string][]byte{
-			oahconst.OCMAgentAccessTokenSecretKey: accessToken,
+			oah.OCMAgentAccessTokenSecretKey: accessToken,
 		},
 	}
 	return secret
@@ -31,8 +31,7 @@ func buildOCMAgentAccessTokenSecret(accessToken []byte, ocmAgent ocmagentv1alpha
 // ensureAccessTokenSecret ensures that an OCMAgent Secret exists on the cluster
 // and that its configuration matches what is expected.
 func (o *ocmAgentHandler) ensureAccessTokenSecret(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := oahconst.BuildNamespacedName()
-	namespacedName.Name = ocmAgent.Spec.TokenSecret
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.TokenSecret)
 	foundResource := &corev1.Secret{}
 
 	clusterPullSecret, err := o.fetchAccessTokenPullSecret()
@@ -78,8 +77,7 @@ func (o *ocmAgentHandler) ensureAccessTokenSecret(ocmAgent ocmagentv1alpha1.OcmA
 }
 
 func (o *ocmAgentHandler) ensureAccessTokenSecretDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := oahconst.BuildNamespacedName()
-	namespacedName.Name = ocmAgent.Spec.TokenSecret
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.TokenSecret)
 	foundResource := &corev1.Secret{}
 	// Does the resource already exist?
 	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
@@ -100,7 +98,7 @@ func (o *ocmAgentHandler) ensureAccessTokenSecretDeleted(ocmAgent ocmagentv1alph
 
 func (o *ocmAgentHandler) fetchAccessTokenPullSecret() ([]byte, error) {
 	foundResource := &corev1.Secret{}
-	if err := o.Client.Get(o.Ctx, oahconst.BuildPullSecretNamespacedName(), foundResource); err != nil {
+	if err := o.Client.Get(o.Ctx, oah.PullSecretNamespacedName, foundResource); err != nil {
 		if k8serrors.IsNotFound(err) {
 			// There should always be a pull secret, log this
 			o.Log.Error(err, "Cluster pull secret was not found on the cluster.")
@@ -108,9 +106,9 @@ func (o *ocmAgentHandler) fetchAccessTokenPullSecret() ([]byte, error) {
 		return nil, err
 	}
 
-	pullSecret, ok := foundResource.Data[oahconst.PullSecretKey]
+	pullSecret, ok := foundResource.Data[oah.PullSecretKey]
 	if !ok {
-		return nil, fmt.Errorf("pull secret missing required key '%s'", oahconst.PullSecretKey)
+		return nil, fmt.Errorf("pull secret missing required key '%s'", oah.PullSecretKey)
 	}
 
 	var dockerConfig map[string]interface{}
@@ -124,9 +122,9 @@ func (o *ocmAgentHandler) fetchAccessTokenPullSecret() ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("unable to find auths section in pull secret")
 	}
-	apiConfig, ok := authConfig.(map[string]interface{})[oahconst.PullSecretAuthTokenKey]
+	apiConfig, ok := authConfig.(map[string]interface{})[oah.PullSecretAuthTokenKey]
 	if !ok {
-		return nil, fmt.Errorf("unable to find pull secret auth key '%s' in pull secret", oahconst.PullSecretAuthTokenKey)
+		return nil, fmt.Errorf("unable to find pull secret auth key '%s' in pull secret", oah.PullSecretAuthTokenKey)
 	}
 	accessToken, ok := apiConfig.(map[string]interface{})["auth"]
 	if !ok {
