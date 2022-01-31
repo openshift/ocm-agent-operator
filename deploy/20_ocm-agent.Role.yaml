@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ocm-agent
+  namespace: openshift-ocm-agent-operator
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - services
+      - services/finalizers
+      - configmaps
+      - secrets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch

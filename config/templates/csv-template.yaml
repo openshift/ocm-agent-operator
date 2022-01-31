@@ -1,0 +1,48 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  name: ocm-agent-operator-0.0.1
+  namespace: placeholder
+  annotations:
+    categories: A list of comma separated categories that your operator falls under.
+    certified: "false"
+    description: Operator for managing the OCM Agent on managed OpenShift clusters.
+    containerImage: quay.io/app-sre/ocm-agent-operator:latest
+    support: Red Hat OpenShift SRE
+spec:
+  displayName: ocm-agent-operator
+  description: Operator for managing the OCM Agent on managed OpenShift clusters.
+  keywords:
+    - kubernetes
+    - openshift
+    - multi-cluster
+    - cluster
+  version: 0.0.1
+  provider:
+    name: Red Hat, Inc
+  maturity: alpha
+  maintainers:
+    - name: OpenShift SRE
+  links:
+    - url: https://github.com/openshift/ocm-agent-operator
+  installModes:
+    - type: OwnNamespace
+      supported: true
+    - type: SingleNamespace
+      supported: true
+    - type: MultiNamespace
+      supported: false
+    - type: AllNamespaces
+      supported: false
+  install:
+    strategy: deployment
+    spec:
+      clusterPermissions:
+        - serviceAccountName: ocm-agent-operator
+          # Rules will be added here by the generate-operator-bundle.py script.
+      deployments:
+        - name: ocm-agent-operator
+          # Deployment spec will be added here by the generate-operator-bundle.py script.
+  customresourcedefinitions:
+    owned:
+    # CRD's will be added here by the generate-operator-bundle.py

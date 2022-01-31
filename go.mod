@@ -3,7 +3,10 @@ module github.com/openshift/ocm-agent-operator
 go 1.16
 
 require (
+	github.com/go-logr/logr v0.4.0 // indirect
+	github.com/golang/mock v1.6.0
 	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/gomega v1.15.0
 	github.com/operator-framework/operator-sdk v0.18.2
 	github.com/spf13/pflag v1.0.5
 	k8s.io/api v0.22.1
