@@ -18,10 +18,10 @@ spec:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - preference:
-              - matchExpressions:
+                matchExpressions:
                   - key: node-role.kubernetes.io/infra
                     operator: Exists
-              weight: 1 
+              weight: 1
       tolerations:
         - effect: NoSchedule
           key: node-role.kubernetes.io/infra
@@ -30,7 +30,7 @@ spec:
           # Replace this with the built image name
           image: quay.io/app-sre/ocm-agent-operator:latest
           command:
-          - ocm-agent-operator
+            - ocm-agent-operator
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
