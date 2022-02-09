@@ -4,6 +4,8 @@ set -e
 
 source `dirname $0`/common.sh
 
+SKIP_SAAS_FILE_CHECKS=true
+
 usage() { echo "Usage: $0 -o operator-name -c saas-repository-channel -H operator-commit-hash -n operator-commit-number -i operator-image -V operator-version -g [hack|common][-d]" 1>&2; exit 1; }
 
 # TODO : Add support of long-options
