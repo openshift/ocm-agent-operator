@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
@@ -119,6 +120,28 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 							ContainerPort: oah.OCMAgentPort,
 							Name:          oah.OCMAgentPortName,
 						}},
+						ReadinessProbe: &corev1.Probe{
+							Handler: corev1.Handler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Scheme: corev1.URISchemeHTTP,
+									Path:   oah.OCMAgentReadyzPath,
+									Port:   intstr.FromInt(oah.OCMAgentPort),
+								},
+							},
+							InitialDelaySeconds: oah.OCMAgentHealthDelay,
+							PeriodSeconds:       oah.OCMAgentHealthPeriod,
+						},
+						LivenessProbe: &corev1.Probe{
+							Handler: corev1.Handler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Scheme: corev1.URISchemeHTTP,
+									Path:   oah.OCMAgentLivezPath,
+									Port:   intstr.FromInt(oah.OCMAgentPort),
+								},
+							},
+							InitialDelaySeconds: oah.OCMAgentHealthDelay,
+							PeriodSeconds:       oah.OCMAgentHealthPeriod,
+						},
 					}},
 				},
 			},
@@ -137,7 +160,7 @@ func buildOCMAgentArgs(ocmAgent ocmagentv1alpha1.OcmAgent) []string {
 	configURLPath := filepath.Join(oah.OCMAgentConfigMountPath, ocmAgent.Spec.OcmAgentConfig,
 		oah.OCMAgentConfigURLKey)
 
-	command := []string {
+	command := []string{
 		oah.OCMAgentCommand,
 		"serve",
 		fmt.Sprintf("--access-token=@%s", accessTokenPath),
