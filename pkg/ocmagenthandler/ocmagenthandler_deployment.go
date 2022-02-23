@@ -128,8 +128,6 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 									Port:   intstr.FromInt(oah.OCMAgentPort),
 								},
 							},
-							InitialDelaySeconds: oah.OCMAgentHealthDelay,
-							PeriodSeconds:       oah.OCMAgentHealthPeriod,
 						},
 						LivenessProbe: &corev1.Probe{
 							Handler: corev1.Handler{
@@ -139,8 +137,6 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 									Port:   intstr.FromInt(oah.OCMAgentPort),
 								},
 							},
-							InitialDelaySeconds: oah.OCMAgentHealthDelay,
-							PeriodSeconds:       oah.OCMAgentHealthPeriod,
 						},
 					}},
 				},
@@ -244,16 +240,28 @@ func deploymentConfigChanged(current, expected *appsv1.Deployment, log logr.Logg
 	// There may be multiple containers eventually, so let's do a loop
 	for _, name := range []string{oah.OCMAgentName} {
 		var curImage, expImage string
-
+		var curReadinessProbeHTTPGet, curLivenessProbeHTTPGet, expReadinessProbeHTTPGet, expLivenessProbeHTTPGet *corev1.HTTPGetAction
+		// Assign current container spec
 		for i, c := range current.Spec.Template.Spec.Containers {
 			if name == c.Name {
 				curImage = current.Spec.Template.Spec.Containers[i].Image
+				// get current readiness probe HTTPGetter only if ReadinessProbe is set
+				if current.Spec.Template.Spec.Containers[i].ReadinessProbe != nil {
+					curReadinessProbeHTTPGet = current.Spec.Template.Spec.Containers[i].ReadinessProbe.HTTPGet
+				}
+				// get current liveness probe HTTPGetter only if LivenessProbe is set
+				if current.Spec.Template.Spec.Containers[i].LivenessProbe != nil {
+					curLivenessProbeHTTPGet = current.Spec.Template.Spec.Containers[i].LivenessProbe.HTTPGet
+				}
 				break
 			}
 		}
+		// Assign expected container spec
 		for i, c := range expected.Spec.Template.Spec.Containers {
 			if name == c.Name {
 				expImage = expected.Spec.Template.Spec.Containers[i].Image
+				expReadinessProbeHTTPGet = expected.Spec.Template.Spec.Containers[i].ReadinessProbe.HTTPGet
+				expLivenessProbeHTTPGet = expected.Spec.Template.Spec.Containers[i].LivenessProbe.HTTPGet
 				break
 			}
 		}
@@ -263,6 +271,18 @@ func deploymentConfigChanged(current, expected *appsv1.Deployment, log logr.Logg
 			changed = true
 			break
 		} else if curImage != expImage {
+			changed = true
+		}
+
+		// Compare readiness probe change
+		if !reflect.DeepEqual(curReadinessProbeHTTPGet, expReadinessProbeHTTPGet) {
+			log.V(2).Info(fmt.Sprintf("current readiness probe http getter %s/%s did not match expected readiness http getter", curReadinessProbeHTTPGet, expReadinessProbeHTTPGet))
+			changed = true
+		}
+
+		// Compare readiness probe change
+		if !reflect.DeepEqual(curLivenessProbeHTTPGet, expLivenessProbeHTTPGet) {
+			log.V(2).Info(fmt.Sprintf("current liveness probe http getter %s/%s did not match expected liveness probe http getter", curLivenessProbeHTTPGet, expLivenessProbeHTTPGet))
 			changed = true
 		}
 	}

@@ -20,10 +20,6 @@ const (
 	OCMAgentLivezPath = "/livez"
 	// OCMAgentReadyzPath is the readyness probe path
 	OCMAgentReadyzPath = "/readyz"
-	// 	OCMAgentHealthDelay is the liveliness/readyness probe delay in seconds
-	OCMAgentHealthDelay = 10
-	// 	OCMAgentHealthDelay is the liveliness/readyness check period in seconds
-	OCMAgentHealthPeriod = 5
 	// OCMAgentServiceAccount is the name of the service account that will run the OCM Agent
 	OCMAgentServiceAccount = "ocm-agent"
 	// OCMAgentCommand is the name of the OCM Agent binary to run in the deployment

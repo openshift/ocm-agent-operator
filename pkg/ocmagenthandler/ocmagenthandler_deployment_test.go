@@ -71,20 +71,15 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(testOcmAgent.Spec.OcmAgentConfig))
 			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[1].Name).To(Equal(testOcmAgent.Spec.TokenSecret))
 
-			// make sure LivenessProbe is part of deployment config and has defned path, port, url scheme and timeouts
-			Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.HTTPGet.Path).NotTo(BeEmpty())
-			Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.HTTPGet.Port.IntVal).To(BeNumerically(">", 0))
-			Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.HTTPGet.Scheme).NotTo(BeEmpty())
-			Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds).To(BeNumerically(">", 0))
-			Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds).To(BeNumerically(">", 0))
+			// make sure LivenessProbe is part of deployment config and has defned path, port, url and scheme
+			Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet.Path).NotTo(BeEmpty())
+			Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet.Port.IntVal).To(BeNumerically(">", 0))
+			Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet.Scheme).NotTo(BeEmpty())
 
-			// make sure ReadinessProbe is part of deployment config and has defned path, port url scheme and timeouts
-			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.HTTPGet.Path).NotTo(BeEmpty())
-			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.HTTPGet.Port.IntVal).To(BeNumerically(">", 0))
-			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.HTTPGet.Scheme).NotTo(BeEmpty())
-			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds).To(BeNumerically(">", 0))
-			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds).To(BeNumerically(">", 0))
-
+			// make sure ReadinessProbe is part of deployment config and has defned path, port url and scheme
+			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Path).NotTo(BeEmpty())
+			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Port.IntVal).To(BeNumerically(">", 0))
+			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Scheme).NotTo(BeEmpty())
 		})
 	})
 
@@ -178,6 +173,26 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			})
 			It("should detect an image change", func() {
 				testDeployment.Spec.Template.Spec.Containers[0].Image = "something else"
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				Expect(changed).To(BeTrue())
+			})
+			It("should handle missing readiness probe", func() {
+				testDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe = nil
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				Expect(changed).To(BeTrue())
+			})
+			It("should handle missing liveness probe", func() {
+				testDeployment.Spec.Template.Spec.Containers[0].LivenessProbe = nil
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				Expect(changed).To(BeTrue())
+			})
+			It("should detect a readiness probe change", func() {
+				testDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet = nil
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				Expect(changed).To(BeTrue())
+			})
+			It("should detect a liveness probe change", func() {
+				testDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet = nil
 				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
 				Expect(changed).To(BeTrue())
 			})
