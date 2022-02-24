@@ -27,7 +27,7 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 		mockClient *clientmocks.MockClient
 		mockCtrl   *gomock.Controller
 
-		testOcmAgent ocmagentv1alpha1.OcmAgent
+		testOcmAgent        ocmagentv1alpha1.OcmAgent
 		testOcmAgentHandler ocmAgentHandler
 	)
 
@@ -38,7 +38,7 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-ocm-agent",
 			},
-			Spec:   ocmagentv1alpha1.OcmAgentSpec{
+			Spec: ocmagentv1alpha1.OcmAgentSpec{
 				OcmBaseUrl:     "http://api.example.com",
 				Services:       []string{},
 				OcmAgentImage:  "quay.io/ocm-agent:example",
@@ -70,6 +70,16 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			Expect(deployment.Spec.Template.Spec.Volumes[1].Name).To(Equal(testOcmAgent.Spec.TokenSecret))
 			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(testOcmAgent.Spec.OcmAgentConfig))
 			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[1].Name).To(Equal(testOcmAgent.Spec.TokenSecret))
+
+			// make sure LivenessProbe is part of deployment config and has defned path, port, url and scheme
+			Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet.Path).NotTo(BeEmpty())
+			Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet.Port.IntVal).To(BeNumerically(">", 0))
+			Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet.Scheme).NotTo(BeEmpty())
+
+			// make sure ReadinessProbe is part of deployment config and has defned path, port url and scheme
+			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Path).NotTo(BeEmpty())
+			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Port.IntVal).To(BeNumerically(">", 0))
+			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Scheme).NotTo(BeEmpty())
 		})
 	})
 
@@ -80,7 +90,7 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			testNamespacedName = ocmagenthandler.BuildNamespacedName(ocmagenthandler.OCMAgentName)
 			testDeployment = buildOCMAgentDeployment(testOcmAgent)
 		})
-		
+
 		When("the OCM Agent deployment already exists", func() {
 			When("the deployment differs from what is expected", func() {
 				BeforeEach(func() {
@@ -133,7 +143,7 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			})
 		})
 
-		When("the OCM Agent deployment should be removed", func () {
+		When("the OCM Agent deployment should be removed", func() {
 			When("the deployment is already removed", func() {
 				It("does nothing", func() {
 					notFound := k8serrs.NewNotFound(schema.GroupResource{}, testDeployment.Name)
@@ -163,22 +173,42 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			})
 			It("should detect an image change", func() {
 				testDeployment.Spec.Template.Spec.Containers[0].Image = "something else"
-				changed := deploymentConfigChanged(&testDeployment,&goldenDeployment,testconst.Logger)
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				Expect(changed).To(BeTrue())
+			})
+			It("should handle missing readiness probe", func() {
+				testDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe = nil
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				Expect(changed).To(BeTrue())
+			})
+			It("should handle missing liveness probe", func() {
+				testDeployment.Spec.Template.Spec.Containers[0].LivenessProbe = nil
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				Expect(changed).To(BeTrue())
+			})
+			It("should detect a readiness probe change", func() {
+				testDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet = nil
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				Expect(changed).To(BeTrue())
+			})
+			It("should detect a liveness probe change", func() {
+				testDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet = nil
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
 				Expect(changed).To(BeTrue())
 			})
 			It("should detect a replica change", func() {
 				replicas := int32(5000)
 				testDeployment.Spec.Replicas = &replicas
-				changed := deploymentConfigChanged(&testDeployment,&goldenDeployment,testconst.Logger)
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
 				Expect(changed).To(BeTrue())
 			})
 			It("should detect a affinity change", func() {
 				testDeployment.Spec.Template.Spec.Affinity = nil
-				changed := deploymentConfigChanged(&testDeployment,&goldenDeployment,testconst.Logger)
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
 				Expect(changed).To(BeTrue())
 			})
 			It("not detect a change if there are no differences", func() {
-				changed := deploymentConfigChanged(&testDeployment,&goldenDeployment,testconst.Logger)
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
 				Expect(changed).To(BeFalse())
 			})
 		})
