@@ -2,8 +2,9 @@ package ocmagenthandler
 
 import (
 	"fmt"
-	"github.com/go-logr/logr"
 	"reflect"
+
+	"github.com/go-logr/logr"
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -28,7 +29,7 @@ func buildOCMAgentService(ocmAgent ocmagentv1alpha1.OcmAgent) corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Selector: labels,
 			Ports: []corev1.ServicePort{{
-				TargetPort: intstr.FromInt(oah.OCMAgentServicePort),
+				TargetPort: intstr.FromInt(oah.OCMAgentPort),
 				Name:       oah.OCMAgentPortName,
 				Port:       oah.OCMAgentServicePort,
 				Protocol:   corev1.ProtocolTCP,
@@ -70,7 +71,7 @@ func (o *ocmAgentHandler) ensureService(ocmAgent ocmagentv1alpha1.OcmAgent) erro
 	} else {
 		// It does exist, check if it is what we expected
 		resource := populationFunc()
-		if serviceConfigChanged(foundResource, &resource, o.Log)  {
+		if serviceConfigChanged(foundResource, &resource, o.Log) {
 			// Specs aren't equal, update and fix.
 			o.Log.Info("An OCMAgent service exists but contains unexpected configuration. Restoring.")
 			foundResource.Spec = *resource.Spec.DeepCopy()

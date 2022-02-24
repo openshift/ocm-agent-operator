@@ -13,9 +13,9 @@ const (
 	// OCMAgentPortName is the name of the OCM Agent service port used in the OCM Agent Deployment
 	OCMAgentPortName = "ocm-agent"
 	// OCMAgentPort is the container port number used by the agent for exposing its services
-	OCMAgentPort = 8080
+	OCMAgentPort = 8081
 	// OCMAgentMetricsPort is the container port number used by the agent for exposing metrics
-	OCMAgentMetricsPort = 8081
+	OCMAgentMetricsPort = 8888
 	// OCMAgentLivezPath is the liveliness probe path
 	OCMAgentLivezPath = "/livez"
 	// OCMAgentReadyzPath is the readyness probe path
