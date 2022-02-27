@@ -99,4 +99,33 @@ objects:
             - kind: ServiceAccount
               name: ocm-agent-operator
               namespace: openshift-ocm-agent-operator
-
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: Role
+          metadata:
+            name: oao-configmap-manager
+            namespace: openshift-monitoring
+          rules:
+            - apiGroups:
+                - ""
+              resources:
+                - configmaps
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: RoleBinding
+          metadata:
+            name: oao-configmap-manager
+            namespace: openshift-monitoring
+          roleRef:
+            kind: Role
+            name: oao-configmap-manager
+          subjects:
+            - kind: ServiceAccount
+              name: ocm-agent-operator
+              namespace: openshift-ocm-agent-operator
