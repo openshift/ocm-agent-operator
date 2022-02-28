@@ -39,8 +39,10 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 				Name: "test-ocm-agent",
 			},
 			Spec: ocmagentv1alpha1.OcmAgentSpec{
-				OcmBaseUrl:     "http://api.example.com",
-				Services:       []string{},
+				Config: ocmagentv1alpha1.AgentConfig{
+					OcmBaseUrl: "http://api.example.com",
+					Services:   []string{},
+				},
 				OcmAgentImage:  "quay.io/ocm-agent:example",
 				TokenSecret:    "example-secret",
 				Replicas:       1,

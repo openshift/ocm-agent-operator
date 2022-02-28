@@ -22,8 +22,8 @@ func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) corev1.ConfigMap
 			Namespace: namespacedName.Namespace,
 		},
 		Data: map[string]string{
-			oah.OCMAgentConfigServicesKey: strings.Join(ocmAgent.Spec.Services, ","),
-			oah.OCMAgentConfigURLKey:      ocmAgent.Spec.OcmBaseUrl,
+			oah.OCMAgentConfigServicesKey: strings.Join(ocmAgent.Spec.Config.Services, ","),
+			oah.OCMAgentConfigURLKey:      ocmAgent.Spec.Config.OcmBaseUrl,
 		},
 	}
 	return cm
