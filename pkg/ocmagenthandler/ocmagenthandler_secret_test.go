@@ -44,26 +44,12 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockClient = clientmocks.NewMockClient(mockCtrl)
-
+		testOcmAgent = testconst.TestOCMAgent
 		testOcmAgentHandler = ocmAgentHandler{
 			Client: mockClient,
 			Scheme: testconst.Scheme,
 			Log:    testconst.Logger,
 			Ctx:    testconst.Context,
-		}
-		testOcmAgent = ocmagentv1alpha1.OcmAgent{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-ocm-agent",
-			},
-			Spec:   ocmagentv1alpha1.OcmAgentSpec{
-				OcmBaseUrl:     "http://api.example.com",
-				Services:       []string{},
-				OcmAgentImage:  "quay.io/ocm-agent:example",
-				TokenSecret:    "example-secret",
-				Replicas:       1,
-				OcmAgentConfig: "example-config",
-			},
-			Status: ocmagentv1alpha1.OcmAgentStatus{},
 		}
 		testClusterPullSecretValue = []byte(fmt.Sprintf(`{
 			"auths": {

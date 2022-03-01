@@ -8,7 +8,6 @@ import (
 	clientmocks "github.com/openshift/ocm-agent-operator/pkg/util/test/generated/mocks/client"
 	appsv1 "k8s.io/api/apps/v1"
 	k8serrs "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,20 +33,7 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockClient = clientmocks.NewMockClient(mockCtrl)
-		testOcmAgent = ocmagentv1alpha1.OcmAgent{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-ocm-agent",
-			},
-			Spec: ocmagentv1alpha1.OcmAgentSpec{
-				OcmBaseUrl:     "http://api.example.com",
-				Services:       []string{},
-				OcmAgentImage:  "quay.io/ocm-agent:example",
-				TokenSecret:    "example-secret",
-				Replicas:       1,
-				OcmAgentConfig: "example-config",
-			},
-			Status: ocmagentv1alpha1.OcmAgentStatus{},
-		}
+		testOcmAgent = testconst.TestOCMAgent
 		testOcmAgentHandler = ocmAgentHandler{
 			Client: mockClient,
 			Scheme: testconst.Scheme,
