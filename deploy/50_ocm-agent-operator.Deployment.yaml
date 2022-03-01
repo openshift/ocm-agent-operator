@@ -7,11 +7,11 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      name: ocm-agent-operator
+      app: ocm-agent-operator
   template:
     metadata:
       labels:
-        name: ocm-agent-operator
+        app: ocm-agent-operator
     spec:
       serviceAccountName: ocm-agent-operator
       affinity:

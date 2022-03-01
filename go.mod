@@ -3,6 +3,7 @@ module github.com/openshift/ocm-agent-operator
 go 1.16
 
 require (
+	github.com/coreos/prometheus-operator v0.38.1-0.20200424145508-7e176fda06cc
 	github.com/go-logr/logr v0.4.0
 	github.com/golang/mock v1.6.0
 	github.com/onsi/ginkgo v1.16.4

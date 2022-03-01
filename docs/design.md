@@ -14,6 +14,7 @@ An `OcmAgent` deployment consists of:
 - A `Secret` (name defined in the `OcmAgent` CR) which contains the agent's OCM access token.
 - A `Service` (named `ocm-agent`) which serves the OCM Agent API
 - A `NetworkPolicy` to only grant ingress from specific cluster clients.
- 
+- A `ServiceMonitor` (named `ocm-agent-metrics`) which makes sure that the OCM Agent metrics can be exposed to Prometheus
+
 The controller watches for changes to the above resources in its deployed namespace, in addition to changes to the cluster pull secret (`openshift-config/pull-secret`) which contains the OCM Agent's auth token.
 

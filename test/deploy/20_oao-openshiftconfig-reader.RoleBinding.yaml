@@ -1,13 +1,14 @@
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: oao-pullsecret-reader
+  name: oao-openshiftconfig-reader
   namespace: openshift-config
 subjects:
 - kind: ServiceAccount
   name: ocm-agent-operator
+  namespace: openshift-ocm-agent-operator
 roleRef:
   kind: Role
-  name: ocm-agent-operator
+  name: oao-openshiftconfig-reader
   apiGroup: rbac.authorization.k8s.io
 
