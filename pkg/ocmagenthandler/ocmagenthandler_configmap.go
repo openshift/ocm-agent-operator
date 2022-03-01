@@ -8,13 +8,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	configv1 "github.com/openshift/api/config/v1"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
 	oah "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 )
 
-func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) corev1.ConfigMap {
+func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, clusterId string) corev1.ConfigMap {
 	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.OcmAgentConfig)
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -24,6 +27,7 @@ func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) corev1.ConfigMap
 		Data: map[string]string{
 			oah.OCMAgentConfigServicesKey: strings.Join(ocmAgent.Spec.AgentConfig.Services, ","),
 			oah.OCMAgentConfigURLKey:      ocmAgent.Spec.AgentConfig.OcmBaseUrl,
+			oah.OCMAgentConfigClusterID: clusterId,
 		},
 	}
 	return cm
@@ -34,9 +38,19 @@ func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) corev1.ConfigMap
 func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.OcmAgentConfig)
 	foundResource := &corev1.ConfigMap{}
-	populationFunc := func() corev1.ConfigMap {
-		return buildOCMAgentConfigMap(ocmAgent)
+
+	// Determine the cluster ID, used as a configmap value
+	cv, err := o.fetchClusterVersion()
+	if err != nil {
+		o.Log.Error(err, "unable to fetch cluster ID for creating configmap")
+		return err
 	}
+	clusterID := string(cv.Spec.ClusterID)
+
+	populationFunc := func() corev1.ConfigMap {
+		return buildOCMAgentConfigMap(ocmAgent, clusterID)
+	}
+
 	// Does the resource already exist?
 	o.Log.Info("ensuring configmap exists", "resource", namespacedName.String())
 	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
@@ -92,4 +106,13 @@ func (o *ocmAgentHandler) ensureConfigMapDeleted(ocmAgent ocmagentv1alpha1.OcmAg
 		return err
 	}
 	return nil
+}
+
+func (o *ocmAgentHandler) fetchClusterVersion() (*configv1.ClusterVersion, error) {
+	cv := &configv1.ClusterVersion{}
+	err := o.Client.Get(o.Ctx, types.NamespacedName{Name: "version"}, cv)
+	if err != nil {
+		return nil, err
+	}
+	return cv, nil
 }

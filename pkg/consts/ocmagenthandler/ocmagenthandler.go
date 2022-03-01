@@ -41,6 +41,8 @@ const (
 	OCMAgentConfigServicesKey = "services"
 	// OCMAgentConfigURLKey is the name of the key used for the OCM URL configmap entry
 	OCMAgentConfigURLKey = "ocmBaseURL"
+	// OCMAgentConfigClusterID is the name of the key used for the Cluster ID configmap entry
+	OCMAgentConfigClusterID = "clusterID"
 
 	// PullSecretKey defines the key in the pull secret containing the auth tokens
 	PullSecretKey = ".dockerconfigjson"
