@@ -7,7 +7,7 @@ spec:
   agentConfig:
     ocmBaseUrl: "https://api.stage.openshift.com"
     services:
-  - service_log
+    - service_log
   replicas: 1
   tokenSecret: "ocm-access-token"
   ocmAgentConfig: "ocm-agent-config"
