@@ -4,10 +4,11 @@ metadata:
   name: ocmagent
   namespace: test-ocm-agent-operator
 spec:
-  ocmBaseUrl: "https://api.stage.openshift.com"
+  agentConfig:
+    ocmBaseUrl: "https://api.stage.openshift.com"
+    services:
+    - service_log
   replicas: 1
-  services:
-  - service_log
   tokenSecret: "ocm-access-token"
   ocmAgentConfig: "ocm-agent-config"
   ocmAgentImage: "quay.io/app-sre/ocm-agent:latest"

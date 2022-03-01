@@ -36,6 +36,23 @@ spec:
           spec:
             description: OcmAgentSpec defines the desired state of OcmAgent
             properties:
+              agentConfig:
+                description: AgentConfig refers to OCM agent config fields separated
+                properties:
+                  ocmBaseUrl:
+                    description: OcmBaseUrl defines the OCM api endpoint for OCM agent
+                      to access
+                    type: string
+                  services:
+                    description: Services defines the supported OCM services, eg,
+                      service_log, cluster_management
+                    items:
+                      type: string
+                    type: array
+                required:
+                - ocmBaseUrl
+                - services
+                type: object
               ocmAgentConfig:
                 description: OcmAgentConfig defines the configmap name which generated
                   by operator and consumed by OCM Agent service
@@ -44,31 +61,20 @@ spec:
                 description: OcmAgentImage defines the image which will be used by
                   the OCM Agent
                 type: string
-              ocmBaseUrl:
-                description: OcmBaseUrl defines the OCM api endpoint for OCM agent
-                  to access
-                type: string
               replicas:
                 description: Replicas defines the replica count for the OCM Agent
                   service
                 format: int32
                 type: integer
-              services:
-                description: Services defines the supported OCM services, eg, service_log,
-                  cluster_management
-                items:
-                  type: string
-                type: array
               tokenSecret:
                 description: TokenSecret points to the secret name which stores the
                   access token to OCM server
                 type: string
             required:
+            - agentConfig
             - ocmAgentConfig
             - ocmAgentImage
-            - ocmBaseUrl
             - replicas
-            - services
             - tokenSecret
             type: object
           status:

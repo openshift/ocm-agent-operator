@@ -4,17 +4,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type AgentConfig struct {
+	// OcmBaseUrl defines the OCM api endpoint for OCM agent to access
+	OcmBaseUrl string `json:"ocmBaseUrl"`
+
+	// Services defines the supported OCM services, eg, service_log, cluster_management
+	Services []string `json:"services"`
+}
+
 // OcmAgentSpec defines the desired state of OcmAgent
 type OcmAgentSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
 
-	// OcmBaseUrl defines the OCM api endpoint for OCM agent to access
-	OcmBaseUrl string `json:"ocmBaseUrl"`
-
-	// Services defines the supported OCM services, eg, service_log, cluster_management
-	Services []string `json:"services"`
+	// AgentConfig refers to OCM agent config fields separated
+	AgentConfig AgentConfig `json:"agentConfig"`
 
 	// OcmAgentImage defines the image which will be used by the OCM Agent
 	OcmAgentImage string `json:"ocmAgentImage"`
