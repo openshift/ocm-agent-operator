@@ -68,7 +68,6 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 				ClusterID: configv1.ClusterID(testClusterId),
 			},
 		}
-		testClusterVersion = testClusterVersion
 	})
 
 	Context("When building an OCM Agent ConfigMap", func() {
