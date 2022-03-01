@@ -55,9 +55,11 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-ocm-agent",
 			},
-			Spec:   ocmagentv1alpha1.OcmAgentSpec{
-				OcmBaseUrl:     "http://api.example.com",
-				Services:       []string{},
+			Spec: ocmagentv1alpha1.OcmAgentSpec{
+				AgentConfig: ocmagentv1alpha1.AgentConfig{
+					OcmBaseUrl: "http://api.example.com",
+					Services:   []string{},
+				},
 				OcmAgentImage:  "quay.io/ocm-agent:example",
 				TokenSecret:    "example-secret",
 				Replicas:       1,
