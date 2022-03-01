@@ -39,7 +39,7 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 				Name: "test-ocm-agent",
 			},
 			Spec: ocmagentv1alpha1.OcmAgentSpec{
-				Config: ocmagentv1alpha1.AgentConfig{
+				AgentConfig: ocmagentv1alpha1.AgentConfig{
 					OcmBaseUrl: "http://api.example.com",
 					Services:   []string{},
 				},

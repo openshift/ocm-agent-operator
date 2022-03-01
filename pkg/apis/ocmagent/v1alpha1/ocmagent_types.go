@@ -19,7 +19,7 @@ type OcmAgentSpec struct {
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
 
 	// AgentConfig refers to OCM agent config fields separated
-	Config AgentConfig `json:"agentConfig"`
+	AgentConfig AgentConfig `json:"agentConfig"`
 
 	// OcmAgentImage defines the image which will be used by the OCM Agent
 	OcmAgentImage string `json:"ocmAgentImage"`
