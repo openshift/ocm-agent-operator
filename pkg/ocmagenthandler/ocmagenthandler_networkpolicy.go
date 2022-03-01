@@ -44,7 +44,7 @@ func buildNetworkPolicy() netv1.NetworkPolicy {
 	return np
 }
 
-// ensureConfigMap ensures that an OCMAgent ConfigMap exists on the cluster
+// ensureNetworkPolicy ensures that an OCMAgent NetworkPolicy exists on the cluster
 // and that its configuration matches what is expected.
 func (o *ocmAgentHandler) ensureNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	namespacedName := oah.BuildNamespacedName(oah.OCMAgentNetworkPolicyName)
