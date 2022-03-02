@@ -2,6 +2,7 @@ package ocmagenthandler
 
 import (
 	"context"
+	configv1 "github.com/openshift/api/config/v1"
 	"reflect"
 
 	"github.com/golang/mock/gomock"
@@ -9,6 +10,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrs "k8s.io/apimachinery/pkg/api/errors"
+  metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +30,8 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 
 		testOcmAgent        ocmagentv1alpha1.OcmAgent
 		testOcmAgentHandler ocmAgentHandler
+		testClusterId       string
+		testClusterVersion  configv1.ClusterVersion
 	)
 
 	BeforeEach(func() {
@@ -40,11 +44,20 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 			Log:    testconst.Logger,
 			Ctx:    testconst.Context,
 		}
+		testClusterId = "9345c78b-b6b6-4f42-b242-79bfcc403b0a"
+		testClusterVersion = configv1.ClusterVersion{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "version",
+			},
+			Spec: configv1.ClusterVersionSpec{
+				ClusterID: configv1.ClusterID(testClusterId),
+			},
+		}
 	})
 
 	Context("When building an OCM Agent ConfigMap", func() {
 		It("Sets a correct name", func() {
-			cm := buildOCMAgentConfigMap(testOcmAgent)
+			cm := buildOCMAgentConfigMap(testOcmAgent, testClusterId)
 			Expect(cm.Name).To(Equal(testOcmAgent.Spec.OcmAgentConfig))
 		})
 	})
@@ -54,7 +67,7 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 		var testNamespacedName types.NamespacedName
 		BeforeEach(func() {
 			testNamespacedName = ocmagenthandler.BuildNamespacedName(testOcmAgent.Spec.OcmAgentConfig)
-			testConfigMap = buildOCMAgentConfigMap(testOcmAgent)
+			testConfigMap = buildOCMAgentConfigMap(testOcmAgent, testClusterId)
 		})
 		When("the OCM Agent config already exists", func() {
 			When("the config differs from what is expected", func() {
@@ -62,8 +75,9 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 					testConfigMap.Data = map[string]string{"fake": "fake"}
 				})
 				It("updates the configmap", func() {
-					goldenConfig := buildOCMAgentConfigMap(testOcmAgent)
+					goldenConfig := buildOCMAgentConfigMap(testOcmAgent, testClusterId)
 					gomock.InOrder(
+						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, testClusterVersion),
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, testConfigMap),
 						mockClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
 							func(ctx context.Context, d *corev1.ConfigMap, opts ...client.UpdateOptions) error {
@@ -78,6 +92,7 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 			When("the configmap matches what is expected", func() {
 				It("does not update the configmap", func() {
 					gomock.InOrder(
+						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, testClusterVersion),
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, testConfigMap),
 					)
 					err := testOcmAgentHandler.ensureConfigMap(testOcmAgent)
@@ -89,6 +104,7 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 			It("creates the configmap", func() {
 				notFound := k8serrs.NewNotFound(schema.GroupResource{}, testConfigMap.Name)
 				gomock.InOrder(
+					mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, testClusterVersion),
 					mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Return(notFound),
 					mockClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
 						func(ctx context.Context, d *corev1.ConfigMap, opts ...client.CreateOptions) error {

@@ -15,10 +15,11 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/openshift/ocm-agent-operator/pkg/apis"
+	controllerconst "github.com/openshift/ocm-agent-operator/pkg/consts/controller"
 	"github.com/openshift/ocm-agent-operator/pkg/controller"
 	"github.com/openshift/ocm-agent-operator/version"
-	controllerconst "github.com/openshift/ocm-agent-operator/pkg/consts/controller"
 
+	configv1 "github.com/openshift/api/config/v1"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -124,6 +125,12 @@ func main() {
 
 	// Setup Scheme for all resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	// For ClusterVersion resource
+	if err = configv1.Install(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
