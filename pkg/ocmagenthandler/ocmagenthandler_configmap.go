@@ -12,25 +12,26 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	configv1 "github.com/openshift/api/config/v1"
+
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
 	oah "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 )
 
-func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) *corev1.ConfigMap {
-
-	// Build OCM Agent configmap
-	camoCMNamespacedName := oah.BuildNamespacedName(ocmAgent.Spec.OcmAgentConfig)
-	oaCM := &corev1.ConfigMap{
+func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, clusterId string) *corev1.ConfigMap {
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.OcmAgentConfig)
+	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      camoCMNamespacedName.Name,
-			Namespace: camoCMNamespacedName.Namespace,
+			Name:      namespacedName.Name,
+			Namespace: namespacedName.Namespace,
 		},
 		Data: map[string]string{
 			oah.OCMAgentConfigServicesKey: strings.Join(ocmAgent.Spec.AgentConfig.Services, ","),
 			oah.OCMAgentConfigURLKey:      ocmAgent.Spec.AgentConfig.OcmBaseUrl,
+			oah.OCMAgentConfigClusterID:   clusterId,
 		},
 	}
-	return oaCM
+	return cm
 }
 
 func buildCAMOConfigMap() (*corev1.ConfigMap, error) {
@@ -54,12 +55,22 @@ func buildCAMOConfigMap() (*corev1.ConfigMap, error) {
 // exists on the cluster and that their configuration matches what is expected.
 func (o *ocmAgentHandler) ensureAllConfigMaps(ocmAgent ocmagentv1alpha1.OcmAgent) error {
 
-	oaCM := buildOCMAgentConfigMap(ocmAgent)
-	err := o.ensureConfigMap(ocmAgent, oaCM, true)
+	// Ensure the OCM Agent ConfigMap
+	// Determine the cluster ID, used as a configmap value
+	cv, err := o.fetchClusterVersion()
+	if err != nil {
+		o.Log.Error(err, "unable to fetch cluster ID for creating configmap")
+		return err
+	}
+	clusterID := string(cv.Spec.ClusterID)
+
+	oaCM := buildOCMAgentConfigMap(ocmAgent, clusterID)
+	err = o.ensureConfigMap(ocmAgent, oaCM, true)
 	if err != nil {
 		return err
 	}
 
+	// Ensure the CAMO ConfigMap
 	camoCM, err := buildCAMOConfigMap()
 	if err != nil {
 		return err
@@ -81,6 +92,7 @@ func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, cm
 		Namespace: cm.Namespace,
 		Name:      cm.Name,
 	}
+
 	// Does the resource already exist?
 	o.Log.Info("ensuring configmap exists", "resource", namespacedName.String())
 	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
@@ -120,31 +132,27 @@ func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, cm
 }
 
 func (o *ocmAgentHandler) ensureAllConfigMapsDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	oaCM := buildOCMAgentConfigMap(ocmAgent)
-	err := o.ensureConfigMapDeleted(oaCM)
-	if err != nil {
-		return err
+
+	cmsToDelete := []types.NamespacedName{
+		oah.BuildNamespacedName(ocmAgent.Spec.OcmAgentConfig),
+		oah.CAMOConfigMapNamespacedName,
 	}
-	camoCM, err := buildCAMOConfigMap()
-	if err != nil {
-		return err
+
+	for _, cm := range cmsToDelete {
+		err := o.ensureConfigMapDeleted(cm)
+		if err != nil {
+			return err
+		}
 	}
-	err = o.ensureConfigMapDeleted(camoCM)
-	if err != nil {
-		return err
-	}
+
 	return nil
 }
 
-func (o *ocmAgentHandler) ensureConfigMapDeleted(c *corev1.ConfigMap) error {
-	namespacedName := types.NamespacedName{
-		Namespace: c.Namespace,
-		Name:      c.Name,
-	}
+func (o *ocmAgentHandler) ensureConfigMapDeleted(n types.NamespacedName) error {
 	foundResource := &corev1.ConfigMap{}
-	o.Log.Info("ensuring configmap removed", "resource", namespacedName.String())
+	o.Log.Info("ensuring configmap removed", "resource", n.String())
 	// Does the resource already exist?
-	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
+	if err := o.Client.Get(o.Ctx, n, foundResource); err != nil {
 		if !k8serrors.IsNotFound(err) {
 			// Return unexpected error
 			return err
@@ -159,4 +167,13 @@ func (o *ocmAgentHandler) ensureConfigMapDeleted(c *corev1.ConfigMap) error {
 		return err
 	}
 	return nil
+}
+
+func (o *ocmAgentHandler) fetchClusterVersion() (*configv1.ClusterVersion, error) {
+	cv := &configv1.ClusterVersion{}
+	err := o.Client.Get(o.Ctx, types.NamespacedName{Name: "version"}, cv)
+	if err != nil {
+		return nil, err
+	}
+	return cv, nil
 }
