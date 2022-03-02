@@ -2,7 +2,6 @@ package ocmagenthandler
 
 import (
 	"context"
-	configv1 "github.com/openshift/api/config/v1"
 	"reflect"
 
 	"github.com/golang/mock/gomock"
@@ -31,7 +30,6 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 		testOcmAgent        ocmagentv1alpha1.OcmAgent
 		testOcmAgentHandler ocmAgentHandler
 		testClusterId       string
-		testClusterVersion  configv1.ClusterVersion
 	)
 
 	BeforeEach(func() {
@@ -60,15 +58,6 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 			Ctx:    testconst.Context,
 		}
 		testClusterId = "9345c78b-b6b6-4f42-b242-79bfcc403b0a"
-		testClusterVersion = configv1.ClusterVersion{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "version",
-			},
-			Spec: configv1.ClusterVersionSpec{
-				ClusterID: configv1.ClusterID(testClusterId),
-			},
-		}
-		testClusterVersion = testClusterVersion
 	})
 
 	Context("When building an OCM Agent ConfigMap", func() {
