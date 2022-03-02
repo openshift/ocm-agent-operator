@@ -52,16 +52,20 @@ var _ = Describe("OCM Agent Service Handler", func() {
 	Context("When building an OCM Agent Service", func() {
 		It("Sets a correct name", func() {
 			cm := buildOCMAgentService(testOcmAgent)
+			metricsSvc := buildOCMAgentMetricsService(testOcmAgent)
 			Expect(cm.Name).To(Equal("ocm-agent"))
+			Expect(metricsSvc.Name).To(Equal("ocm-agent-metrics"))
 		})
 	})
 
 	Context("Managing the OCM Agent Service", func() {
-		var testService corev1.Service
-		var testNamespacedName types.NamespacedName
+		var testService, testMetricsService corev1.Service
+		var testNamespacedName, testMetricsNamespacedName types.NamespacedName
 		BeforeEach(func() {
 			testNamespacedName = oah.BuildNamespacedName(oah.OCMAgentServiceName)
 			testService = buildOCMAgentService(testOcmAgent)
+			testMetricsService = buildOCMAgentMetricsService(testOcmAgent)
+			testMetricsNamespacedName = oah.BuildNamespacedName(oah.OCMAgentMetricsServiceName)
 		})
 		When("the OCM Agent service already exists", func() {
 			When("the service differs from what is expected", func() {
@@ -77,6 +81,7 @@ var _ = Describe("OCM Agent Service Handler", func() {
 								Expect(reflect.DeepEqual(d.Spec, goldenService.Spec)).To(BeTrue())
 								return nil
 							}),
+						mockClient.EXPECT().Get(gomock.Any(), testMetricsNamespacedName, gomock.Any()).Times(1).SetArg(2, testMetricsService),
 					)
 					err := testOcmAgentHandler.ensureService(testOcmAgent)
 					Expect(err).To(BeNil())
@@ -86,6 +91,7 @@ var _ = Describe("OCM Agent Service Handler", func() {
 				It("does not update the Service", func() {
 					gomock.InOrder(
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Times(1).SetArg(2, testService),
+						mockClient.EXPECT().Get(gomock.Any(), testMetricsNamespacedName, gomock.Any()).Times(1).SetArg(2, testMetricsService),
 					)
 					err := testOcmAgentHandler.ensureService(testOcmAgent)
 					Expect(err).To(BeNil())
@@ -105,6 +111,7 @@ var _ = Describe("OCM Agent Service Handler", func() {
 							Expect(*d.ObjectMeta.OwnerReferences[0].Controller).To(BeTrue())
 							return nil
 						}),
+					mockClient.EXPECT().Get(gomock.Any(), testMetricsNamespacedName, gomock.Any()).Times(1).SetArg(2, testMetricsService),
 				)
 				err := testOcmAgentHandler.ensureService(testOcmAgent)
 				Expect(err).To(BeNil())
@@ -126,6 +133,8 @@ var _ = Describe("OCM Agent Service Handler", func() {
 					gomock.InOrder(
 						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).SetArg(2, testService),
 						mockClient.EXPECT().Delete(gomock.Any(), &testService),
+						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).SetArg(2, testMetricsService),
+						mockClient.EXPECT().Delete(gomock.Any(), &testMetricsService),
 					)
 					err := testOcmAgentHandler.ensureServiceDeleted(testOcmAgent)
 					Expect(err).To(BeNil())
