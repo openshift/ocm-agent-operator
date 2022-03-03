@@ -19,6 +19,7 @@ import (
 	"github.com/openshift/ocm-agent-operator/pkg/controller"
 	"github.com/openshift/ocm-agent-operator/version"
 
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
@@ -131,6 +132,12 @@ func main() {
 
 	// For ClusterVersion resource
 	if err = configv1.Install(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	// Add ServiceMonitor scheme
+	if err = monitoringv1.AddToScheme(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}

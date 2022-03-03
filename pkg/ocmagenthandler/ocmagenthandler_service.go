@@ -48,6 +48,7 @@ func buildOCMAgentMetricsService(ocmAgent ocmagentv1alpha1.OcmAgent) corev1.Serv
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      namespacedName.Name,
 			Namespace: namespacedName.Namespace,
+			Labels:    labels,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: labels,
