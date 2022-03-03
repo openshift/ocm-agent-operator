@@ -10,6 +10,8 @@ const (
 	OCMAgentName = "ocm-agent"
 	// OCMAgentNamespace is the fall-back namespace to use for OCM Agent Deployments
 	OCMAgentNamespace = "openshift-ocm-agent-operator"
+	// OCMAgentNetworkPolicyName is the name of the network policy to restrict OCM Agent access
+	OCMAgentNetworkPolicyName = "ocm-agent-allow-only-alertmanager"
 	// OCMAgentPortName is the name of the OCM Agent service port used in the OCM Agent Deployment
 	OCMAgentPortName = "ocm-agent"
 	// OCMAgentPort is the container port number used by the agent for exposing its services

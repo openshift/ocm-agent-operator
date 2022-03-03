@@ -13,6 +13,7 @@ An `OcmAgent` deployment consists of:
 - A `ConfigMap` (name defined in the `OcmAgent` CR) which contains the agent's configuration.
 - A `Secret` (name defined in the `OcmAgent` CR) which contains the agent's OCM access token.
 - A `Service` (named `ocm-agent`) which serves the OCM Agent API
-
+- A `NetworkPolicy` to only grant ingress from specific cluster clients.
+ 
 The controller watches for changes to the above resources in its deployed namespace, in addition to changes to the cluster pull secret (`openshift-config/pull-secret`) which contains the OCM Agent's auth token.
 
