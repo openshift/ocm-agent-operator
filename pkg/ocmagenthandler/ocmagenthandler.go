@@ -2,6 +2,7 @@ package ocmagenthandler
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -42,6 +43,8 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesExist(ocmAgent ocmagentv1alpha1
 		o.ensureAllConfigMaps,
 		o.ensureAccessTokenSecret,
 		o.ensureService,
+		o.ensureNetworkPolicy,
+		o.ensureServiceMonitor,
 	}
 
 	for _, fn := range ensureFuncs {
@@ -61,6 +64,8 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesAbsent(ocmAgent ocmagentv1alpha
 		o.ensureServiceDeleted,
 		o.ensureAllConfigMapsDeleted,
 		o.ensureAccessTokenSecretDeleted,
+		o.ensureNetworkPolicyDeleted,
+		o.ensureServiceMonitorDeleted,
 	}
 
 	for _, fn := range ensureFuncs {

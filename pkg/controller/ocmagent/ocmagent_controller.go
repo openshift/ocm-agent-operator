@@ -2,10 +2,14 @@ package ocmagent
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -74,48 +78,12 @@ func add(mgr manager.Manager, r *ReconcileOCMAgent) error {
 		return err
 	}
 
-	// Watch for changes to pull secret
+	// Watch for changes to ocm agent resources
 	oaPredicate := predicate.Funcs{
 		UpdateFunc:  func(e event.UpdateEvent) bool { return handleOCMAgentResources(e.ObjectNew) },
 		DeleteFunc:  func(e event.DeleteEvent) bool { return handleOCMAgentResources(e.Object) },
 		CreateFunc:  func(e event.CreateEvent) bool { return handleOCMAgentResources(e.Object) },
 		GenericFunc: func(e event.GenericEvent) bool { return false },
-	}
-
-	// Watch for changes to Deployments
-	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &ocmagentv1alpha1.OcmAgent{},
-	}, oaPredicate)
-	if err != nil {
-		return err
-	}
-
-	// Watch for changes to Services
-	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &ocmagentv1alpha1.OcmAgent{},
-	}, oaPredicate)
-	if err != nil {
-		return err
-	}
-
-	// Watch for changes to OAO ConfigMaps
-	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &ocmagentv1alpha1.OcmAgent{},
-	}, oaPredicate)
-	if err != nil {
-		return err
-	}
-
-	// Watch for changes to OAO Secrets
-	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &ocmagentv1alpha1.OcmAgent{},
-	}, oaPredicate)
-	if err != nil {
-		return err
 	}
 
 	// Watch for changes to pull secret
@@ -140,6 +108,27 @@ func add(mgr manager.Manager, r *ReconcileOCMAgent) error {
 	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, handler.EnqueueRequestsFromMapFunc(mapResourceToOCMAgent(r.Client, r.Ctx, r.Log)), camoPredicate)
 	if err != nil {
 		return err
+	}
+
+	// Define a list of managedResources
+	var managedResources = []source.Source{
+		&source.Kind{Type: &appsv1.Deployment{}},
+		&source.Kind{Type: &corev1.Service{}},
+		&source.Kind{Type: &corev1.ConfigMap{}},
+		&source.Kind{Type: &corev1.Secret{}},
+		&source.Kind{Type: &netv1.NetworkPolicy{}},
+		&source.Kind{Type: &monitoringv1.ServiceMonitor{}},
+	}
+
+	// Watch for the managedResources
+	for _, r := range managedResources {
+		err = c.Watch(r, &handler.EnqueueRequestForOwner{
+			IsController: true,
+			OwnerType:    &ocmagentv1alpha1.OcmAgent{},
+		}, oaPredicate)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

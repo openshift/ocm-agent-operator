@@ -12,40 +12,27 @@ rules:
   - configmaps
   - secrets
   verbs:
-  - create
-  - delete
+  - '*'
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
   - get
   - list
-  - patch
-  - update
   - watch
-- apiGroups:
-    - ""
-  resources:
-    - pods
-  verbs:
-    - get
-    - list
-    - watch
 - apiGroups:
   - apps
   resources:
   - deployments
   verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
+  - '*'
 - apiGroups:
   - monitoring.coreos.com
   resources:
   - servicemonitors
   verbs:
-  - get
-  - create
+  - '*'
 - apiGroups:
   - apps
   resources:
@@ -67,3 +54,10 @@ rules:
   - list
   - watch
   - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  - networkpolicies/finalizers
+  verbs:
+  - '*'

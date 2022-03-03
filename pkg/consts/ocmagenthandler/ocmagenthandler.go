@@ -13,6 +13,8 @@ const (
 	OCMAgentName = "ocm-agent"
 	// OCMAgentNamespace is the fall-back namespace to use for OCM Agent Deployments
 	OCMAgentNamespace = "openshift-ocm-agent-operator"
+	// OCMAgentNetworkPolicyName is the name of the network policy to restrict OCM Agent access
+	OCMAgentNetworkPolicyName = "ocm-agent-allow-only-alertmanager"
 	// OCMAgentPortName is the name of the OCM Agent service port used in the OCM Agent Deployment
 	OCMAgentPortName = "ocm-agent"
 	// OCMAgentPort is the container port number used by the agent for exposing its services
@@ -28,8 +30,6 @@ const (
 	// OCMAgentCommand is the name of the OCM Agent binary to run in the deployment
 	OCMAgentCommand = "ocm-agent"
 
-	// OCMAgentServiceScheme is the protocol that the OCM Agent will use
-	OCMAgentServiceScheme = "http"
 	// OCMAgentServiceName is the name of the Service that serves the OCM Agent
 	OCMAgentServiceName = "ocm-agent"
 	// OCMAgentServicePort is the port number to use for the OCM Agent Service
@@ -39,6 +39,8 @@ const (
 	OCMAgentServiceURLKey = "serviceURL"
 	// OCMAgentWebhookReceiverPath is the path of the webhook receiver in the OCM Agent
 	OCMAgentWebhookReceiverPath = "/alertmanager-receiver"
+	// OCMAgentServiceScheme is the protocol that the OCM Agent will use
+	OCMAgentServiceScheme = "http"
 
 	// OCMAgentMetricsServiceName is the name of the service that service the OCM Agent metrics
 	OCMAgentMetricsServiceName = "ocm-agent-metrics"
@@ -50,7 +52,8 @@ const (
 	OCMAgentSecretMountPath = "/secrets"
 	// OCMAgentAccessTokenSecretKey is the name of the key used in the access token secret
 	OCMAgentAccessTokenSecretKey = "access_token"
-
+	// OCMAgentServiceMonitorName is the name of the ServiceMonitor for OCM Agent
+	OCMAgentServiceMonitorName = "ocm-agent-metrics"
 	// OCMAgentConfigMountPath is the base mount path for configs in the OCM Agent container
 	OCMAgentConfigMountPath = "/configs"
 	// OCMAgentConfigServicesKey is the name of the key used for the services configmap entry
@@ -59,7 +62,6 @@ const (
 	OCMAgentConfigURLKey = "ocmBaseURL"
 	// OCMAgentConfigClusterID is the name of the key used for the Cluster ID configmap entry
 	OCMAgentConfigClusterID = "clusterID"
-
 	// PullSecretKey defines the key in the pull secret containing the auth tokens
 	PullSecretKey = ".dockerconfigjson"
 	// PullSecretAuthTokenKey defines the name of the key in the pull secret containing the auth token
