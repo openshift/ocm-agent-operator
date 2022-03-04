@@ -135,4 +135,36 @@ var _ = Describe("OCM Agent Service Handler", func() {
 			})
 		})
 	})
+
+	Context("When comparing two services", func() {
+		var currentService, expectedService corev1.Service
+		BeforeEach(func() {
+			currentService = buildOCMAgentService(testOcmAgent)
+			expectedService = buildOCMAgentService(testOcmAgent)
+		})
+		Context("When the labels are different", func() {
+			BeforeEach(func() {
+				currentService.Labels = map[string]string{"different": "value"}
+			})
+			It("flags them as different", func() {
+				r := serviceConfigChanged(&currentService, &expectedService, testconst.Logger)
+				Expect(r).To(BeTrue())
+			})
+		})
+		Context("When the ports are different", func() {
+			BeforeEach(func() {
+				currentService.Spec.Ports[0].Port = int32(9999)
+			})
+			It("flags them as different", func() {
+				r := serviceConfigChanged(&currentService, &expectedService, testconst.Logger)
+				Expect(r).To(BeTrue())
+			})
+		})
+		Context("When there are no differences", func() {
+			It("flags that there are none", func() {
+				r := serviceConfigChanged(&currentService, &expectedService, testconst.Logger)
+				Expect(r).To(BeFalse())
+			})
+		})
+	})
 })

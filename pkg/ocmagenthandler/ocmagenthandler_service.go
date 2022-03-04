@@ -140,6 +140,9 @@ func (o *ocmAgentHandler) ensureServiceDeleted(ocmAgent ocmagentv1alpha1.OcmAgen
 func serviceConfigChanged(current, expected *corev1.Service, log logr.Logger) bool {
 	changed := false
 
+	if !reflect.DeepEqual(current.Labels, expected.Labels) {
+		changed = true
+	}
 	if !reflect.DeepEqual(current.Spec.Selector, expected.Spec.Selector) {
 		log.V(2).Info(fmt.Sprintf("current service %s/%s did not contain expected selectors", current.Namespace, current.Name))
 		changed = true

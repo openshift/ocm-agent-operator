@@ -157,6 +157,11 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			BeforeEach(func() {
 				goldenDeployment = buildOCMAgentDeployment(testOcmAgent)
 			})
+			It("should detect a label change", func() {
+				testDeployment.Labels = map[string]string{"dummy":"value"}
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				Expect(changed).To(BeTrue())
+			})
 			It("should detect an image change", func() {
 				testDeployment.Spec.Template.Spec.Containers[0].Image = "something else"
 				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
