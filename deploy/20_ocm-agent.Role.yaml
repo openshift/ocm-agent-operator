@@ -19,3 +19,13 @@ rules:
       - patch
       - update
       - watch
+  - apiGroups:
+      - ocmagent.managed.openshift.io
+    resources:
+      - managednotifications
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+      - update
