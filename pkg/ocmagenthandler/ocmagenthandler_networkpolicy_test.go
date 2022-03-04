@@ -51,9 +51,6 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 			Expect(np.Name).To(Equal(oah.OCMAgentNetworkPolicyName))
 			Expect(np.Namespace).To(Equal(oah.OCMAgentNamespace))
 		})
-		It("Selects the correct pod", func() {
-			Expect(np.Spec.PodSelector.MatchLabels).To(HaveKeyWithValue("app", oah.OCMAgentName))
-		})
 	})
 
 	Context("Managing the OCM Agent NetworkPolicy", func() {

@@ -237,6 +237,14 @@ func (o *ocmAgentHandler) ensureDeploymentDeleted(ocmAgent ocmagentv1alpha1.OcmA
 func deploymentConfigChanged(current, expected *appsv1.Deployment, log logr.Logger) bool {
 	changed := false
 
+	// Compare labels
+	if !reflect.DeepEqual(current.Labels, expected.Labels) {
+		return true
+	}
+	if !reflect.DeepEqual(current.Spec.Template.Labels, expected.Spec.Template.Labels) {
+		return true
+	}
+
 	// There may be multiple containers eventually, so let's do a loop
 	for _, name := range []string{oah.OCMAgentName} {
 		var curImage, expImage string

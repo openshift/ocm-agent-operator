@@ -93,7 +93,19 @@ func add(mgr manager.Manager, r *ReconcileOCMAgent) error {
 		CreateFunc:  func(e event.CreateEvent) bool { return handlePullSecret(e.Object) },
 		GenericFunc: func(e event.GenericEvent) bool { return false },
 	}
-	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(pullSecretToOCMAgent(r.Client, r.Ctx, r.Log)), psPredicate)
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(mapResourceToOCMAgent(r.Client, r.Ctx, r.Log)), psPredicate)
+	if err != nil {
+		return err
+	}
+
+	// Watch for changes to CAMO configmap
+	camoPredicate := predicate.Funcs{
+		UpdateFunc:  func(e event.UpdateEvent) bool { return handleCamoConfigMap(e.ObjectNew) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return handleCamoConfigMap(e.Object) },
+		CreateFunc:  func(e event.CreateEvent) bool { return handleCamoConfigMap(e.Object) },
+		GenericFunc: func(e event.GenericEvent) bool { return false },
+	}
+	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, handler.EnqueueRequestsFromMapFunc(mapResourceToOCMAgent(r.Client, r.Ctx, r.Log)), camoPredicate)
 	if err != nil {
 		return err
 	}
@@ -201,4 +213,11 @@ func handlePullSecret(meta metav1.Object) bool {
 func handleOCMAgentResources(meta metav1.Object) bool {
 	agentNamespacedName := oahconst.BuildNamespacedName(oahconst.OCMAgentName)
 	return meta.GetNamespace() == agentNamespacedName.Namespace
+}
+
+// handleCamoConfigMap returns true if meta indicates it is the CAMO config map
+func handleCamoConfigMap(meta metav1.Object) bool {
+	camoConfigMapNamespacedName := oahconst.CAMOConfigMapNamespacedName
+	return meta.GetNamespace() == camoConfigMapNamespacedName.Namespace &&
+		meta.GetName() == camoConfigMapNamespacedName.Name
 }

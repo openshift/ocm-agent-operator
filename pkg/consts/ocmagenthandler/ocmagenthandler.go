@@ -1,6 +1,9 @@
 package ocmagenthandler
 
 import (
+	"fmt"
+	"net/url"
+
 	ns "github.com/openshift/ocm-agent-operator/pkg/util/namespace"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -26,10 +29,19 @@ const (
 	OCMAgentServiceAccount = "ocm-agent"
 	// OCMAgentCommand is the name of the OCM Agent binary to run in the deployment
 	OCMAgentCommand = "ocm-agent"
+
 	// OCMAgentServiceName is the name of the Service that serves the OCM Agent
 	OCMAgentServiceName = "ocm-agent"
 	// OCMAgentServicePort is the port number to use for the OCM Agent Service
 	OCMAgentServicePort = 8081
+	// OCMAgentServiceURLKey defines the key in the configure-alertmanager-operator ConfigMap
+	// that contains the OCM Agent service URL
+	OCMAgentServiceURLKey = "serviceURL"
+	// OCMAgentWebhookReceiverPath is the path of the webhook receiver in the OCM Agent
+	OCMAgentWebhookReceiverPath = "/alertmanager-receiver"
+	// OCMAgentServiceScheme is the protocol that the OCM Agent will use
+	OCMAgentServiceScheme = "http"
+
 	// OCMAgentMetricsServiceName is the name of the service that service the OCM Agent metrics
 	OCMAgentMetricsServiceName = "ocm-agent-metrics"
 	// OCMAgentMetricsServicePort is the port number to use for OCM Agent metrics service
@@ -54,6 +66,7 @@ const (
 	PullSecretKey = ".dockerconfigjson"
 	// PullSecretAuthTokenKey defines the name of the key in the pull secret containing the auth token
 	PullSecretAuthTokenKey = "cloud.openshift.com"
+
 )
 
 var (
@@ -61,6 +74,12 @@ var (
 	PullSecretNamespacedName = types.NamespacedName{
 		Namespace: "openshift-config",
 		Name:      "pull-secret",
+	}
+
+	// CAMOConfigMapNamespacedName defines the namespaced name of the CAMO configmap
+	CAMOConfigMapNamespacedName = types.NamespacedName{
+		Namespace: "openshift-monitoring",
+		Name:      "ocm-agent",
 	}
 )
 
@@ -72,4 +91,17 @@ func BuildNamespacedName(name string) types.NamespacedName {
 	}
 	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
 	return namespacedName
+}
+
+func BuildServiceURL() (string, error) {
+	u := fmt.Sprintf("%s://%s.%s.svc.cluster.local:%d%s", OCMAgentServiceScheme,
+		OCMAgentServiceName,
+		OCMAgentNamespace,
+		OCMAgentServicePort,
+		OCMAgentWebhookReceiverPath)
+
+	if _, err := url.ParseRequestURI(u); err != nil {
+		return "", err
+	}
+	return u, nil
 }

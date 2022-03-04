@@ -13,7 +13,7 @@ import (
 	oahconst "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 )
 
-func pullSecretToOCMAgent(c client.Client, ctx context.Context, log logr.Logger) handler.MapFunc {
+func mapResourceToOCMAgent(c client.Client, ctx context.Context, log logr.Logger) handler.MapFunc {
 	return func (o client.Object) []reconcile.Request {
 		var requests []reconcile.Request
 		ocmagentlist := &ocmagentv1alpha1.OcmAgentList{}

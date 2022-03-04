@@ -115,4 +115,49 @@ objects:
             - kind: ServiceAccount
               name: ocm-agent-operator
               namespace: openshift-ocm-agent-operator
-
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: Role
+          metadata:
+            name: oao-monitoring-manager
+            namespace: openshift-monitoring
+          rules:
+            - apiGroups:
+                - ""
+              resources:
+                - configmaps
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - monitoring.coreos.com
+              resources:
+                - servicemonitors
+              verbs:
+                - get
+                - watch
+                - list
+            - apiGroups:
+                - networking.k8s.io
+              resources:
+                - networkpolicies
+              verbs:
+                - get
+                - watch
+                - list
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: RoleBinding
+          metadata:
+            name: oao-monitoring-manager
+            namespace: openshift-monitoring
+          roleRef:
+            kind: Role
+            name: oao-monitoring-manager
+          subjects:
+            - kind: ServiceAccount
+              name: ocm-agent-operator
+              namespace: openshift-ocm-agent-operator

@@ -2,6 +2,7 @@ package ocmagenthandler
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -17,9 +18,9 @@ import (
 	oah "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 )
 
-func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, clusterId string) corev1.ConfigMap {
+func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, clusterId string) *corev1.ConfigMap {
 	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.OcmAgentConfig)
-	cm := corev1.ConfigMap{
+	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      namespacedName.Name,
 			Namespace: namespacedName.Namespace,
@@ -27,18 +28,34 @@ func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, clusterId string
 		Data: map[string]string{
 			oah.OCMAgentConfigServicesKey: strings.Join(ocmAgent.Spec.AgentConfig.Services, ","),
 			oah.OCMAgentConfigURLKey:      ocmAgent.Spec.AgentConfig.OcmBaseUrl,
-			oah.OCMAgentConfigClusterID: clusterId,
+			oah.OCMAgentConfigClusterID:   clusterId,
 		},
 	}
 	return cm
 }
 
-// ensureConfigMap ensures that an OCMAgent ConfigMap exists on the cluster
-// and that its configuration matches what is expected.
-func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.OcmAgentConfig)
-	foundResource := &corev1.ConfigMap{}
+func buildCAMOConfigMap() (*corev1.ConfigMap, error) {
+	oaServiceURL, err := oah.BuildServiceURL()
+	if err != nil {
+		return nil, err
+	}
+	camoCM := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      oah.CAMOConfigMapNamespacedName.Name,
+			Namespace: oah.CAMOConfigMapNamespacedName.Namespace,
+		},
+		Data: map[string]string{
+			oah.OCMAgentServiceURLKey: oaServiceURL,
+		},
+	}
+	return camoCM, nil
+}
 
+// ensureAllConfigMaps ensures that all OCM Agent Operator-managed configmaps
+// exists on the cluster and that their configuration matches what is expected.
+func (o *ocmAgentHandler) ensureAllConfigMaps(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+
+	// Ensure the OCM Agent ConfigMap
 	// Determine the cluster ID, used as a configmap value
 	cv, err := o.fetchClusterVersion()
 	if err != nil {
@@ -47,8 +64,33 @@ func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) er
 	}
 	clusterID := string(cv.Spec.ClusterID)
 
-	populationFunc := func() corev1.ConfigMap {
-		return buildOCMAgentConfigMap(ocmAgent, clusterID)
+	oaCM := buildOCMAgentConfigMap(ocmAgent, clusterID)
+	err = o.ensureConfigMap(ocmAgent, oaCM, true)
+	if err != nil {
+		return err
+	}
+
+	// Ensure the CAMO ConfigMap
+	camoCM, err := buildCAMOConfigMap()
+	if err != nil {
+		return err
+	}
+	err = o.ensureConfigMap(ocmAgent, camoCM, false)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ensureAllConfigMaps ensures that all OCM Agent Operator-managed configmaps
+// exists on the cluster and that their configuration matches what is expected.
+func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, cm *corev1.ConfigMap, manager bool) error {
+
+	foundResource := &corev1.ConfigMap{}
+	namespacedName := types.NamespacedName{
+		Namespace: cm.Namespace,
+		Name:      cm.Name,
 	}
 
 	// Does the resource already exist?
@@ -56,15 +98,17 @@ func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) er
 	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
 		if k8serrors.IsNotFound(err) {
 			// It does not exist, so must be created.
-			o.Log.Info("An OCMAgent configmap does not exist; will be created.")
-			// Populate the resource with the template
-			resource := populationFunc()
-			// Set the controller reference
-			if err := controllerutil.SetControllerReference(&ocmAgent, &resource, o.Scheme); err != nil {
-				return err
+			o.Log.Info(fmt.Sprintf("configmap does not exist, %s/%s; will be created.",
+				cm.Namespace,
+				cm.Name))
+			// Set the controller reference if needed
+			if manager {
+				if err := controllerutil.SetControllerReference(&ocmAgent, cm, o.Scheme); err != nil {
+					return err
+				}
 			}
 			// and create it
-			err = o.Client.Create(o.Ctx, &resource)
+			err = o.Client.Create(o.Ctx, cm)
 			if err != nil {
 				return err
 			}
@@ -74,11 +118,11 @@ func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) er
 		}
 	} else {
 		// It does exist, check if it is what we expected
-		resource := populationFunc()
-		if !reflect.DeepEqual(foundResource.Data, resource.Data) {
+		if !reflect.DeepEqual(foundResource.Data, cm.Data) {
 			// Specs aren't equal, update and fix.
-			o.Log.Info("An OCMAgent configmap exists but contains unexpected configuration. Restoring.")
-			foundResource = resource.DeepCopy()
+			o.Log.Info(fmt.Sprintf("configmap exists but contains unexpected configuration, %s/%s. Restoring.",
+				cm.Namespace, cm.Name))
+			foundResource = cm.DeepCopy()
 			if err = o.Client.Update(context.TODO(), foundResource); err != nil {
 				return err
 			}
@@ -87,12 +131,28 @@ func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) er
 	return nil
 }
 
-func (o *ocmAgentHandler) ensureConfigMapDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.OcmAgentConfig)
+func (o *ocmAgentHandler) ensureAllConfigMapsDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+
+	cmsToDelete := []types.NamespacedName{
+		oah.BuildNamespacedName(ocmAgent.Spec.OcmAgentConfig),
+		oah.CAMOConfigMapNamespacedName,
+	}
+
+	for _, cm := range cmsToDelete {
+		err := o.ensureConfigMapDeleted(cm)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (o *ocmAgentHandler) ensureConfigMapDeleted(n types.NamespacedName) error {
 	foundResource := &corev1.ConfigMap{}
+	o.Log.Info("ensuring configmap removed", "resource", n.String())
 	// Does the resource already exist?
-	o.Log.Info("ensuring configmap removed", "resource", namespacedName.String())
-	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
+	if err := o.Client.Get(o.Ctx, n, foundResource); err != nil {
 		if !k8serrors.IsNotFound(err) {
 			// Return unexpected error
 			return err
@@ -101,6 +161,7 @@ func (o *ocmAgentHandler) ensureConfigMapDeleted(ocmAgent ocmagentv1alpha1.OcmAg
 			return nil
 		}
 	}
+	// It does, so remove it
 	err := o.Client.Delete(o.Ctx, foundResource)
 	if err != nil {
 		return err

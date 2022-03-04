@@ -40,7 +40,7 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesExist(ocmAgent ocmagentv1alpha1
 
 	ensureFuncs := []ensureResource{
 		o.ensureDeployment,
-		o.ensureConfigMap,
+		o.ensureAllConfigMaps,
 		o.ensureAccessTokenSecret,
 		o.ensureService,
 		o.ensureNetworkPolicy,
@@ -62,7 +62,7 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesAbsent(ocmAgent ocmagentv1alpha
 	ensureFuncs := []ensureResource{
 		o.ensureDeploymentDeleted,
 		o.ensureServiceDeleted,
-		o.ensureConfigMapDeleted,
+		o.ensureAllConfigMapsDeleted,
 		o.ensureAccessTokenSecretDeleted,
 		o.ensureNetworkPolicyDeleted,
 		o.ensureServiceMonitorDeleted,
