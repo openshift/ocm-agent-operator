@@ -155,13 +155,15 @@ func buildOCMAgentArgs(ocmAgent ocmagentv1alpha1.OcmAgent) []string {
 		oah.OCMAgentConfigServicesKey)
 	configURLPath := filepath.Join(oah.OCMAgentConfigMountPath, ocmAgent.Spec.OcmAgentConfig,
 		oah.OCMAgentConfigURLKey)
-
+	clusterIDPath := filepath.Join(oah.OCMAgentConfigMountPath, ocmAgent.Spec.OcmAgentConfig,
+		oah.OCMAgentConfigClusterID)
 	command := []string{
 		oah.OCMAgentCommand,
 		"serve",
 		fmt.Sprintf("--access-token=@%s", accessTokenPath),
 		fmt.Sprintf("--services=@%s", configServicesPath),
 		fmt.Sprintf("--ocm-url=@%s", configURLPath),
+		fmt.Sprintf("--cluster-id=@%s", clusterIDPath),
 	}
 	return command
 }
