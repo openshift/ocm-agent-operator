@@ -54,8 +54,10 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			// This is a little brittle based on the naming conventions used in the testOcmAgent
 			Expect(deployment.Spec.Template.Spec.Volumes[0].Name).To(Equal(testOcmAgent.Spec.OcmAgentConfig))
 			Expect(deployment.Spec.Template.Spec.Volumes[1].Name).To(Equal(testOcmAgent.Spec.TokenSecret))
+			Expect(deployment.Spec.Template.Spec.Volumes[2].Name).To(Equal(ocmagenthandler.TrustedCaBundleConfigMapName))
 			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(testOcmAgent.Spec.OcmAgentConfig))
 			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[1].Name).To(Equal(testOcmAgent.Spec.TokenSecret))
+			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[2].Name).To(Equal(ocmagenthandler.TrustedCaBundleConfigMapName))
 
 			// make sure LivenessProbe is part of deployment config and has defned path, port, url and scheme
 			Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet.Path).NotTo(BeEmpty())
@@ -158,7 +160,7 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 				goldenDeployment = buildOCMAgentDeployment(testOcmAgent)
 			})
 			It("should detect a label change", func() {
-				testDeployment.Labels = map[string]string{"dummy":"value"}
+				testDeployment.Labels = map[string]string{"dummy": "value"}
 				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
 				Expect(changed).To(BeTrue())
 			})

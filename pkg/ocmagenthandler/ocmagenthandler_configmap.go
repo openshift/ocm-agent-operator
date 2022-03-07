@@ -34,6 +34,21 @@ func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, clusterId string
 	return cm
 }
 
+func buildTrustedCaConfigMap() *corev1.ConfigMap {
+	namespacedName := oah.BuildNamespacedName(oah.TrustedCaBundleConfigMapName)
+	labels := map[string]string{
+		oah.InjectCaBundleIndicator: "true",
+	}
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      namespacedName.Name,
+			Namespace: namespacedName.Namespace,
+			Labels:    labels,
+		},
+	}
+	return cm
+}
+
 func buildCAMOConfigMap() (*corev1.ConfigMap, error) {
 	oaServiceURL, err := oah.BuildServiceURL()
 	if err != nil {
@@ -51,8 +66,8 @@ func buildCAMOConfigMap() (*corev1.ConfigMap, error) {
 	return camoCM, nil
 }
 
-// ensureAllConfigMaps ensures that all OCM Agent Operator-managed configmaps
-// exists on the cluster and that their configuration matches what is expected.
+// ensureAllConfigMaps calls the ensureConfigMap on all the OCM Agent
+// managed configmaps
 func (o *ocmAgentHandler) ensureAllConfigMaps(ocmAgent ocmagentv1alpha1.OcmAgent) error {
 
 	// Ensure the OCM Agent ConfigMap
@@ -80,11 +95,19 @@ func (o *ocmAgentHandler) ensureAllConfigMaps(ocmAgent ocmagentv1alpha1.OcmAgent
 		return err
 	}
 
+	// Ensure the trusted-ca-build ConfigMap
+	trustedCACM := buildTrustedCaConfigMap()
+	err = o.ensureConfigMap(ocmAgent, trustedCACM, true)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-// ensureAllConfigMaps ensures that all OCM Agent Operator-managed configmaps
-// exists on the cluster and that their configuration matches what is expected.
+// ensureConfigMaps ensures that the OCM Agent Operator-managed configmap
+// exists on the cluster and that the configuration matches what is expected.
+// And apply the ownerReference to the configmaps if needed
 func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, cm *corev1.ConfigMap, manager bool) error {
 
 	foundResource := &corev1.ConfigMap{}
@@ -117,14 +140,17 @@ func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, cm
 			return err
 		}
 	} else {
-		// It does exist, check if it is what we expected
-		if !reflect.DeepEqual(foundResource.Data, cm.Data) {
-			// Specs aren't equal, update and fix.
-			o.Log.Info(fmt.Sprintf("configmap exists but contains unexpected configuration, %s/%s. Restoring.",
-				cm.Namespace, cm.Name))
-			foundResource = cm.DeepCopy()
-			if err = o.Client.Update(context.TODO(), foundResource); err != nil {
-				return err
+		// skip update the configmap for trusted-ca-bundle to avoid the race with CNO
+		if cm.Name != oah.TrustedCaBundleConfigMapName {
+			// It does exist, check if it is what we expected
+			if !reflect.DeepEqual(foundResource.Data, cm.Data) {
+				// Specs aren't equal, update and fix.
+				o.Log.Info(fmt.Sprintf("configmap exists but contains unexpected configuration, %s/%s. Restoring.",
+					cm.Namespace, cm.Name))
+				foundResource = cm.DeepCopy()
+				if err = o.Client.Update(context.TODO(), foundResource); err != nil {
+					return err
+				}
 			}
 		}
 	}

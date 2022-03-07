@@ -28,43 +28,72 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 		MatchLabels: labels,
 	}
 
-	var volumes []corev1.Volume
-	var volumeMounts []corev1.VolumeMount
-	// Define a volume/volume mount for the access token secret
-	var secretVolumeSourceDefaultMode int32 = 0600
+	// Define a volumes for the config
 	tokenSecretVolumeName := ocmAgent.Spec.TokenSecret
-	volumes = append(volumes, corev1.Volume{
-		Name: tokenSecretVolumeName,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName:  ocmAgent.Spec.TokenSecret,
-				DefaultMode: &secretVolumeSourceDefaultMode,
-			},
-		},
-	})
-	volumeMounts = append(volumeMounts, corev1.VolumeMount{
-		Name:      tokenSecretVolumeName,
-		MountPath: filepath.Join(oah.OCMAgentSecretMountPath, tokenSecretVolumeName),
-	})
-
-	// Define a volume/volume mount for the config
 	configVolumeName := ocmAgent.Spec.OcmAgentConfig
+	trustedCaVolumeName := oah.TrustedCaBundleConfigMapName
+	var secretVolumeSourceDefaultMode int32 = 0600
 	var configVolumeSourceDefaultMode int32 = 0600
-	volumes = append(volumes, corev1.Volume{
-		Name: configVolumeName,
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: ocmAgent.Spec.OcmAgentConfig,
+	var trustedCaVolumeSourceDefaultMode int32 = 0644
+
+	volumes := []corev1.Volume{
+		{
+			Name: tokenSecretVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  ocmAgent.Spec.TokenSecret,
+					DefaultMode: &secretVolumeSourceDefaultMode,
 				},
-				DefaultMode: &configVolumeSourceDefaultMode,
 			},
 		},
-	})
-	volumeMounts = append(volumeMounts, corev1.VolumeMount{
-		Name:      configVolumeName,
-		MountPath: filepath.Join(oah.OCMAgentConfigMountPath, configVolumeName),
-	})
+		{
+			Name: configVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: ocmAgent.Spec.OcmAgentConfig,
+					},
+					DefaultMode: &configVolumeSourceDefaultMode,
+				},
+			},
+		},
+		{
+			Name: trustedCaVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: oah.TrustedCaBundleConfigMapName,
+					},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "ca-bundle.crt",
+							Path: "tls-ca-bundle.pem",
+						},
+					},
+					DefaultMode: &trustedCaVolumeSourceDefaultMode,
+				},
+			},
+		},
+	}
+
+	// define the volume mounts for the deployment
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      tokenSecretVolumeName,
+			MountPath: filepath.Join(oah.OCMAgentSecretMountPath, tokenSecretVolumeName),
+		},
+		{
+			Name:      configVolumeName,
+			MountPath: filepath.Join(oah.OCMAgentConfigMountPath, configVolumeName),
+		},
+		{
+			Name:      trustedCaVolumeName,
+			MountPath: "/etc/pki/ca-trust/extracted/pem",
+			ReadOnly:  true,
+		},
+	}
+
+	fmt.Println(volumeMounts)
 	// Sort volume slices by name to keep the sequence stable.
 	sort.Slice(volumes, func(i, j int) bool {
 		return volumes[i].Name < volumes[j].Name
@@ -72,6 +101,7 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 	sort.Slice(volumeMounts, func(i, j int) bool {
 		return volumeMounts[i].Name < volumeMounts[j].Name
 	})
+	fmt.Println(volumeMounts)
 
 	// Construct the command arguments of the agent
 	ocmAgentCommand := buildOCMAgentArgs(ocmAgent)

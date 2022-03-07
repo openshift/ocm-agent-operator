@@ -66,7 +66,10 @@ const (
 	PullSecretKey = ".dockerconfigjson"
 	// PullSecretAuthTokenKey defines the name of the key in the pull secret containing the auth token
 	PullSecretAuthTokenKey = "cloud.openshift.com"
-
+	// InjectCaBundleIndicator defines the name of the key for the label of trusted CA bundle configmap
+	InjectCaBundleIndicator = "config.openshift.io/inject-trusted-cabundle"
+	// TrustedCaBundleConfigMap defines the name of trusted CA bundle configmap
+	TrustedCaBundleConfigMapName = "trusted-ca-bundle"
 )
 
 var (
