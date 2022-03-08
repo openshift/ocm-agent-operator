@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 
+	oconfigv1 "github.com/openshift/api/config/v1"
 	testconst "github.com/openshift/ocm-agent-operator/pkg/consts/test/init"
 	clientmocks "github.com/openshift/ocm-agent-operator/pkg/util/test/generated/mocks/client"
 	appsv1 "k8s.io/api/apps/v1"
@@ -74,9 +75,17 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 	Context("Managing the OCM Agent deployment", func() {
 		var testDeployment appsv1.Deployment
 		var testNamespacedName types.NamespacedName
+		var testProxy, testNoProxy oconfigv1.Proxy
 		BeforeEach(func() {
 			testNamespacedName = ocmagenthandler.BuildNamespacedName(ocmagenthandler.OCMAgentName)
 			testDeployment = buildOCMAgentDeployment(testOcmAgent)
+			testProxy = oconfigv1.Proxy{
+				Status: oconfigv1.ProxyStatus{
+					HTTPProxy: "proxy.test:8080",
+					NoProxy:   "www.example.com",
+				},
+			}
+			testNoProxy = oconfigv1.Proxy{}
 		})
 
 		When("the OCM Agent deployment already exists", func() {
@@ -89,6 +98,7 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 				It("updates the deployment", func() {
 					goldenDeployment := buildOCMAgentDeployment(testOcmAgent)
 					gomock.InOrder(
+						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).SetArg(2, testProxy),
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Times(1).SetArg(2, testDeployment),
 						mockClient.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(
 							func(ctx context.Context, d *appsv1.Deployment, opts ...client.UpdateOptions) error {
@@ -104,6 +114,7 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			When("the deployment matches what is expected", func() {
 				It("does not update the deployment", func() {
 					gomock.InOrder(
+						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).SetArg(2, testNoProxy),
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Times(1).SetArg(2, testDeployment),
 					)
 					err := testOcmAgentHandler.ensureDeployment(testOcmAgent)
@@ -113,9 +124,17 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 		})
 
 		When("the OCM Agent deployment does not already exist", func() {
+			BeforeEach(func() {
+				gomock.InOrder(
+					mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).SetArg(2, testProxy),
+				)
+				envVars, _ := testOcmAgentHandler.buildEnvVars()
+				testDeployment.Spec.Template.Spec.Containers[0].Env = envVars
+			})
 			It("creates the deployment", func() {
 				notFound := k8serrs.NewNotFound(schema.GroupResource{}, testDeployment.Name)
 				gomock.InOrder(
+					mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).SetArg(2, testProxy),
 					mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Times(1).Return(notFound),
 					mockClient.EXPECT().Create(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(
 						func(ctx context.Context, d *appsv1.Deployment, opts ...client.CreateOptions) error {

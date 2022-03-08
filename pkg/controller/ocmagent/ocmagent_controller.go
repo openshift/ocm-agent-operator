@@ -78,33 +78,15 @@ func add(mgr manager.Manager, r *ReconcileOCMAgent) error {
 		return err
 	}
 
-	// Watch for changes to ocm agent resources
-	oaPredicate := predicate.Funcs{
-		UpdateFunc:  func(e event.UpdateEvent) bool { return handleOCMAgentResources(e.ObjectNew) },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return handleOCMAgentResources(e.Object) },
-		CreateFunc:  func(e event.CreateEvent) bool { return handleOCMAgentResources(e.Object) },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
-	}
-
 	// Watch for changes to pull secret
-	psPredicate := predicate.Funcs{
-		UpdateFunc:  func(e event.UpdateEvent) bool { return handlePullSecret(e.ObjectNew) },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return handlePullSecret(e.Object) },
-		CreateFunc:  func(e event.CreateEvent) bool { return handlePullSecret(e.Object) },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
-	}
+	psPredicate := generatePredicateFunc(handlePullSecret)
 	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(mapResourceToOCMAgent(r.Client, r.Ctx, r.Log)), psPredicate)
 	if err != nil {
 		return err
 	}
 
 	// Watch for changes to CAMO configmap
-	camoPredicate := predicate.Funcs{
-		UpdateFunc:  func(e event.UpdateEvent) bool { return handleCamoConfigMap(e.ObjectNew) },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return handleCamoConfigMap(e.Object) },
-		CreateFunc:  func(e event.CreateEvent) bool { return handleCamoConfigMap(e.Object) },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
-	}
+	camoPredicate := generatePredicateFunc(handleCamoConfigMap)
 	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, handler.EnqueueRequestsFromMapFunc(mapResourceToOCMAgent(r.Client, r.Ctx, r.Log)), camoPredicate)
 	if err != nil {
 		return err
@@ -121,6 +103,7 @@ func add(mgr manager.Manager, r *ReconcileOCMAgent) error {
 	}
 
 	// Watch for the managedResources
+	oaPredicate := generatePredicateFunc(handleOCMAgentResources)
 	for _, r := range managedResources {
 		err = c.Watch(r, &handler.EnqueueRequestForOwner{
 			IsController: true,
@@ -132,6 +115,15 @@ func add(mgr manager.Manager, r *ReconcileOCMAgent) error {
 	}
 
 	return nil
+}
+
+func generatePredicateFunc(handler func(metav1.Object) bool) predicate.Funcs {
+	return predicate.Funcs{
+		UpdateFunc:  func(e event.UpdateEvent) bool { return handler(e.ObjectNew) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return handler(e.Object) },
+		CreateFunc:  func(e event.CreateEvent) bool { return handler(e.Object) },
+		GenericFunc: func(e event.GenericEvent) bool { return false },
+	}
 }
 
 // blank assignment to verify that ReconcileOCMAgent implements reconcile.Reconciler

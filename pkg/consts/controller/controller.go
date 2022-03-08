@@ -10,5 +10,4 @@ const (
 
 	// ReconcileOCMAgentFinalizer defines the finalizer to apply to the OCM Agent resource
 	ReconcileOCMAgentFinalizer = "ocmagent.managed.openshift.io"
-
 )
