@@ -94,6 +94,7 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 					Expect(err).To(BeNil())
 				})
 			})
+
 		})
 		When("the OCM Agent configmap does not already exist", func() {
 			It("creates the configmap", func() {
@@ -146,6 +147,35 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 				Expect(cm.Name).To(Equal(oahconst.CAMOConfigMapNamespacedName.Name))
 				Expect(cm.Namespace).To(Equal(oahconst.CAMOConfigMapNamespacedName.Namespace))
 				Expect(cm.Data).To(HaveKey(oahconst.OCMAgentServiceURLKey))
+			})
+		})
+	})
+
+	Context("Managing the Trusted CA configmap", func() {
+		var testcm *corev1.ConfigMap
+		var testNamespacedName types.NamespacedName
+		When("building the Trusted CA configmap", func() {
+			BeforeEach(func() {
+				testcm = buildTrustedCaConfigMap()
+			})
+			It("builds successfully", func() {
+				Expect(testcm.Name).To(Equal("trusted-ca-bundle"))
+				Expect(testcm.Namespace).To(Equal(oahconst.OCMAgentNamespace))
+				Expect(testcm.ObjectMeta.Labels).Should(HaveKey(oahconst.InjectCaBundleIndicator))
+			})
+		})
+		When("the trusted ca bundle being updated", func() {
+			BeforeEach(func() {
+				testcm = buildTrustedCaConfigMap()
+				testcm.Data = map[string]string{"aaa": "bbb"}
+				testNamespacedName = oahconst.BuildNamespacedName(testcm.Name)
+			})
+			It("does not update the configmap", func() {
+				gomock.InOrder(
+					mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, *testcm),
+				)
+				err := testOcmAgentHandler.ensureConfigMap(testOcmAgent, testcm, true)
+				Expect(err).To(BeNil())
 			})
 		})
 	})
