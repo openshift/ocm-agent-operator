@@ -1,0 +1,15 @@
+apiVersion: ocmagent.managed.openshift.io/v1alpha1
+kind: ManagedNotification
+metadata:
+  name: test-notifications
+  namespace: openshift-ocm-agent-operator
+spec:
+  templates:
+  - activeBody: |-
+      This is a test notification when an alert is firing.
+    name: ExampleTemplate
+    resendWait: 24
+    resolvedBody: |-
+      This is a test notification when an alert is resolved.
+    severity: Info
+    summary: 'Action Required: Test Notification'
