@@ -31,6 +31,7 @@ $ oc get managednotification -n openshift-ocm-agent-operator
 The [OCMAgent Controller](https://github.com/openshift/ocm-agent-operator/tree/master/pkg/controller/ocmagent/ocmagent_controller.go) is responsible for ensuring the deployment or removal of an OCM Agent based upon the presence of an `OCMAgent` Custom Resource.
 
 An `OcmAgent` deployment consists of:
+
 - A `ServiceAccount` (named `ocm-agent`)
 - A `Role` and `RoleBinding` (both named `ocm-agent`) that defines the OCM Agent's API  permissions.
 - A `Deployment` (named `ocm-agent`) which runs the [ocm-agent](https://quay.io/openshift/ocm-agent)
@@ -50,4 +51,11 @@ The `ConfigMap` contains the following items:
 
 | Key | Description | Example |
 | --- | --- | --- |
-| `serviceURL` | OCM Agent service URI | http://ocm-agent.openshift-ocm-agent-operator.svc.cluster.local:8081/alertmanager-receiver |
+| `serviceURL` | OCM Agent service URI | <http://ocm-agent.openshift-ocm-agent-operator.svc.cluster.local:8081/alertmanager-receiver> |
+
+### cluster proxy support
+
+The OCM Agent Controller will monitor the cluster proxy setting
+and inject the HTTP_PROXY, HTTPS_PROXY and NO_PROXY environment
+variables to the OCM Agent deployment automatically based on the
+values of the proxy/cluster object.

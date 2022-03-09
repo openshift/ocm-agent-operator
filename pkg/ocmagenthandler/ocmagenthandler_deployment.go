@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-logr/logr"
 
+	oconfigv1 "github.com/openshift/api/config/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,8 +33,8 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 	tokenSecretVolumeName := ocmAgent.Spec.TokenSecret
 	configVolumeName := ocmAgent.Spec.OcmAgentConfig
 	trustedCaVolumeName := oah.TrustedCaBundleConfigMapName
-	var secretVolumeSourceDefaultMode int32 = 0600
-	var configVolumeSourceDefaultMode int32 = 0600
+	var secretVolumeSourceDefaultMode int32 = 0640
+	var configVolumeSourceDefaultMode int32 = 0644
 	var trustedCaVolumeSourceDefaultMode int32 = 0644
 
 	volumes := []corev1.Volume{
@@ -93,7 +94,12 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 		},
 	}
 
-	fmt.Println(volumeMounts)
+	envVars := []corev1.EnvVar{
+		{Name: "HTTP_PROXY"},
+		{Name: "HTTPS_PROXY"},
+		{Name: "NO_PROXY"},
+	}
+
 	// Sort volume slices by name to keep the sequence stable.
 	sort.Slice(volumes, func(i, j int) bool {
 		return volumes[i].Name < volumes[j].Name
@@ -101,7 +107,6 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 	sort.Slice(volumeMounts, func(i, j int) bool {
 		return volumeMounts[i].Name < volumeMounts[j].Name
 	})
-	fmt.Println(volumeMounts)
 
 	// Construct the command arguments of the agent
 	ocmAgentCommand := buildOCMAgentArgs(ocmAgent)
@@ -142,6 +147,7 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 						Key:      "node-role.kubernetes.io/infra",
 					}},
 					Containers: []corev1.Container{{
+						Env:          envVars,
 						VolumeMounts: volumeMounts,
 						Image:        ocmAgent.Spec.OcmAgentImage,
 						Command:      ocmAgentCommand,
@@ -206,14 +212,22 @@ func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) e
 	populationFunc := func() appsv1.Deployment {
 		return buildOCMAgentDeployment(ocmAgent)
 	}
+
+	envVars, err := o.buildEnvVars()
+	if err != nil {
+		return err
+	}
+
+	// Populate the resource with template and append the env vars
+	resource := populationFunc()
+	resource.Spec.Template.Spec.Containers[0].Env = envVars
+
 	// Does the resource already exist?
 	o.Log.Info("ensuring deployment exists", "resource", namespacedName.String())
 	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
 		if k8serrors.IsNotFound(err) {
 			// It does not exist, so must be created.
 			o.Log.Info("An OCMAgent deployment does not exist; will be created.")
-			// Populate the resource with the template
-			resource := populationFunc()
 			// Set the controller reference
 			if err := controllerutil.SetControllerReference(&ocmAgent, &resource, o.Scheme); err != nil {
 				return err
@@ -229,7 +243,6 @@ func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) e
 		}
 	} else {
 		// It does exist, check if it is what we expected
-		resource := populationFunc()
 		if deploymentConfigChanged(foundResource, &resource, o.Log) {
 			// Specs aren't equal, update and fix.
 			o.Log.Info("An OCMAgent deployment exists but contains unexpected configuration. Restoring.")
@@ -281,6 +294,7 @@ func deploymentConfigChanged(current, expected *appsv1.Deployment, log logr.Logg
 	for _, name := range []string{oah.OCMAgentName} {
 		var curImage, expImage string
 		var curReadinessProbeHTTPGet, curLivenessProbeHTTPGet, expReadinessProbeHTTPGet, expLivenessProbeHTTPGet *corev1.HTTPGetAction
+		var curEnvs, expEnvs []corev1.EnvVar
 		// Assign current container spec
 		for i, c := range current.Spec.Template.Spec.Containers {
 			if name == c.Name {
@@ -293,6 +307,7 @@ func deploymentConfigChanged(current, expected *appsv1.Deployment, log logr.Logg
 				if current.Spec.Template.Spec.Containers[i].LivenessProbe != nil {
 					curLivenessProbeHTTPGet = current.Spec.Template.Spec.Containers[i].LivenessProbe.HTTPGet
 				}
+				curEnvs = current.Spec.Template.Spec.Containers[i].Env
 				break
 			}
 		}
@@ -302,6 +317,7 @@ func deploymentConfigChanged(current, expected *appsv1.Deployment, log logr.Logg
 				expImage = expected.Spec.Template.Spec.Containers[i].Image
 				expReadinessProbeHTTPGet = expected.Spec.Template.Spec.Containers[i].ReadinessProbe.HTTPGet
 				expLivenessProbeHTTPGet = expected.Spec.Template.Spec.Containers[i].LivenessProbe.HTTPGet
+				expEnvs = expected.Spec.Template.Spec.Containers[i].Env
 				break
 			}
 		}
@@ -325,6 +341,12 @@ func deploymentConfigChanged(current, expected *appsv1.Deployment, log logr.Logg
 			log.V(2).Info(fmt.Sprintf("current liveness probe http getter %s/%s did not match expected liveness probe http getter", curLivenessProbeHTTPGet, expLivenessProbeHTTPGet))
 			changed = true
 		}
+
+		if !reflect.DeepEqual(curEnvs, expEnvs) {
+			log.V(2).Info(fmt.Sprintf("current env vars %s/%s did not match expected env vars", curEnvs, expEnvs))
+			changed = true
+		}
+
 	}
 
 	// Compare replicas
@@ -348,4 +370,21 @@ func deploymentConfigChanged(current, expected *appsv1.Deployment, log logr.Logg
 	// TODO compare more things if needed
 
 	return changed
+}
+
+// buildEnvVars build the slice of environments to set to the OCM Agent deployment
+func (o *ocmAgentHandler) buildEnvVars() ([]corev1.EnvVar, error) {
+	envVars := []corev1.EnvVar{}
+	proxy := oconfigv1.Proxy{}
+	err := o.Client.Get(o.Ctx, oah.ProxyNamespacedName, &proxy)
+	if err != nil {
+		return nil, err
+	}
+
+	proxyStatus := proxy.Status
+	envVars = append(envVars, corev1.EnvVar{Name: "HTTP_PROXY", Value: proxyStatus.HTTPProxy})
+	envVars = append(envVars, corev1.EnvVar{Name: "HTTPS_PROXY", Value: proxyStatus.HTTPSProxy})
+	envVars = append(envVars, corev1.EnvVar{Name: "NO_PROXY", Value: proxyStatus.NoProxy})
+
+	return envVars, nil
 }

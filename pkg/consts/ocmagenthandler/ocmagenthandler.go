@@ -84,6 +84,11 @@ var (
 		Namespace: "openshift-monitoring",
 		Name:      "ocm-agent",
 	}
+
+	ProxyNamespacedName = types.NamespacedName{
+		Namespace: "",
+		Name:      "cluster",
+	}
 )
 
 // BuildNamespacedName returns the name and namespace intended for OCM Agent deployment resources
