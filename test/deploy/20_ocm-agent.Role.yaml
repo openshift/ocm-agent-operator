@@ -23,6 +23,7 @@ rules:
       - ocmagent.managed.openshift.io
     resources:
       - managednotifications
+      - managednotifications/status 
     verbs:
       - get
       - list
