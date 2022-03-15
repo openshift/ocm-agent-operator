@@ -1,11 +1,12 @@
 package v1alpha1_test
 
 import (
+	"reflect"
+	"time"
+
 	"github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"reflect"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -14,7 +15,7 @@ import (
 var _ = Describe("OCMAgent Controller", func() {
 
 	const (
-		testTemplateName = "test-template"
+		testNotificationName = "test-notification"
 	)
 
 	var (
@@ -24,13 +25,13 @@ var _ = Describe("OCMAgent Controller", func() {
 	BeforeEach(func() {
 		testManagedNotification = &v1alpha1.ManagedNotification{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "test",
+				Name:      "test",
 				Namespace: "test-ns",
 			},
-			Spec:       v1alpha1.ManagedNotificationSpec{
-				Templates: []v1alpha1.Template{
+			Spec: v1alpha1.ManagedNotificationSpec{
+				Notifications: []v1alpha1.Notification{
 					{
-						Name:         testTemplateName,
+						Name:         testNotificationName,
 						Summary:      "Test Summary",
 						ActiveDesc:   "Test Firing",
 						ResolvedDesc: "Test Resolved",
@@ -39,28 +40,28 @@ var _ = Describe("OCMAgent Controller", func() {
 					},
 				},
 			},
-			Status:     v1alpha1.ManagedNotificationStatus{
+			Status: v1alpha1.ManagedNotificationStatus{
 				Notifications: []v1alpha1.NotificationRecord{
 					{
-						Name:                testTemplateName,
+						Name:                testNotificationName,
 						ServiceLogSentCount: 0,
-						Conditions:          []v1alpha1.NotificationCondition{
+						Conditions: []v1alpha1.NotificationCondition{
 							{
 								Type:               v1alpha1.ConditionAlertFiring,
 								Status:             corev1.ConditionTrue,
-								LastTransitionTime: &metav1.Time{Time:time.Now()},
+								LastTransitionTime: &metav1.Time{Time: time.Now()},
 								Reason:             "Test reason",
 							},
 							{
 								Type:               v1alpha1.ConditionAlertResolved,
 								Status:             corev1.ConditionTrue,
-								LastTransitionTime: &metav1.Time{Time:time.Now()},
+								LastTransitionTime: &metav1.Time{Time: time.Now()},
 								Reason:             "Test reason",
 							},
 							{
 								Type:               v1alpha1.ConditionServiceLogSent,
 								Status:             corev1.ConditionTrue,
-								LastTransitionTime: &metav1.Time{Time:time.Now()},
+								LastTransitionTime: &metav1.Time{Time: time.Now()},
 								Reason:             "Test reason",
 							},
 						},
@@ -70,35 +71,35 @@ var _ = Describe("OCMAgent Controller", func() {
 		}
 	})
 
-	Context("When retrieving a template", func() {
-		It("will raise an error if the template is not found", func() {
-			t, err := testManagedNotification.GetTemplateForName("nonexistant")
+	Context("When retrieving a notification", func() {
+		It("will raise an error if the notification is not found", func() {
+			t, err := testManagedNotification.GetNotificationForName("nonexistant")
 			Expect(t).To(BeNil())
 			Expect(err).To(HaveOccurred())
 		})
-		It("will return the correct template", func() {
-			t, err := testManagedNotification.GetTemplateForName(testTemplateName)
-			Expect(t.Name).To(Equal(testTemplateName))
+		It("will return the correct notification", func() {
+			t, err := testManagedNotification.GetNotificationForName(testNotificationName)
+			Expect(t.Name).To(Equal(testNotificationName))
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
-	Context("When retrieving a template notification status", func() {
-		It("will raise an error if the template is not found", func() {
+	Context("When retrieving a notification status", func() {
+		It("will raise an error if the notification is not found", func() {
 			t, err := testManagedNotification.Status.GetNotificationRecord("nonexistant")
 			Expect(t).To(BeNil())
 			Expect(err).To(HaveOccurred())
 		})
-		It("will return the correct template notification status", func() {
-			t, err := testManagedNotification.Status.GetNotificationRecord(testTemplateName)
-			Expect(t.Name).To(Equal(testTemplateName))
+		It("will return the correct notification status", func() {
+			t, err := testManagedNotification.Status.GetNotificationRecord(testNotificationName)
+			Expect(t.Name).To(Equal(testNotificationName))
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
-	Context("When checking if a firing template notification can be sent", func() {
+	Context("When checking if a firing notification can be sent", func() {
 
-		When("there is no defined template", func() {
+		When("there is no defined notification", func() {
 			It("will raise an error", func() {
 				cansend, err := testManagedNotification.CanBeSent("nonexistant")
 				Expect(cansend).To(BeFalse())
@@ -106,12 +107,12 @@ var _ = Describe("OCMAgent Controller", func() {
 			})
 		})
 
-		When("there is no notification history for the template", func() {
+		When("there is no notification history for the notification", func() {
 			BeforeEach(func() {
 				testManagedNotification.Status.Notifications = []v1alpha1.NotificationRecord{}
 			})
 			It("will send", func() {
-				cansend, err := testManagedNotification.CanBeSent(testTemplateName)
+				cansend, err := testManagedNotification.CanBeSent(testNotificationName)
 				Expect(cansend).To(BeTrue())
 				Expect(err).To(BeNil())
 			})
@@ -127,7 +128,7 @@ var _ = Describe("OCMAgent Controller", func() {
 				}
 			})
 			It("will not resend", func() {
-				cansend, err := testManagedNotification.CanBeSent(testTemplateName)
+				cansend, err := testManagedNotification.CanBeSent(testNotificationName)
 				Expect(cansend).To(BeFalse())
 				Expect(err).To(BeNil())
 			})
@@ -143,7 +144,7 @@ var _ = Describe("OCMAgent Controller", func() {
 				}
 			})
 			It("will resend", func() {
-				cansend, err := testManagedNotification.CanBeSent(testTemplateName)
+				cansend, err := testManagedNotification.CanBeSent(testNotificationName)
 				Expect(cansend).To(BeTrue())
 				Expect(err).To(BeNil())
 			})
@@ -152,9 +153,9 @@ var _ = Describe("OCMAgent Controller", func() {
 
 	Context("When retrieving a notification record", func() {
 		It("retrieves the right record", func() {
-			nr, err := testManagedNotification.Status.GetNotificationRecord(testTemplateName)
+			nr, err := testManagedNotification.Status.GetNotificationRecord(testNotificationName)
 			Expect(err).To(BeNil())
-			Expect(reflect.DeepEqual(*nr,testManagedNotification.Status.Notifications[0])).To(BeTrue())
+			Expect(reflect.DeepEqual(*nr, testManagedNotification.Status.Notifications[0])).To(BeTrue())
 		})
 	})
 
@@ -166,7 +167,7 @@ var _ = Describe("OCMAgent Controller", func() {
 		var newSLCount int32
 		BeforeEach(func() {
 			nrs = testManagedNotification.Status.Notifications
-			newTime = &metav1.Time{Time:time.Now()}
+			newTime = &metav1.Time{Time: time.Now()}
 			newSLCount = int32(555)
 			newConditions = []v1alpha1.NotificationCondition{
 				{
@@ -177,7 +178,7 @@ var _ = Describe("OCMAgent Controller", func() {
 				},
 			}
 			newrecord = v1alpha1.NotificationRecord{
-				Name:                testTemplateName,
+				Name:                testNotificationName,
 				ServiceLogSentCount: newSLCount,
 				Conditions:          newConditions,
 			}
@@ -185,8 +186,8 @@ var _ = Describe("OCMAgent Controller", func() {
 		When("the notification record already exists", func() {
 			It("updates the existing record", func() {
 				nrs.SetNotificationRecord(newrecord)
-				nr := nrs.GetNotificationRecord(testTemplateName)
-				Expect(reflect.DeepEqual(*nr,newrecord)).To(BeTrue())
+				nr := nrs.GetNotificationRecord(testNotificationName)
+				Expect(reflect.DeepEqual(*nr, newrecord)).To(BeTrue())
 			})
 		})
 		When("the notification record does not exist", func() {
@@ -195,8 +196,8 @@ var _ = Describe("OCMAgent Controller", func() {
 			})
 			It("adds the record", func() {
 				nrs.SetNotificationRecord(newrecord)
-				nr := nrs.GetNotificationRecord(testTemplateName)
-				Expect(reflect.DeepEqual(*nr,newrecord)).To(BeTrue())
+				nr := nrs.GetNotificationRecord(testNotificationName)
+				Expect(reflect.DeepEqual(*nr, newrecord)).To(BeTrue())
 			})
 		})
 	})
@@ -205,7 +206,7 @@ var _ = Describe("OCMAgent Controller", func() {
 		var nr *v1alpha1.NotificationRecord
 		BeforeEach(func() {
 			var err error
-			nr, err = testManagedNotification.Status.GetNotificationRecord(testTemplateName)
+			nr, err = testManagedNotification.Status.GetNotificationRecord(testNotificationName)
 			Expect(err).To(BeNil())
 		})
 		When("the condition does not already exist", func() {
@@ -218,7 +219,7 @@ var _ = Describe("OCMAgent Controller", func() {
 				err := nr.SetStatus(v1alpha1.ConditionAlertFiring, "testreason")
 				Expect(err).To(BeNil())
 				Expect(nr.Conditions[0].Type).To(Equal(v1alpha1.ConditionAlertFiring))
-				Expect(nr.Name).To(Equal(testTemplateName))
+				Expect(nr.Name).To(Equal(testNotificationName))
 				Expect(nr.ServiceLogSentCount).To(Equal(int32(1)))
 				Expect(nr.Conditions[0].Reason).To(Equal("testreason"))
 				Expect(nr.Conditions[0].LastTransitionTime.After(currTime)).To(BeTrue())
@@ -231,7 +232,7 @@ var _ = Describe("OCMAgent Controller", func() {
 				err := nr.SetStatus(v1alpha1.ConditionAlertFiring, "testreason")
 				Expect(err).To(BeNil())
 				Expect(nr.Conditions[0].Type).To(Equal(v1alpha1.ConditionAlertFiring))
-				Expect(nr.Name).To(Equal(testTemplateName))
+				Expect(nr.Name).To(Equal(testNotificationName))
 				Expect(nr.ServiceLogSentCount).To(Equal(int32(1)))
 				Expect(nr.Conditions[0].Reason).To(Equal("testreason"))
 				Expect(nr.Conditions[0].LastTransitionTime.After(currTime)).To(BeTrue())

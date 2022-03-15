@@ -37,7 +37,7 @@ spec:
           spec:
             description: ManagedNotificationSpec defines the desired state of ManagedNotification
             properties:
-              templates:
+              notifications:
                 description: AgentConfig refers to OCM agent config fields separated
                 items:
                   properties:
@@ -46,8 +46,8 @@ spec:
                         the alert is active
                       type: string
                     name:
-                      description: The name of the template used to associate with
-                        an alert
+                      description: The name of the notification used to associate
+                        with an alert
                       type: string
                     resendWait:
                       description: Measured in hours. The minimum time interval that
@@ -80,7 +80,7 @@ spec:
                   type: object
                 type: array
             required:
-            - templates
+            - notifications
             type: object
           status:
             description: ManagedNotificationStatus defines the observed state of ManagedNotification
@@ -117,11 +117,11 @@ spec:
                         type: object
                       type: array
                     name:
-                      description: Name of the notification template
+                      description: Name of the notification
                       type: string
                     serviceLogSentCount:
                       description: ServiceLogSentCount records the number of service
-                        logs sent for the template
+                        logs sent for the notification
                       format: int32
                       type: integer
                   required:
