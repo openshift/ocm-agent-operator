@@ -2,9 +2,10 @@ package v1alpha1
 
 import (
 	"fmt"
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -27,12 +28,12 @@ type ManagedNotificationSpec struct {
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
 
 	// AgentConfig refers to OCM agent config fields separated
-	Templates []Template `json:"templates"`
+	Notifications []Notification `json:"notifications"`
 }
 
-type Template struct {
+type Notification struct {
 
-	// The name of the template used to associate with an alert
+	// The name of the notification used to associate with an alert
 	Name string `json:"name"`
 
 	// The summary line of the Service Log notification
@@ -64,6 +65,7 @@ type ManagedNotificationStatus struct {
 type NotificationRecords []NotificationRecord
 
 type NotificationConditionType string
+
 const (
 	ConditionAlertFiring    NotificationConditionType = "AlertFiring"
 	ConditionAlertResolved  NotificationConditionType = "AlertResolved"
@@ -89,11 +91,11 @@ type NotificationCondition struct {
 }
 
 type NotificationRecord struct {
-	// Name of the notification template
+	// Name of the notification
 	Name string `json:"name"`
 
 	// +kubebuilder:validation:Optional
-	// ServiceLogSentCount records the number of service logs sent for the template
+	// ServiceLogSentCount records the number of service logs sent for the notification
 	ServiceLogSentCount int32 `json:"serviceLogSentCount,omitempty"`
 
 	// Conditions is a set of Condition instances.
@@ -126,30 +128,30 @@ func init() {
 	SchemeBuilder.Register(&ManagedNotification{}, &ManagedNotificationList{})
 }
 
-// GetTemplateForName returns a notification template matching the given name
-// or error if no matching template can be found.
-func (m *ManagedNotification) GetTemplateForName(n string) (*Template, error) {
-	for _, t := range m.Spec.Templates {
+// GetNotificationForName returns a notification matching the given name
+// or error if no matching notification can be found.
+func (m *ManagedNotification) GetNotificationForName(n string) (*Notification, error) {
+	for _, t := range m.Spec.Notifications {
 		if t.Name == n {
 			return &t, nil
 		}
 	}
-	return nil, fmt.Errorf("template with name %v not found", n)
+	return nil, fmt.Errorf("notification with name %v not found", n)
 }
 
-// GetNotificationRecord returns the history for a notification template matching
-// the given name or error if no matching template can be found.
+// GetNotificationRecord returns the history for a notification matching
+// the given name or error if no matching notification can be found.
 func (m *ManagedNotificationStatus) GetNotificationRecord(n string) (*NotificationRecord, error) {
 	for _, t := range m.Notifications {
 		if t.Name == n {
 			return &t, nil
 		}
 	}
-	return nil, fmt.Errorf("template with name %v not found", n)
+	return nil, fmt.Errorf("notification with name %v not found", n)
 }
 
 // HasNotificationRecord returns whether or not a notification status history exists
-// for a template with the given name
+// with the given name
 func (m *ManagedNotificationStatus) HasNotificationRecord(n string) bool {
 	for _, t := range m.Notifications {
 		if t.Name == n {
@@ -159,16 +161,16 @@ func (m *ManagedNotificationStatus) HasNotificationRecord(n string) bool {
 	return false
 }
 
-// CanBeSent returns true if a service log from the template is allowed to be sent
+// CanBeSent returns true if a service log from the notification is allowed to be sent
 func (m *ManagedNotification) CanBeSent(n string) (bool, error) {
 
-	// If no template exists, one cannot be sent
-	t, err := m.GetTemplateForName(n)
+	// If no notification exists, one cannot be sent
+	t, err := m.GetNotificationForName(n)
 	if err != nil {
 		return false, err
 	}
 
-	// If no status history exists for the template, it is safe to send a notification
+	// If no status history exists for the notification, it is safe to send a notification
 	if !m.Status.HasNotificationRecord(n) {
 		return true, nil
 	}
@@ -188,8 +190,8 @@ func (m *ManagedNotification) CanBeSent(n string) (bool, error) {
 	now := time.Now()
 	nextresend := sentCondition.LastTransitionTime.Time.Add(time.Duration(t.ResendWait) * time.Hour)
 	if now.Before(nextresend) {
-			return false, nil
-		}
+		return false, nil
+	}
 
 	return true, nil
 }
@@ -243,7 +245,7 @@ func (nr *NotificationRecord) SetStatus(nct NotificationConditionType, reason st
 	condition := NotificationCondition{
 		Type:               nct,
 		Status:             corev1.ConditionTrue,
-		LastTransitionTime: &metav1.Time{Time:time.Now()},
+		LastTransitionTime: &metav1.Time{Time: time.Now()},
 		Reason:             reason,
 	}
 	nr.Conditions.SetCondition(condition)
