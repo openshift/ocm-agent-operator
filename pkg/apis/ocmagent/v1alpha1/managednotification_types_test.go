@@ -187,7 +187,9 @@ var _ = Describe("OCMAgent Controller", func() {
 			It("updates the existing record", func() {
 				nrs.SetNotificationRecord(newrecord)
 				nr := nrs.GetNotificationRecord(testNotificationName)
-				Expect(reflect.DeepEqual(*nr, newrecord)).To(BeTrue())
+				Expect(reflect.DeepEqual(nr.Name, newrecord.Name)).To(BeTrue())
+				Expect(reflect.DeepEqual(nr.Conditions, newrecord.Conditions)).To(BeTrue())
+				Expect(nr.ServiceLogSentCount).To(Equal(newrecord.ServiceLogSentCount + 1))
 			})
 		})
 		When("the notification record does not exist", func() {
@@ -197,7 +199,9 @@ var _ = Describe("OCMAgent Controller", func() {
 			It("adds the record", func() {
 				nrs.SetNotificationRecord(newrecord)
 				nr := nrs.GetNotificationRecord(testNotificationName)
-				Expect(reflect.DeepEqual(*nr, newrecord)).To(BeTrue())
+				Expect(reflect.DeepEqual(nr.Name, newrecord.Name)).To(BeTrue())
+				Expect(reflect.DeepEqual(nr.Conditions, newrecord.Conditions)).To(BeTrue())
+				Expect(nr.ServiceLogSentCount).To(Equal(newrecord.ServiceLogSentCount + 1))
 			})
 		})
 	})
@@ -214,28 +218,26 @@ var _ = Describe("OCMAgent Controller", func() {
 				nr.Conditions = []v1alpha1.NotificationCondition{}
 			})
 			It("will create the status", func() {
-				currTime := time.Now()
+				currTime := &metav1.Time{Time: time.Now()}
 				Expect(nr.ServiceLogSentCount).To(Equal(int32(0)))
-				err := nr.SetStatus(v1alpha1.ConditionAlertFiring, "testreason")
+				err := nr.SetStatus(v1alpha1.ConditionAlertFiring, "testreason", corev1.ConditionTrue, currTime)
 				Expect(err).To(BeNil())
 				Expect(nr.Conditions[0].Type).To(Equal(v1alpha1.ConditionAlertFiring))
 				Expect(nr.Name).To(Equal(testNotificationName))
-				Expect(nr.ServiceLogSentCount).To(Equal(int32(1)))
 				Expect(nr.Conditions[0].Reason).To(Equal("testreason"))
-				Expect(nr.Conditions[0].LastTransitionTime.After(currTime)).To(BeTrue())
+				Expect(nr.Conditions[0].LastTransitionTime.Equal(currTime)).To(BeTrue())
 			})
 		})
 		When("the condition already exists", func() {
 			It("will update the status", func() {
-				currTime := time.Now()
+				currTime := &metav1.Time{Time: time.Now()}
 				Expect(nr.ServiceLogSentCount).To(Equal(int32(0)))
-				err := nr.SetStatus(v1alpha1.ConditionAlertFiring, "testreason")
+				err := nr.SetStatus(v1alpha1.ConditionAlertFiring, "testreason", corev1.ConditionTrue, currTime)
 				Expect(err).To(BeNil())
 				Expect(nr.Conditions[0].Type).To(Equal(v1alpha1.ConditionAlertFiring))
 				Expect(nr.Name).To(Equal(testNotificationName))
-				Expect(nr.ServiceLogSentCount).To(Equal(int32(1)))
 				Expect(nr.Conditions[0].Reason).To(Equal("testreason"))
-				Expect(nr.Conditions[0].LastTransitionTime.After(currTime)).To(BeTrue())
+				Expect(nr.Conditions[0].LastTransitionTime.Equal(currTime)).To(BeTrue())
 			})
 		})
 	})

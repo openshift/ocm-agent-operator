@@ -230,6 +230,7 @@ func (nrs NotificationRecords) GetNotificationRecord(name string) *NotificationR
 
 // SetNotificationRecord adds or overwrites the supplied notification record
 func (nrs *NotificationRecords) SetNotificationRecord(rec NotificationRecord) {
+	rec.ServiceLogSentCount++
 	for i, n := range *nrs {
 		if n.Name == rec.Name {
 			(*nrs)[i] = rec
@@ -240,12 +241,11 @@ func (nrs *NotificationRecords) SetNotificationRecord(rec NotificationRecord) {
 }
 
 // SetStatus updates the status for a given notification record type
-func (nr *NotificationRecord) SetStatus(nct NotificationConditionType, reason string) error {
-	nr.ServiceLogSentCount++
+func (nr *NotificationRecord) SetStatus(nct NotificationConditionType, reason string, cs corev1.ConditionStatus, t *metav1.Time) error {
 	condition := NotificationCondition{
 		Type:               nct,
-		Status:             corev1.ConditionTrue,
-		LastTransitionTime: &metav1.Time{Time: time.Now()},
+		Status:             cs,
+		LastTransitionTime: t,
 		Reason:             reason,
 	}
 	nr.Conditions.SetCondition(condition)
