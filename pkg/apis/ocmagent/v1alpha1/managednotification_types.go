@@ -162,7 +162,7 @@ func (m *ManagedNotificationStatus) HasNotificationRecord(n string) bool {
 }
 
 // CanBeSent returns true if a service log from the notification is allowed to be sent
-func (m *ManagedNotification) CanBeSent(n string) (bool, error) {
+func (m *ManagedNotification) CanBeSent(n string, firing bool) (bool, error) {
 
 	// If no notification exists, one cannot be sent
 	t, err := m.GetNotificationForName(n)
@@ -170,27 +170,48 @@ func (m *ManagedNotification) CanBeSent(n string) (bool, error) {
 		return false, err
 	}
 
-	// If no status history exists for the notification, it is safe to send a notification
-	if !m.Status.HasNotificationRecord(n) {
-		return true, nil
-	}
+	hasNotificationRecord := m.Status.HasNotificationRecord(n)
 
-	// If a status history exists but can't be fetched, this is an irregular situation
-	s, err := m.Status.GetNotificationRecord(n)
-	if err != nil {
-		return false, err
-	}
+	// If alert is firing
+	if firing {
+		// If no status history exists for the notification, it is safe to send a notification
+		if !hasNotificationRecord {
+			return true, nil
+		}
 
-	// If the last time a notification was sent is within the don't-resend window, don't send
-	sentCondition := s.Conditions.GetCondition(ConditionServiceLogSent)
-	if sentCondition == nil {
-		// No service log send recorded yet, it can be sent
-		return true, nil
-	}
-	now := time.Now()
-	nextresend := sentCondition.LastTransitionTime.Time.Add(time.Duration(t.ResendWait) * time.Hour)
-	if now.Before(nextresend) {
-		return false, nil
+		// If a status history exists but can't be fetched, this is an irregular situation
+		s, err := m.Status.GetNotificationRecord(n)
+		if err != nil {
+			return false, err
+		}
+		// Check if the last time a notification was sent is within the don't-resend window, don't send
+		sentCondition := s.Conditions.GetCondition(ConditionServiceLogSent)
+		if sentCondition == nil {
+			// No service log send recorded yet, it can be sent
+			return true, nil
+		}
+		now := time.Now()
+		nextresend := sentCondition.LastTransitionTime.Time.Add(time.Duration(t.ResendWait) * time.Hour)
+		if now.Before(nextresend) {
+			return false, nil
+		}
+	} else {
+		// If not status history, we should not send the resolved notification
+		if !hasNotificationRecord {
+			return false, nil
+		}
+
+		// If a status history exists but can't be fetched, this is an irregular situation
+		s, err := m.Status.GetNotificationRecord(n)
+		if err != nil {
+			return false, err
+		}
+
+		// If alert is not firing, only firing status notification can be sent
+		firingStatus := s.Conditions.GetCondition(ConditionAlertFiring).Status
+		if firingStatus != corev1.ConditionTrue {
+			return false, nil
+		}
 	}
 
 	return true, nil
