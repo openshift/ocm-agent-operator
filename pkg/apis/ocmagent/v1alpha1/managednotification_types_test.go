@@ -101,7 +101,7 @@ var _ = Describe("OCMAgent Controller", func() {
 
 		When("there is no defined notification", func() {
 			It("will raise an error", func() {
-				cansend, err := testManagedNotification.CanBeSent("nonexistant")
+				cansend, err := testManagedNotification.CanBeSent("nonexistant", true)
 				Expect(cansend).To(BeFalse())
 				Expect(err).To(HaveOccurred())
 			})
@@ -112,7 +112,7 @@ var _ = Describe("OCMAgent Controller", func() {
 				testManagedNotification.Status.Notifications = []v1alpha1.NotificationRecord{}
 			})
 			It("will send", func() {
-				cansend, err := testManagedNotification.CanBeSent(testNotificationName)
+				cansend, err := testManagedNotification.CanBeSent(testNotificationName, true)
 				Expect(cansend).To(BeTrue())
 				Expect(err).To(BeNil())
 			})
@@ -128,7 +128,7 @@ var _ = Describe("OCMAgent Controller", func() {
 				}
 			})
 			It("will not resend", func() {
-				cansend, err := testManagedNotification.CanBeSent(testNotificationName)
+				cansend, err := testManagedNotification.CanBeSent(testNotificationName, true)
 				Expect(cansend).To(BeFalse())
 				Expect(err).To(BeNil())
 			})
@@ -144,7 +144,50 @@ var _ = Describe("OCMAgent Controller", func() {
 				}
 			})
 			It("will resend", func() {
-				cansend, err := testManagedNotification.CanBeSent(testNotificationName)
+				cansend, err := testManagedNotification.CanBeSent(testNotificationName, true)
+				Expect(cansend).To(BeTrue())
+				Expect(err).To(BeNil())
+			})
+		})
+	})
+
+	Context("When checking if a resolved notifcation can be sent", func() {
+		When("there is no history for the notification", func() {
+			BeforeEach(func() {
+				testManagedNotification.Status.Notifications = []v1alpha1.NotificationRecord{}
+			})
+			It("will not send", func() {
+				cansend, err := testManagedNotification.CanBeSent(testNotificationName, false)
+				Expect(cansend).To(BeFalse())
+				Expect(err).To(BeNil())
+			})
+		})
+
+		When("the alert is not in firing status already", func() {
+			BeforeEach(func() {
+				testManagedNotification.Status.Notifications = []v1alpha1.NotificationRecord{
+					{
+						Conditions: []v1alpha1.NotificationCondition{
+							{
+								Type:               v1alpha1.ConditionAlertFiring,
+								Status:             corev1.ConditionFalse,
+								Reason:             "whatever",
+								LastTransitionTime: &metav1.Time{Time: time.Now()},
+							},
+						},
+					},
+				}
+			})
+			It("will not send", func() {
+				cansend, err := testManagedNotification.CanBeSent(testNotificationName, false)
+				Expect(cansend).To(BeFalse())
+				Expect(err).To(BeNil())
+			})
+		})
+
+		When("the alert is already firing", func() {
+			It("will send the resolved notification", func() {
+				cansend, err := testManagedNotification.CanBeSent(testNotificationName, false)
 				Expect(cansend).To(BeTrue())
 				Expect(err).To(BeNil())
 			})
