@@ -41,7 +41,7 @@ var _ = Describe("OCMAgent Controller", func() {
 				},
 			},
 			Status: v1alpha1.ManagedNotificationStatus{
-				Notifications: []v1alpha1.NotificationRecord{
+				NotificationRecords: []v1alpha1.NotificationRecord{
 					{
 						Name:                testNotificationName,
 						ServiceLogSentCount: 0,
@@ -109,7 +109,7 @@ var _ = Describe("OCMAgent Controller", func() {
 
 		When("there is no notification history for the notification", func() {
 			BeforeEach(func() {
-				testManagedNotification.Status.Notifications = []v1alpha1.NotificationRecord{}
+				testManagedNotification.Status.NotificationRecords = []v1alpha1.NotificationRecord{}
 			})
 			It("will send", func() {
 				cansend, err := testManagedNotification.CanBeSent(testNotificationName, true)
@@ -120,7 +120,7 @@ var _ = Describe("OCMAgent Controller", func() {
 
 		When("the current time is within the dont-resend window", func() {
 			BeforeEach(func() {
-				testManagedNotification.Status.Notifications[0].Conditions[2] = v1alpha1.NotificationCondition{
+				testManagedNotification.Status.NotificationRecords[0].Conditions[2] = v1alpha1.NotificationCondition{
 					Type:               v1alpha1.ConditionServiceLogSent,
 					Status:             corev1.ConditionTrue,
 					LastTransitionTime: &metav1.Time{Time: time.Now().Add(time.Duration(-5) * time.Minute)},
@@ -136,7 +136,7 @@ var _ = Describe("OCMAgent Controller", func() {
 
 		When("the current time is outside the dont-resend window", func() {
 			BeforeEach(func() {
-				testManagedNotification.Status.Notifications[0].Conditions[2] = v1alpha1.NotificationCondition{
+				testManagedNotification.Status.NotificationRecords[0].Conditions[2] = v1alpha1.NotificationCondition{
 					Type:               v1alpha1.ConditionServiceLogSent,
 					Status:             corev1.ConditionTrue,
 					LastTransitionTime: &metav1.Time{Time: time.Now().Add(time.Duration(-5) * time.Hour)},
@@ -154,7 +154,7 @@ var _ = Describe("OCMAgent Controller", func() {
 	Context("When checking if a resolved notifcation can be sent", func() {
 		When("there is no history for the notification", func() {
 			BeforeEach(func() {
-				testManagedNotification.Status.Notifications = []v1alpha1.NotificationRecord{}
+				testManagedNotification.Status.NotificationRecords = []v1alpha1.NotificationRecord{}
 			})
 			It("will not send", func() {
 				cansend, err := testManagedNotification.CanBeSent(testNotificationName, false)
@@ -165,7 +165,7 @@ var _ = Describe("OCMAgent Controller", func() {
 
 		When("the alert is not in firing status already", func() {
 			BeforeEach(func() {
-				testManagedNotification.Status.Notifications = []v1alpha1.NotificationRecord{
+				testManagedNotification.Status.NotificationRecords = []v1alpha1.NotificationRecord{
 					{
 						Conditions: []v1alpha1.NotificationCondition{
 							{
@@ -198,7 +198,7 @@ var _ = Describe("OCMAgent Controller", func() {
 		It("retrieves the right record", func() {
 			nr, err := testManagedNotification.Status.GetNotificationRecord(testNotificationName)
 			Expect(err).To(BeNil())
-			Expect(reflect.DeepEqual(*nr, testManagedNotification.Status.Notifications[0])).To(BeTrue())
+			Expect(reflect.DeepEqual(*nr, testManagedNotification.Status.NotificationRecords[0])).To(BeTrue())
 		})
 	})
 
@@ -209,7 +209,7 @@ var _ = Describe("OCMAgent Controller", func() {
 		var newConditions []v1alpha1.NotificationCondition
 		var newSLCount int32
 		BeforeEach(func() {
-			nrs = testManagedNotification.Status.Notifications
+			nrs = testManagedNotification.Status.NotificationRecords
 			newTime = &metav1.Time{Time: time.Now()}
 			newSLCount = int32(555)
 			newConditions = []v1alpha1.NotificationCondition{
