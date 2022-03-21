@@ -21,6 +21,9 @@ func buildNetworkPolicy() netv1.NetworkPolicy {
 			Namespace: namespacedName.Namespace,
 		},
 		Spec: netv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{"app": oah.OCMAgentName},
+			},
 			Ingress: []netv1.NetworkPolicyIngressRule{{
 				From: []netv1.NetworkPolicyPeer{{
 					NamespaceSelector: &metav1.LabelSelector{
