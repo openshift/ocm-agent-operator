@@ -59,7 +59,7 @@ type ManagedNotificationStatus struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
 
-	Notifications NotificationRecords `json:"notifications,omitempty"`
+	NotificationRecords NotificationRecords `json:"notificationRecords,omitempty"`
 }
 
 type NotificationRecords []NotificationRecord
@@ -142,7 +142,7 @@ func (m *ManagedNotification) GetNotificationForName(n string) (*Notification, e
 // GetNotificationRecord returns the history for a notification matching
 // the given name or error if no matching notification can be found.
 func (m *ManagedNotificationStatus) GetNotificationRecord(n string) (*NotificationRecord, error) {
-	for _, t := range m.Notifications {
+	for _, t := range m.NotificationRecords {
 		if t.Name == n {
 			return &t, nil
 		}
@@ -153,7 +153,7 @@ func (m *ManagedNotificationStatus) GetNotificationRecord(n string) (*Notificati
 // HasNotificationRecord returns whether or not a notification status history exists
 // with the given name
 func (m *ManagedNotificationStatus) HasNotificationRecord(n string) bool {
-	for _, t := range m.Notifications {
+	for _, t := range m.NotificationRecords {
 		if t.Name == n {
 			return true
 		}
@@ -236,7 +236,7 @@ func (m *ManagedNotificationStatus) NewNotificationRecord(n string) {
 		ServiceLogSentCount: 0,
 		Conditions:          []NotificationCondition{},
 	}
-	m.Notifications = append(m.Notifications, r)
+	m.NotificationRecords = append(m.NotificationRecords, r)
 }
 
 // GetNotificationRecord retrieves the notification record associated with the given name
