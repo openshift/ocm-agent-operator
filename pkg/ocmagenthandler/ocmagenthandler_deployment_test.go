@@ -69,6 +69,17 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Path).NotTo(BeEmpty())
 			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Port.IntVal).To(BeNumerically(">", 0))
 			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Scheme).NotTo(BeEmpty())
+
+			// make sure Resources Limits is part of deployment config and has defined limits for memory and cpu
+			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Limits).NotTo(BeEmpty())
+			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Value()).To(BeNumerically(">", 0))
+			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Value()).To(BeNumerically(">", 0))
+
+			// make sure Resources Requests is part of deployment config and has defined limits for memory and cpu
+			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Requests).NotTo(BeEmpty())
+			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().Value()).To(BeNumerically(">", 0))
+			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().Value()).To(BeNumerically(">", 0))
+
 		})
 	})
 

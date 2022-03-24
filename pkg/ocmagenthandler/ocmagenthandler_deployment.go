@@ -12,6 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	k8sresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -108,6 +109,17 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 		return volumeMounts[i].Name < volumeMounts[j].Name
 	})
 
+	// Define resource limits for the config
+	resourceLimits := corev1.ResourceList{
+		corev1.ResourceCPU:    k8sresource.MustParse(oah.ResourceLimitsCPU),
+		corev1.ResourceMemory: k8sresource.MustParse(oah.ResourceLimitsMemory),
+	}
+	// Define resource requests for the config
+	resourceRequests := corev1.ResourceList{
+		corev1.ResourceCPU:    k8sresource.MustParse(oah.ResourceRequestsCPU),
+		corev1.ResourceMemory: k8sresource.MustParse(oah.ResourceRequestsMemory),
+	}
+
 	// Construct the command arguments of the agent
 	ocmAgentCommand := buildOCMAgentArgs(ocmAgent)
 
@@ -173,6 +185,10 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 									Port:   intstr.FromInt(oah.OCMAgentPort),
 								},
 							},
+						},
+						Resources: corev1.ResourceRequirements{
+							Limits:   resourceLimits,
+							Requests: resourceRequests,
 						},
 					}},
 				},
