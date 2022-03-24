@@ -70,6 +70,12 @@ const (
 	InjectCaBundleIndicator = "config.openshift.io/inject-trusted-cabundle"
 	// TrustedCaBundleConfigMap defines the name of trusted CA bundle configmap
 	TrustedCaBundleConfigMapName = "trusted-ca-bundle"
+	// ResourceLimitsCPU and ResourceLimitsMemory defines the cpu and memory limits for OA deployment
+	ResourceLimitsCPU    = "0.2"
+	ResourceLimitsMemory = "128Mi"
+	// ResourceRequestsCPU and ResourceRequestsMemory defines the cpu and memory requests for OA deployment
+	ResourceRequestsCPU    = "0.1"
+	ResourceRequestsMemory = "64Mi"
 )
 
 var (
