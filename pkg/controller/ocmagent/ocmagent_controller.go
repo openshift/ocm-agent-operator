@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	controllerruntime "sigs.k8s.io/controller-runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -46,22 +47,32 @@ var log = logf.Log.WithName("controller_ocmagent")
 // Add creates a new OCMAgent Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+	reconciler, err := newReconciler(mgr)
+	if err != nil {
+		return err
+	}
+	return add(mgr, reconciler)
 }
 
 // newReconciler returns a new ReconcileOCMAgent
-func newReconciler(mgr manager.Manager) *ReconcileOCMAgent {
-	client := mgr.GetClient()
+func newReconciler(mgr manager.Manager) (*ReconcileOCMAgent, error) {
+	mgrClient := mgr.GetClient()
+	kubeConfig := controllerruntime.GetConfigOrDie()
+	handlerClient, err := client.New(kubeConfig, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
 	log := ctrl.Log.WithName("controllers").WithName("OCMAgent")
 	ctx := context.Background()
 	scheme := mgr.GetScheme()
 	return &ReconcileOCMAgent{
-		Client:          client,
+		Client:          mgrClient,
 		Scheme:          scheme,
 		Ctx:             ctx,
 		Log:             log,
-		OCMAgentHandler: ocmagenthandler.New(client, scheme, log, ctx),
-	}
+		OCMAgentHandler: ocmagenthandler.New(handlerClient, scheme, log, ctx),
+	}, nil
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -74,20 +85,6 @@ func add(mgr manager.Manager, r *ReconcileOCMAgent) error {
 
 	// Watch for changes to primary resource OCMAgent
 	err = c.Watch(&source.Kind{Type: &ocmagentv1alpha1.OcmAgent{}}, &handler.EnqueueRequestForObject{})
-	if err != nil {
-		return err
-	}
-
-	// Watch for changes to pull secret
-	psPredicate := generatePredicateFunc(handlePullSecret)
-	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(mapResourceToOCMAgent(r.Client, r.Ctx, r.Log)), psPredicate)
-	if err != nil {
-		return err
-	}
-
-	// Watch for changes to CAMO configmap
-	camoPredicate := generatePredicateFunc(handleCamoConfigMap)
-	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, handler.EnqueueRequestsFromMapFunc(mapResourceToOCMAgent(r.Client, r.Ctx, r.Log)), camoPredicate)
 	if err != nil {
 		return err
 	}
@@ -194,22 +191,8 @@ func (r *ReconcileOCMAgent) Reconcile(ctx context.Context, request reconcile.Req
 	return reconcile.Result{}, nil
 }
 
-// handlePullSecret returns true if meta indicates it is the cluster pull secret
-func handlePullSecret(meta metav1.Object) bool {
-	pullSecretNamespacedName := oahconst.PullSecretNamespacedName
-	return meta.GetNamespace() == pullSecretNamespacedName.Namespace &&
-		meta.GetName() == pullSecretNamespacedName.Name
-}
-
 // handleOCMAgentResources returns true if meta indicates it is an OCM Agent-related resource
 func handleOCMAgentResources(meta metav1.Object) bool {
 	agentNamespacedName := oahconst.BuildNamespacedName(oahconst.OCMAgentName)
 	return meta.GetNamespace() == agentNamespacedName.Namespace
-}
-
-// handleCamoConfigMap returns true if meta indicates it is the CAMO config map
-func handleCamoConfigMap(meta metav1.Object) bool {
-	camoConfigMapNamespacedName := oahconst.CAMOConfigMapNamespacedName
-	return meta.GetNamespace() == camoConfigMapNamespacedName.Namespace &&
-		meta.GetName() == camoConfigMapNamespacedName.Name
 }
