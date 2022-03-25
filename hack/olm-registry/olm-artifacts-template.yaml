@@ -86,23 +86,6 @@ objects:
             verbs:
             - get
             - list
-            - watch
-          - apiGroups:
-            - monitoring.coreos.com
-            resources:
-            - servicemonitors
-            verbs:
-            - get
-            - watch
-            - list
-          - apiGroups:
-            - networking.k8s.io
-            resources:
-            - networkpolicies
-            verbs:
-            - get
-            - watch
-            - list
         - apiVersion: rbac.authorization.k8s.io/v1
           kind: RoleBinding
           metadata:
