@@ -147,7 +147,7 @@ func (m *ManagedNotificationStatus) GetNotificationRecord(n string) (*Notificati
 			return &t, nil
 		}
 	}
-	return nil, fmt.Errorf("notification with name %v not found", n)
+	return nil, fmt.Errorf("notification record with name %v not found", n)
 }
 
 // HasNotificationRecord returns whether or not a notification status history exists
