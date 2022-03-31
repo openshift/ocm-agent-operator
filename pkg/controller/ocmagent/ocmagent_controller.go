@@ -2,7 +2,6 @@ package ocmagent
 
 import (
 	"context"
-
 	"github.com/go-logr/logr"
 
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
@@ -29,6 +28,7 @@ import (
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
 	ctrlconst "github.com/openshift/ocm-agent-operator/pkg/consts/controller"
 	oahconst "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
+	"github.com/openshift/ocm-agent-operator/pkg/localmetrics"
 	"github.com/openshift/ocm-agent-operator/pkg/ocmagenthandler"
 )
 
@@ -144,12 +144,14 @@ func (r *ReconcileOCMAgent) Reconcile(ctx context.Context, request reconcile.Req
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
+			localmetrics.UpdateMetricOcmAgentResourceAbsent()
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		log.Error(err, "Failed to retrieve OCMAgent. Will retry on next reconcile.")
 		return reconcile.Result{}, err
 	}
+	localmetrics.ResetMetricOcmAgentResourceAbsent()
 
 	// Is the OCMAgent being deleted?
 	if !instance.DeletionTimestamp.IsZero() {

@@ -11,6 +11,7 @@ spec:
   template:
     metadata:
       labels:
+        name: ocm-agent-operator
         app: ocm-agent-operator
     spec:
       serviceAccountName: ocm-agent-operator

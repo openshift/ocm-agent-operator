@@ -12,6 +12,7 @@ import (
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
 	oah "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
+	"github.com/openshift/ocm-agent-operator/pkg/localmetrics"
 )
 
 func buildOCMAgentAccessTokenSecret(accessToken []byte, ocmAgent ocmagentv1alpha1.OcmAgent) corev1.Secret {
@@ -36,8 +37,10 @@ func (o *ocmAgentHandler) ensureAccessTokenSecret(ocmAgent ocmagentv1alpha1.OcmA
 
 	clusterPullSecret, err := o.fetchAccessTokenPullSecret()
 	if err != nil {
+		localmetrics.UpdateMetricPullSecretInvalid(ocmAgent.Name)
 		return err
 	}
+	localmetrics.ResetMetricPullSecretInvalid(ocmAgent.Name)
 	populationFunc := func() corev1.Secret {
 		return buildOCMAgentAccessTokenSecret(clusterPullSecret, ocmAgent)
 	}
