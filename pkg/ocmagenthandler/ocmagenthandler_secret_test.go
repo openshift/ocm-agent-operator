@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/golang/mock/gomock"
 
@@ -18,7 +19,10 @@ import (
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
 	oahconst "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 	testconst "github.com/openshift/ocm-agent-operator/pkg/consts/test/init"
+	"github.com/openshift/ocm-agent-operator/pkg/localmetrics"
 	clientmocks "github.com/openshift/ocm-agent-operator/pkg/util/test/generated/mocks/client"
+
+	"github.com/prometheus/client_golang/prometheus/testutil"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -159,6 +163,42 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 					err := testOcmAgentHandler.ensureAccessTokenSecretDeleted(testOcmAgent)
 					Expect(err).To(BeNil())
 				})
+			})
+		})
+		When("the pull secret can't be found", func() {
+			BeforeEach(func() {
+				delete(testPullSecret.Data, oahconst.PullSecretKey)
+			})
+			It("returns an error and sets the metric", func() {
+				gomock.InOrder(
+					mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).SetArg(2, testSecret),
+				)
+				err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
+				Expect(err).NotTo(BeNil())
+				expectedMetric := `
+# HELP ocm_agent_operator_pull_secret_invalid Failed to obtain a valid pull secret
+# TYPE ocm_agent_operator_pull_secret_invalid gauge
+ocm_agent_operator_pull_secret_invalid{ocmagent_name="test-ocm-agent"} 1
+`
+				err = testutil.CollectAndCompare(localmetrics.MetricPullSecretInvalid, strings.NewReader(expectedMetric))
+				Expect(err).To(BeNil())
+			})
+		})
+		When("the pull secret can be found", func() {
+			It("sets the correct metric", func() {
+				gomock.InOrder(
+					mockClient.EXPECT().Get(gomock.Any(), oahconst.PullSecretNamespacedName, gomock.Any()).Times(1).SetArg(2, testPullSecret),
+					mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Times(1).SetArg(2, testSecret),
+				)
+				err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
+				Expect(err).To(BeNil())
+				expectedMetric := `
+# HELP ocm_agent_operator_pull_secret_invalid Failed to obtain a valid pull secret
+# TYPE ocm_agent_operator_pull_secret_invalid gauge
+ocm_agent_operator_pull_secret_invalid{ocmagent_name="test-ocm-agent"} 0
+`
+				err = testutil.CollectAndCompare(localmetrics.MetricPullSecretInvalid, strings.NewReader(expectedMetric))
+				Expect(err).To(BeNil())
 			})
 		})
 	})
