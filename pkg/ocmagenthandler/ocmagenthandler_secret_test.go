@@ -31,7 +31,7 @@ import (
 var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 
 	const (
-		testAccessTokenValue = "dGhpcyBpcyBhIHRlc3QgdmFsdWU=" // "this is a test value"
+		testAccessTokenValue = "dGhpcyBpcyBhIHRlc3QgdmFsdWU=" //#nosec G101 -- This is a false positive (test value)
 	)
 
 	var (
