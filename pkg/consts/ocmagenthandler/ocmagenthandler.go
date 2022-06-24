@@ -63,7 +63,7 @@ const (
 	// OCMAgentConfigClusterID is the name of the key used for the Cluster ID configmap entry
 	OCMAgentConfigClusterID = "clusterID"
 	// PullSecretKey defines the key in the pull secret containing the auth tokens
-	PullSecretKey = ".dockerconfigjson"
+	PullSecretKey = ".dockerconfigjson" //#nosec G101 -- This is a false positive
 	// PullSecretAuthTokenKey defines the name of the key in the pull secret containing the auth token
 	PullSecretAuthTokenKey = "cloud.openshift.com"
 	// InjectCaBundleIndicator defines the name of the key for the label of trusted CA bundle configmap
