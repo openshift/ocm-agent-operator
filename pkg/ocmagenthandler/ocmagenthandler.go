@@ -3,13 +3,40 @@ package ocmagenthandler
 import (
 	"context"
 
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	"github.com/go-logr/logr"
-	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
+	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//go:generate mockgen -source $GOFILE -destination ../../pkg/util/test/generated/mocks/$GOPACKAGE/interfaces.go -package $GOPACKAGE
+//go:generate mockgen -source $GOFILE -destination ../../pkg/util/test/generated/mocks/$GOPACKAGE/interfaces.go -package mocks
+
+type OcmAgentHandlerBuilder interface {
+	New() (OCMAgentHandler, error)
+}
+
+type ocmAgentHandlerBuilder struct {
+	Client client.Client
+}
+
+func NewBuilder(c client.Client) OcmAgentHandlerBuilder {
+	return &ocmAgentHandlerBuilder{Client: c}
+}
+
+func (oab *ocmAgentHandlerBuilder) New() (OCMAgentHandler, error) {
+	log := ctrl.Log.WithName("handler").WithName("OCMAgent")
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	oaohandler := &ocmAgentHandler{
+		Client: oab.Client,
+		Log:    log,
+		Ctx:    ctx,
+		Scheme: scheme,
+	}
+	return oaohandler, nil
+}
 
 type OCMAgentHandler interface {
 	// EnsureOCMAgentResourcesExist ensures that an OCM Agent is deployed on the cluster.
@@ -22,18 +49,9 @@ type ensureResource func(agent ocmagentv1alpha1.OcmAgent) error
 
 type ocmAgentHandler struct {
 	Client client.Client
-	Scheme *runtime.Scheme
 	Log    logr.Logger
 	Ctx    context.Context
-}
-
-func New(client client.Client, scheme *runtime.Scheme, log logr.Logger, ctx context.Context) OCMAgentHandler {
-	return &ocmAgentHandler{
-		Client: client,
-		Scheme: scheme,
-		Log:    log,
-		Ctx:    ctx,
-	}
+	Scheme *runtime.Scheme
 }
 
 func (o *ocmAgentHandler) EnsureOCMAgentResourcesExist(ocmAgent ocmagentv1alpha1.OcmAgent) error {

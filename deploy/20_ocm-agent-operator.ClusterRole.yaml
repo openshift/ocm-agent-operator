@@ -1,7 +1,6 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: ocm-agent-operator
 rules:
   - apiGroups:
@@ -46,3 +45,10 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+    - networking.k8s.io
+    resources:
+    - networkpolicies
+    - networkpolicies/finalizers
+    verbs:
+    - '*'

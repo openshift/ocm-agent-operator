@@ -7,21 +7,14 @@ OPERATOR_NAME=ocm-agent-operator
 boilerplate-update: ## Make boilerplate update itself
 	@boilerplate/update
 
+# Run against the configured Kubernetes cluster in ~/.kube/config
 .PHONY: run
-run: ## Wrapper around operator sdk run. Requires OPERATOR_NAMESPACE to be set. See run-standard for defaults. 
-	operator-sdk run --local --watch-namespace ""
+run:
+	go run ./main.go
 
-.PHONY: run-routes
-run-routes: ## Same as `run`, however will use ROUTE objects to contact prometheus and alertmanager. Use of routes is non-standard but convenient for local development.
-	ROUTES=true operator-sdk run --local --watch-namespace ""
-
-.PHONY: run-standard
-run-standard: ## Run locally with openshift-ocm-agent-operator as OPERATOR_NAMESPACE.
-	OPERATOR_NAMESPACE=openshift-ocm-agent-operator operator-sdk run --local --watch-namespace ""
-
-.PHONY: run-standard-routes
-run-standard-routes: ## Run locally with openshift-ocm-agent-operator as OPERATOR_NAMESPACE and use of non-standard routes.
-	OPERATOR_NAMESPACE=openshift-ocm-agent-operator ROUTES=true operator-sdk run --local --watch-namespace ""
+.PHONY: run-verbose
+run-verbose:
+	go run ./main.go --zap-log-level=5
 
 .PHONY: tools
 tools: ## Install local go tools for OAO
