@@ -23,23 +23,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
 	ctrlconst "github.com/openshift/ocm-agent-operator/pkg/consts/controller"
 	"github.com/openshift/ocm-agent-operator/pkg/localmetrics"
 	"github.com/openshift/ocm-agent-operator/pkg/ocmagenthandler"
+	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // OcmAgentReconciler reconciles a OcmAgent object
@@ -135,65 +130,13 @@ func (r *OcmAgentReconciler) Reconcile(ctx context.Context, request reconcile.Re
 // SetupWithManager sets up the controller with the Manager.
 func (r *OcmAgentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
-	onAllExceptGenericEventsPredicate := predicate.Funcs{
-		UpdateFunc: func(evt event.UpdateEvent) bool {
-			return true
-		},
-		CreateFunc: func(evt event.CreateEvent) bool {
-			return true
-		},
-		DeleteFunc: func(evt event.DeleteEvent) bool {
-			return true
-		},
-		GenericFunc: func(evt event.GenericEvent) bool {
-			return false
-		},
-	}
-
-	controllerBuilder := ctrl.NewControllerManagedBy(mgr).
-		//  Watch for the managedResources
-		Watches(&source.Kind{Type: &ocmagentv1alpha1.OcmAgent{}},
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(onAllExceptGenericEventsPredicate),
-		).
-		Watches(&source.Kind{Type: &corev1.Service{}},
-			&handler.EnqueueRequestForOwner{
-				IsController: true,
-				OwnerType:    &ocmagentv1alpha1.OcmAgent{},
-			},
-			builder.WithPredicates(onAllExceptGenericEventsPredicate),
-		).
-		Watches(&source.Kind{Type: &corev1.Secret{}},
-			&handler.EnqueueRequestForOwner{
-				IsController: true,
-				OwnerType:    &ocmagentv1alpha1.OcmAgent{},
-			},
-			builder.WithPredicates(onAllExceptGenericEventsPredicate),
-		).
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}},
-			&handler.EnqueueRequestForOwner{
-				IsController: true,
-				OwnerType:    &ocmagentv1alpha1.OcmAgent{},
-			},
-			builder.WithPredicates(onAllExceptGenericEventsPredicate),
-		).
-		Watches(&source.Kind{Type: &appsv1.Deployment{}},
-			&handler.EnqueueRequestForOwner{
-				IsController: true,
-				OwnerType:    &ocmagentv1alpha1.OcmAgent{},
-			},
-			builder.WithPredicates(onAllExceptGenericEventsPredicate),
-		).
-		Watches(&source.Kind{Type: &netv1.NetworkPolicy{}},
-			&handler.EnqueueRequestForOwner{
-				IsController: true,
-				OwnerType:    &ocmagentv1alpha1.OcmAgent{},
-			},
-			builder.WithPredicates(onAllExceptGenericEventsPredicate),
-		)
-
-	// Create a new controller
-	return controllerBuilder.
+	return ctrl.NewControllerManagedBy(mgr).
 		For(&ocmagentv1alpha1.OcmAgent{}).
+		Owns(&netv1.NetworkPolicy{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&corev1.Service{}).
+		Owns(&corev1.Secret{}).
+		Owns(&corev1.ConfigMap{}).
+		Owns(&monitorv1.ServiceMonitor{}).
 		Complete(r)
 }

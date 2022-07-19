@@ -3,7 +3,7 @@ package ocmagenthandler
 import (
 	"reflect"
 
-	monitorv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"

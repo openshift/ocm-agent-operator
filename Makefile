@@ -10,11 +10,11 @@ boilerplate-update: ## Make boilerplate update itself
 # Run against the configured Kubernetes cluster in ~/.kube/config
 .PHONY: run
 run:
-	go run ./main.go
+	OPERATOR_NAMESPACE="openshift-ocm-agent-operator" go run ./main.go
 
 .PHONY: run-verbose
 run-verbose:
-	go run ./main.go --zap-log-level=5
+	OPERATOR_NAMESPACE="openshift-ocm-agent-operator" go run ./main.go --zap-log-level=5
 
 .PHONY: tools
 tools: ## Install local go tools for OAO

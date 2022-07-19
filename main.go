@@ -17,10 +17,13 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 
+	"github.com/openshift/ocm-agent-operator/pkg/localmetrics"
 	"github.com/openshift/ocm-agent-operator/pkg/ocmagenthandler"
+	"github.com/openshift/ocm-agent-operator/pkg/util/namespace"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -34,8 +37,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	monitorv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	oconfigv1 "github.com/openshift/api/config/v1"
+	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+
+	// OSD metrics
+	osdmetrics "github.com/openshift/operator-custom-metrics/pkg/metrics"
 
 	ocmagentmanagedopenshiftiov1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
 	"github.com/openshift/ocm-agent-operator/controllers/ocmagent"
@@ -45,6 +51,11 @@ import (
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
+)
+
+var (
+	osdMetricsPort = "8686"
+	osdMetricsPath = "/metrics"
 )
 
 func init() {
@@ -73,7 +84,30 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	operatorNS, err := namespace.GetOperatorNamespace()
+	if err != nil {
+		setupLog.Error(err, "unable to determine operator namespace, please define OPERATOR_NAMESPACE")
+		os.Exit(1)
+	}
+
+	if err := monitorv1.AddToScheme(clientgoscheme.Scheme); err != nil {
+		setupLog.Error(err, "unable to add monitoringv1 scheme")
+		os.Exit(1)
+	}
+
+	metricsServer := osdmetrics.NewBuilder(operatorNS, "ocm-agent-operator").
+		WithPort(osdMetricsPort).
+		WithPath(osdMetricsPath).
+		WithCollectors(localmetrics.MetricsList).
+		WithServiceMonitor().
+		GetConfig()
+
+	if err := osdmetrics.ConfigureMetrics(context.TODO(), *metricsServer); err != nil {
+		setupLog.Error(err, "Failed to configure OSD metrics")
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+		Namespace:              operatorNS,
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
 		Port:                   9443,
@@ -87,17 +121,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := ocmagentmanagedopenshiftiov1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
-		setupLog.Error(err, "")
-		os.Exit(1)
-	}
-
 	// Create a separate client for the OAH Builder
 	kubeConfig := ctrl.GetConfigOrDie()
 	handlerClient, err := client.New(kubeConfig, client.Options{Scheme: mgr.GetScheme()})
 	if err != nil {
 		os.Exit(1)
 	}
+
 	if err = (&ocmagent.OcmAgentReconciler{
 		Client:                 mgr.GetClient(),
 		Scheme:                 mgr.GetScheme(),

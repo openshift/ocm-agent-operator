@@ -28,12 +28,11 @@ func NewBuilder(c client.Client) OcmAgentHandlerBuilder {
 func (oab *ocmAgentHandlerBuilder) New() (OCMAgentHandler, error) {
 	log := ctrl.Log.WithName("handler").WithName("OCMAgent")
 	ctx := context.Background()
-	scheme := runtime.NewScheme()
 	oaohandler := &ocmAgentHandler{
 		Client: oab.Client,
 		Log:    log,
 		Ctx:    ctx,
-		Scheme: scheme,
+		Scheme: oab.Client.Scheme(),
 	}
 	return oaohandler, nil
 }

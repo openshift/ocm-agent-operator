@@ -54,4 +54,10 @@ rules:
   - list
   - watch
   - update
-
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  - networkpolicies/finalizers
+  verbs:
+  - '*'
