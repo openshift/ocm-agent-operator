@@ -1,3 +1,19 @@
+/*
+Copyright 2022.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package v1alpha1
 
 import (
@@ -15,8 +31,7 @@ type AgentConfig struct {
 // OcmAgentSpec defines the desired state of OcmAgent
 type OcmAgentSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+	// Important: Run "make" to regenerate code after modifying this file
 
 	// AgentConfig refers to OCM agent config fields separated
 	AgentConfig AgentConfig `json:"agentConfig"`
@@ -36,9 +51,8 @@ type OcmAgentSpec struct {
 
 // OcmAgentStatus defines the observed state of OcmAgent
 type OcmAgentStatus struct {
-	// INSERT ADDITIONAL STATUS FIELDS - define observed state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
 
 	// ServiceStatus indicates the status of OCM Agent service
 	ServiceStatus string `json:"serviceStatus"`
@@ -46,11 +60,11 @@ type OcmAgentStatus struct {
 	AvailableReplicas int32 `json:"availableReplicas"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+//+kubebuilder:resource:path=ocmagents,scope=Namespaced
 
 // OcmAgent is the Schema for the ocmagents API
-// +kubebuilder:subresource:status
-// +kubebuilder:resource:path=ocmagents,scope=Namespaced
 type OcmAgent struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -59,7 +73,7 @@ type OcmAgent struct {
 	Status OcmAgentStatus `json:"status,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+//+kubebuilder:object:root=true
 
 // OcmAgentList contains a list of OcmAgent
 type OcmAgentList struct {

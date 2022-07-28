@@ -15,4 +15,3 @@ Operator to manage the [OCM Agent](https://github.com/openshift/ocm-agent) servi
 * [Development](./docs/development.md) -- Instructions for developing and deploying the operator.
 * [Testing](./docs/testing.md) -- Instructions for writing tests.
 * [How To Test](./docs/how-to-test.md) -- Instructions on how to test the OCM Agent Operator
-

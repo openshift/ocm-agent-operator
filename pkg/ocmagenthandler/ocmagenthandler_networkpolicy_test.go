@@ -2,9 +2,10 @@ package ocmagenthandler
 
 import (
 	"context"
+	"reflect"
+
 	k8serrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"reflect"
 
 	"github.com/golang/mock/gomock"
 
@@ -12,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
+	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
 	oah "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 	testconst "github.com/openshift/ocm-agent-operator/pkg/consts/test/init"
 	clientmocks "github.com/openshift/ocm-agent-operator/pkg/util/test/generated/mocks/client"
@@ -36,9 +37,9 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 		testOcmAgent = testconst.TestOCMAgent
 		testOcmAgentHandler = ocmAgentHandler{
 			Client: mockClient,
-			Scheme: testconst.Scheme,
 			Log:    testconst.Logger,
 			Ctx:    testconst.Context,
+			Scheme: testconst.Scheme,
 		}
 	})
 

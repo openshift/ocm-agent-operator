@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/pkg/apis/ocmagent/v1alpha1"
+	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
 	oahconst "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 	testconst "github.com/openshift/ocm-agent-operator/pkg/consts/test/init"
 	clientmocks "github.com/openshift/ocm-agent-operator/pkg/util/test/generated/mocks/client"
@@ -37,9 +37,9 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 		testOcmAgent = testconst.TestOCMAgent
 		testOcmAgentHandler = ocmAgentHandler{
 			Client: mockClient,
-			Scheme: testconst.Scheme,
 			Log:    testconst.Logger,
 			Ctx:    testconst.Context,
+			Scheme: testconst.Scheme,
 		}
 		testClusterId = "9345c78b-b6b6-4f42-b242-79bfcc403b0a"
 	})
