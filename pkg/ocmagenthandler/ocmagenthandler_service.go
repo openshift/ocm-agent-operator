@@ -78,6 +78,7 @@ func (o *ocmAgentHandler) ensureService(ocmAgent ocmagentv1alpha1.OcmAgent) erro
 
 	// Does the resource already exist?
 	for _, svc := range []corev1.Service{oaSvc, oaMetricsSvc} {
+		svc := svc //prevent implicit memory aliasing
 		namespacedName := oah.BuildNamespacedName(svc.Name)
 		o.Log.Info("ensuring service exists", "resource", svc.Name)
 		if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
