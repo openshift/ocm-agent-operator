@@ -60,6 +60,8 @@ objects:
           metadata:
             name: ocm-agent-operator-og
             namespace: openshift-ocm-agent-operator
+            annotations:
+              olm.operatorframework.io/exclude-global-namespace-resolution: 'true'
           spec:
             targetNamespaces:
               - openshift-ocm-agent-operator
