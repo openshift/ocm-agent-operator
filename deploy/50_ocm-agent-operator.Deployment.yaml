@@ -30,6 +30,13 @@ spec:
         - name: ocm-agent-operator
           # Replace this with the built image name
           image: REPLACE_IMAGE
+          resources:
+            requests:
+              memory: "40Mi"
+              cpu: "1m"
+            limits:
+              memory: "64Mi"
+              cpu: "4m"
           command:
             - ocm-agent-operator
           imagePullPolicy: Always
