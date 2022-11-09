@@ -119,6 +119,7 @@ var _ = Describe("OCMAgent Controller", func() {
 			}
 			t, err := testManagedNotificationWrb.GetNotificationForName(testNotificationNameWrb)
 			Expect(t.Name).To(Equal(testNotificationNameWrb))
+			Expect(t.ResolvedDesc).To(Equal(""))
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

@@ -294,3 +294,17 @@ func (c *Conditions) SetCondition(new NotificationCondition) {
 	}
 	*c = append(*c, new)
 }
+
+// ShouldSendResolved checks whether OA should send the SL for resolved alert
+func (m ManagedNotification) ShouldSendResolved(n string, firing bool) (bool, error) {
+	// logic for deciding whether a resolved SL should be sent goes here
+	// If no notification exists, one cannot be sent
+	t, err := m.GetNotificationForName(n)
+	if err != nil {
+		return false, err
+	}
+	if firing || len(t.ResolvedDesc) > 0 {
+		return true, nil
+	}
+	return false, nil
+}
