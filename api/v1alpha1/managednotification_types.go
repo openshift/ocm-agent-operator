@@ -218,6 +218,11 @@ func (m *ManagedNotification) CanBeSent(n string, firing bool) (bool, error) {
 			return false, err
 		}
 
+		// If resolved body is empty, do not send SL for resolved alert
+		if len(t.ResolvedDesc) == 0 {
+			return false, nil
+		}
+
 		// If alert is not firing, only firing status notification can be sent
 		firingStatus := s.Conditions.GetCondition(ConditionAlertFiring).Status
 		if firingStatus != corev1.ConditionTrue {
@@ -293,18 +298,4 @@ func (c *Conditions) SetCondition(new NotificationCondition) {
 		}
 	}
 	*c = append(*c, new)
-}
-
-// ShouldSendResolved checks whether OA should send the SL for resolved alert
-func (m ManagedNotification) ShouldSendResolved(n string, firing bool) (bool, error) {
-	// logic for deciding whether a resolved SL should be sent goes here
-	// If no notification exists, one cannot be sent
-	t, err := m.GetNotificationForName(n)
-	if err != nil {
-		return false, err
-	}
-	if firing || len(t.ResolvedDesc) > 0 {
-		return true, nil
-	}
-	return false, nil
 }

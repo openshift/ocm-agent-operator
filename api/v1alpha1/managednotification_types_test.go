@@ -20,7 +20,8 @@ var _ = Describe("OCMAgent Controller", func() {
 	)
 
 	var (
-		testManagedNotification *v1alpha1.ManagedNotification
+		testManagedNotification    *v1alpha1.ManagedNotification
+		testManagedNotificationWrb *v1alpha1.ManagedNotification
 	)
 
 	BeforeEach(func() {
@@ -70,6 +71,39 @@ var _ = Describe("OCMAgent Controller", func() {
 				},
 			},
 		}
+		testManagedNotificationWrb = &v1alpha1.ManagedNotification{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-wrb",
+				Namespace: "test-ns-wrb",
+			},
+			Spec: v1alpha1.ManagedNotificationSpec{
+				Notifications: []v1alpha1.Notification{
+					{
+						Name:       testNotificationNameWrb,
+						Summary:    "Test Summary",
+						ActiveDesc: "Test Firing",
+						Severity:   "Info",
+						ResendWait: 1,
+					},
+				},
+			},
+			Status: v1alpha1.ManagedNotificationStatus{
+				NotificationRecords: []v1alpha1.NotificationRecord{
+					{
+						Name:                testNotificationName,
+						ServiceLogSentCount: 0,
+						Conditions: []v1alpha1.NotificationCondition{
+							{
+								Type:               v1alpha1.ConditionAlertFiring,
+								Status:             corev1.ConditionTrue,
+								LastTransitionTime: &metav1.Time{Time: time.Now()},
+								Reason:             "Test reason",
+							},
+						},
+					},
+				},
+			},
+		}
 	})
 
 	Context("When retrieving a notification", func() {
@@ -84,39 +118,6 @@ var _ = Describe("OCMAgent Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("will return the correct notification if the resolve body is empty", func() {
-			testManagedNotificationWrb := &v1alpha1.ManagedNotification{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-wrb",
-					Namespace: "test-ns-wrb",
-				},
-				Spec: v1alpha1.ManagedNotificationSpec{
-					Notifications: []v1alpha1.Notification{
-						{
-							Name:       testNotificationNameWrb,
-							Summary:    "Test Summary",
-							ActiveDesc: "Test Firing",
-							Severity:   "Info",
-							ResendWait: 1,
-						},
-					},
-				},
-				Status: v1alpha1.ManagedNotificationStatus{
-					NotificationRecords: []v1alpha1.NotificationRecord{
-						{
-							Name:                testNotificationName,
-							ServiceLogSentCount: 0,
-							Conditions: []v1alpha1.NotificationCondition{
-								{
-									Type:               v1alpha1.ConditionAlertFiring,
-									Status:             corev1.ConditionTrue,
-									LastTransitionTime: &metav1.Time{Time: time.Now()},
-									Reason:             "Test reason",
-								},
-							},
-						},
-					},
-				},
-			}
 			t, err := testManagedNotificationWrb.GetNotificationForName(testNotificationNameWrb)
 			Expect(t.Name).To(Equal(testNotificationNameWrb))
 			Expect(t.ResolvedDesc).To(Equal(""))
@@ -198,6 +199,14 @@ var _ = Describe("OCMAgent Controller", func() {
 			})
 			It("will not send", func() {
 				cansend, err := testManagedNotification.CanBeSent(testNotificationName, false)
+				Expect(cansend).To(BeFalse())
+				Expect(err).To(BeNil())
+			})
+		})
+
+		When("the resolved body is empty", func() {
+			It("will not send", func() {
+				cansend, err := testManagedNotificationWrb.CanBeSent(testNotificationNameWrb, false)
 				Expect(cansend).To(BeFalse())
 				Expect(err).To(BeNil())
 			})
