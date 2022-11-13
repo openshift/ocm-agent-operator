@@ -73,7 +73,6 @@ spec:
                   - activeBody
                   - name
                   - resendWait
-                  - resolvedBody
                   - severity
                   - summary
                   type: object

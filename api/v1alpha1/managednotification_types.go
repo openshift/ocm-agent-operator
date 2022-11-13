@@ -46,7 +46,7 @@ type Notification struct {
 	ActiveDesc string `json:"activeBody"`
 
 	// The body text of the Service Log notification when the alert is resolved
-	ResolvedDesc string `json:"resolvedBody"`
+	ResolvedDesc string `json:"resolvedBody,omitempty"`
 
 	// +kubebuilder:validation:Enum={"Debug","Info","Warning","Error","Fatal"}
 	// The severity of the Service Log notification
@@ -55,7 +55,6 @@ type Notification struct {
 	// Measured in hours. The minimum time interval that must elapse between active Service Log notifications
 	ResendWait int32 `json:"resendWait"`
 }
-
 
 // ManagedNotificationSpec defines the desired state of ManagedNotification
 type ManagedNotificationSpec struct {
@@ -127,7 +126,7 @@ type ManagedNotification struct {
 	Status ManagedNotificationStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // ManagedNotificationList contains a list of ManagedNotification
 type ManagedNotificationList struct {
@@ -217,6 +216,11 @@ func (m *ManagedNotification) CanBeSent(n string, firing bool) (bool, error) {
 		s, err := m.Status.GetNotificationRecord(n)
 		if err != nil {
 			return false, err
+		}
+
+		// If resolved body is empty, do not send SL for resolved alert
+		if len(t.ResolvedDesc) == 0 {
+			return false, nil
 		}
 
 		// If alert is not firing, only firing status notification can be sent
