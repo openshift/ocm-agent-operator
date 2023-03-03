@@ -5,36 +5,37 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	v1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
 	ocmagenthandler "github.com/openshift/ocm-agent-operator/pkg/ocmagenthandler"
-	reflect "reflect"
 )
 
-// MockOcmAgentHandlerBuilder is a mock of OcmAgentHandlerBuilder interface
+// MockOcmAgentHandlerBuilder is a mock of OcmAgentHandlerBuilder interface.
 type MockOcmAgentHandlerBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockOcmAgentHandlerBuilderMockRecorder
 }
 
-// MockOcmAgentHandlerBuilderMockRecorder is the mock recorder for MockOcmAgentHandlerBuilder
+// MockOcmAgentHandlerBuilderMockRecorder is the mock recorder for MockOcmAgentHandlerBuilder.
 type MockOcmAgentHandlerBuilderMockRecorder struct {
 	mock *MockOcmAgentHandlerBuilder
 }
 
-// NewMockOcmAgentHandlerBuilder creates a new mock instance
+// NewMockOcmAgentHandlerBuilder creates a new mock instance.
 func NewMockOcmAgentHandlerBuilder(ctrl *gomock.Controller) *MockOcmAgentHandlerBuilder {
 	mock := &MockOcmAgentHandlerBuilder{ctrl: ctrl}
 	mock.recorder = &MockOcmAgentHandlerBuilderMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockOcmAgentHandlerBuilder) EXPECT() *MockOcmAgentHandlerBuilderMockRecorder {
 	return m.recorder
 }
 
-// New mocks base method
+// New mocks base method.
 func (m *MockOcmAgentHandlerBuilder) New() (ocmagenthandler.OCMAgentHandler, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "New")
@@ -43,50 +44,36 @@ func (m *MockOcmAgentHandlerBuilder) New() (ocmagenthandler.OCMAgentHandler, err
 	return ret0, ret1
 }
 
-// New indicates an expected call of New
+// New indicates an expected call of New.
 func (mr *MockOcmAgentHandlerBuilderMockRecorder) New() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockOcmAgentHandlerBuilder)(nil).New))
 }
 
-// MockOCMAgentHandler is a mock of OCMAgentHandler interface
+// MockOCMAgentHandler is a mock of OCMAgentHandler interface.
 type MockOCMAgentHandler struct {
 	ctrl     *gomock.Controller
 	recorder *MockOCMAgentHandlerMockRecorder
 }
 
-// MockOCMAgentHandlerMockRecorder is the mock recorder for MockOCMAgentHandler
+// MockOCMAgentHandlerMockRecorder is the mock recorder for MockOCMAgentHandler.
 type MockOCMAgentHandlerMockRecorder struct {
 	mock *MockOCMAgentHandler
 }
 
-// NewMockOCMAgentHandler creates a new mock instance
+// NewMockOCMAgentHandler creates a new mock instance.
 func NewMockOCMAgentHandler(ctrl *gomock.Controller) *MockOCMAgentHandler {
 	mock := &MockOCMAgentHandler{ctrl: ctrl}
 	mock.recorder = &MockOCMAgentHandlerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockOCMAgentHandler) EXPECT() *MockOCMAgentHandlerMockRecorder {
 	return m.recorder
 }
 
-// EnsureOCMAgentResourcesExist mocks base method
-func (m *MockOCMAgentHandler) EnsureOCMAgentResourcesExist(arg0 v1alpha1.OcmAgent) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureOCMAgentResourcesExist", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// EnsureOCMAgentResourcesExist indicates an expected call of EnsureOCMAgentResourcesExist
-func (mr *MockOCMAgentHandlerMockRecorder) EnsureOCMAgentResourcesExist(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureOCMAgentResourcesExist", reflect.TypeOf((*MockOCMAgentHandler)(nil).EnsureOCMAgentResourcesExist), arg0)
-}
-
-// EnsureOCMAgentResourcesAbsent mocks base method
+// EnsureOCMAgentResourcesAbsent mocks base method.
 func (m *MockOCMAgentHandler) EnsureOCMAgentResourcesAbsent(arg0 v1alpha1.OcmAgent) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureOCMAgentResourcesAbsent", arg0)
@@ -94,8 +81,22 @@ func (m *MockOCMAgentHandler) EnsureOCMAgentResourcesAbsent(arg0 v1alpha1.OcmAge
 	return ret0
 }
 
-// EnsureOCMAgentResourcesAbsent indicates an expected call of EnsureOCMAgentResourcesAbsent
+// EnsureOCMAgentResourcesAbsent indicates an expected call of EnsureOCMAgentResourcesAbsent.
 func (mr *MockOCMAgentHandlerMockRecorder) EnsureOCMAgentResourcesAbsent(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureOCMAgentResourcesAbsent", reflect.TypeOf((*MockOCMAgentHandler)(nil).EnsureOCMAgentResourcesAbsent), arg0)
+}
+
+// EnsureOCMAgentResourcesExist mocks base method.
+func (m *MockOCMAgentHandler) EnsureOCMAgentResourcesExist(arg0 v1alpha1.OcmAgent) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureOCMAgentResourcesExist", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureOCMAgentResourcesExist indicates an expected call of EnsureOCMAgentResourcesExist.
+func (mr *MockOCMAgentHandlerMockRecorder) EnsureOCMAgentResourcesExist(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureOCMAgentResourcesExist", reflect.TypeOf((*MockOCMAgentHandler)(nil).EnsureOCMAgentResourcesExist), arg0)
 }
