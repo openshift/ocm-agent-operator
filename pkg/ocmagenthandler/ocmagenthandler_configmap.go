@@ -20,17 +20,24 @@ import (
 
 func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, clusterId string) *corev1.ConfigMap {
 	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.OcmAgentConfig)
+
+	CMData := map[string]string{
+		oah.OCMAgentConfigServicesKey: strings.Join(ocmAgent.Spec.AgentConfig.Services, ","),
+		oah.OCMAgentConfigURLKey:      ocmAgent.Spec.AgentConfig.OcmBaseUrl,
+	}
+
+	if clusterId != "" {
+		CMData[oah.OCMAgentConfigClusterID] = clusterId
+	}
+
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      namespacedName.Name,
 			Namespace: namespacedName.Namespace,
 		},
-		Data: map[string]string{
-			oah.OCMAgentConfigServicesKey: strings.Join(ocmAgent.Spec.AgentConfig.Services, ","),
-			oah.OCMAgentConfigURLKey:      ocmAgent.Spec.AgentConfig.OcmBaseUrl,
-			oah.OCMAgentConfigClusterID:   clusterId,
-		},
+		Data: CMData,
 	}
+
 	return cm
 }
 
@@ -49,8 +56,8 @@ func buildTrustedCaConfigMap() *corev1.ConfigMap {
 	return cm
 }
 
-func buildCAMOConfigMap() (*corev1.ConfigMap, error) {
-	oaServiceURL, err := oah.BuildServiceURL()
+func buildCAMOConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) (*corev1.ConfigMap, error) {
+	oaServiceURL, err := oah.BuildServiceURL(ocmAgent.Name, ocmAgent.Namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -79,14 +86,20 @@ func (o *ocmAgentHandler) ensureAllConfigMaps(ocmAgent ocmagentv1alpha1.OcmAgent
 	}
 	clusterID := string(cv.Spec.ClusterID)
 
-	oaCM := buildOCMAgentConfigMap(ocmAgent, clusterID)
+	var oaCM *corev1.ConfigMap
+	if ocmAgent.Spec.FleetMode {
+		oaCM = buildOCMAgentConfigMap(ocmAgent, "")
+	} else {
+		oaCM = buildOCMAgentConfigMap(ocmAgent, clusterID)
+	}
+
 	err = o.ensureConfigMap(ocmAgent, oaCM, true)
 	if err != nil {
 		return err
 	}
 
 	// Ensure the CAMO ConfigMap
-	camoCM, err := buildCAMOConfigMap()
+	camoCM, err := buildCAMOConfigMap(ocmAgent)
 	if err != nil {
 		return err
 	}

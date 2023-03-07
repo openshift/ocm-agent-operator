@@ -17,11 +17,11 @@ import (
 )
 
 func buildOCMAgentService(ocmAgent ocmagentv1alpha1.OcmAgent) corev1.Service {
-	namespacedName := oah.BuildNamespacedName(oah.OCMAgentServiceName)
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name)
 	labels := map[string]string{
-		"app": oah.OCMAgentName,
+		"app": ocmAgent.Name,
 	}
-	cm := corev1.Service{
+	svc := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      namespacedName.Name,
 			Namespace: namespacedName.Namespace,
@@ -36,13 +36,14 @@ func buildOCMAgentService(ocmAgent ocmagentv1alpha1.OcmAgent) corev1.Service {
 			}},
 		},
 	}
-	return cm
+	return svc
 }
 
 func buildOCMAgentMetricsService(ocmAgent ocmagentv1alpha1.OcmAgent) corev1.Service {
-	namespacedName := oah.BuildNamespacedName(oah.OCMAgentMetricsServiceName)
+	metricsSVCname := ocmAgent.Name + "-metrics"
+	namespacedName := oah.BuildNamespacedName(metricsSVCname)
 	labels := map[string]string{
-		"app": oah.OCMAgentName,
+		"app": ocmAgent.Name,
 	}
 	svc := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -114,7 +115,9 @@ func (o *ocmAgentHandler) ensureService(ocmAgent ocmagentv1alpha1.OcmAgent) erro
 }
 
 func (o *ocmAgentHandler) ensureServiceDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	for _, svcName := range []string{oah.OCMAgentServiceName, oah.OCMAgentMetricsServiceName} {
+	OASvcName := ocmAgent.Name
+	OAMetricsSvcName := ocmAgent.Name + "-metrics"
+	for _, svcName := range []string{OASvcName, OAMetricsSvcName} {
 		namespacedName := oah.BuildNamespacedName(svcName)
 		foundResource := &corev1.Service{}
 		// Does the resource already exist?

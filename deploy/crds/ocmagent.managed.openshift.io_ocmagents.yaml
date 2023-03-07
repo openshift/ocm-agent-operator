@@ -52,6 +52,10 @@ spec:
                 - ocmBaseUrl
                 - services
                 type: object
+              fleetMode:
+                description: FleetMode indicates if the OCM agent is running in fleet
+                  mode, default to false
+                type: boolean
               ocmAgentConfig:
                 description: OcmAgentConfig defines the configmap name which generated
                   by operator and consumed by OCM Agent service

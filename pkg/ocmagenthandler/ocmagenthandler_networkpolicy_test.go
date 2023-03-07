@@ -46,7 +46,7 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 	Context("When building an OCM Agent NetworkPolicy", func() {
 		var np netv1.NetworkPolicy
 		BeforeEach(func() {
-			np = buildNetworkPolicy()
+			np = buildNetworkPolicy(testOcmAgent)
 		})
 		It("Has the expected name and namespace", func() {
 			Expect(np.Name).To(Equal(oah.OCMAgentNetworkPolicyName))
@@ -58,7 +58,7 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 		var testNetworkPolicy netv1.NetworkPolicy
 		var testNamespacedName types.NamespacedName
 		BeforeEach(func() {
-			testNetworkPolicy = buildNetworkPolicy()
+			testNetworkPolicy = buildNetworkPolicy(testOcmAgent)
 			testNamespacedName = types.NamespacedName{
 				Namespace: testNetworkPolicy.Namespace,
 				Name:      testNetworkPolicy.Name,
@@ -70,7 +70,7 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 					testNetworkPolicy.Spec.PodSelector.MatchLabels = map[string]string{"fake": "fake"}
 				})
 				It("updates the networkpolicy", func() {
-					goldenNetworkPolicy := buildNetworkPolicy()
+					goldenNetworkPolicy := buildNetworkPolicy(testOcmAgent)
 					gomock.InOrder(
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, testNetworkPolicy),
 						mockClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(

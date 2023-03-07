@@ -22,9 +22,9 @@ import (
 )
 
 func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployment {
-	namespacedName := oah.BuildNamespacedName(oah.OCMAgentName)
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name)
 	labels := map[string]string{
-		"app": oah.OCMAgentName,
+		"app": ocmAgent.Name,
 	}
 	labelSelectors := metav1.LabelSelector{
 		MatchLabels: labels,
@@ -163,7 +163,7 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 						VolumeMounts: volumeMounts,
 						Image:        ocmAgent.Spec.OcmAgentImage,
 						Command:      ocmAgentCommand,
-						Name:         oah.OCMAgentName,
+						Name:         ocmAgent.Name,
 						Ports: []corev1.ContainerPort{{
 							ContainerPort: oah.OCMAgentPort,
 							Name:          oah.OCMAgentPortName,
@@ -215,15 +215,21 @@ func buildOCMAgentArgs(ocmAgent ocmagentv1alpha1.OcmAgent) []string {
 		fmt.Sprintf("--access-token=@%s", accessTokenPath),
 		fmt.Sprintf("--services=@%s", configServicesPath),
 		fmt.Sprintf("--ocm-url=@%s", configURLPath),
-		fmt.Sprintf("--cluster-id=@%s", clusterIDPath),
 	}
+	if !ocmAgent.Spec.FleetMode {
+		command = append(command, fmt.Sprintf("--cluster-id=@%s", clusterIDPath))
+	}
+	if ocmAgent.Spec.FleetMode {
+		command = append(command, "--fleet-mode=true")
+	}
+
 	return command
 }
 
 // ensureDeployment ensures that an OCMAgent Deployment exists on the cluster
 // and that its configuration matches what is expected.
 func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := oah.BuildNamespacedName(oah.OCMAgentName)
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name)
 	foundResource := &appsv1.Deployment{}
 	populationFunc := func() appsv1.Deployment {
 		return buildOCMAgentDeployment(ocmAgent)
@@ -259,7 +265,7 @@ func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) e
 		}
 	} else {
 		// It does exist, check if it is what we expected
-		if deploymentConfigChanged(foundResource, &resource, o.Log) {
+		if deploymentConfigChanged(foundResource, &resource, ocmAgent, o.Log) {
 			// Specs aren't equal, update and fix.
 			o.Log.Info("An OCMAgent deployment exists but contains unexpected configuration. Restoring.")
 			foundResource.Spec = *resource.Spec.DeepCopy()
@@ -273,7 +279,7 @@ func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) e
 
 // ensureDeploymentDeleted removes the deployment from the cluster
 func (o *ocmAgentHandler) ensureDeploymentDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := oah.BuildNamespacedName(oah.OCMAgentName)
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name)
 	foundResource := &appsv1.Deployment{}
 	// Does the resource already exist?
 	o.Log.Info("ensuring deployment removed", "resource", namespacedName.String())
@@ -295,7 +301,7 @@ func (o *ocmAgentHandler) ensureDeploymentDeleted(ocmAgent ocmagentv1alpha1.OcmA
 
 // deploymentConfigChanged flags if the two supplied deployments differ in configuration
 // that the OCM Agent Operator manages
-func deploymentConfigChanged(current, expected *appsv1.Deployment, log logr.Logger) bool {
+func deploymentConfigChanged(current, expected *appsv1.Deployment, ocmAgent ocmagentv1alpha1.OcmAgent, log logr.Logger) bool {
 	changed := false
 
 	// Compare labels
@@ -307,7 +313,7 @@ func deploymentConfigChanged(current, expected *appsv1.Deployment, log logr.Logg
 	}
 
 	// There may be multiple containers eventually, so let's do a loop
-	for _, name := range []string{oah.OCMAgentName} {
+	for _, name := range []string{ocmAgent.Name} {
 		var curImage, expImage string
 		var curReadinessProbeHTTPGet, curLivenessProbeHTTPGet, expReadinessProbeHTTPGet, expLivenessProbeHTTPGet *corev1.HTTPGetAction
 		var curEnvs, expEnvs []corev1.EnvVar

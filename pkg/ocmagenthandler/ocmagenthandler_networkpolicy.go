@@ -13,7 +13,7 @@ import (
 	oah "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 )
 
-func buildNetworkPolicy() netv1.NetworkPolicy {
+func buildNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent) netv1.NetworkPolicy {
 	namespacedName := oah.BuildNamespacedName(oah.OCMAgentNetworkPolicyName)
 	np := netv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -22,7 +22,7 @@ func buildNetworkPolicy() netv1.NetworkPolicy {
 		},
 		Spec: netv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{"app": oah.OCMAgentName},
+				MatchLabels: map[string]string{"app": ocmAgent.Name},
 			},
 			Ingress: []netv1.NetworkPolicyIngressRule{{
 				From: []netv1.NetworkPolicyPeer{{
@@ -45,7 +45,7 @@ func (o *ocmAgentHandler) ensureNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent
 	namespacedName := oah.BuildNamespacedName(oah.OCMAgentNetworkPolicyName)
 	foundResource := &netv1.NetworkPolicy{}
 	populationFunc := func() netv1.NetworkPolicy {
-		return buildNetworkPolicy()
+		return buildNetworkPolicy(ocmAgent)
 	}
 	// Does the resource already exist?
 	o.Log.Info("ensuring networkpolicy exists", "resource", namespacedName.String())

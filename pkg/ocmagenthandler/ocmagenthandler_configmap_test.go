@@ -140,7 +140,7 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 			var cm *corev1.ConfigMap
 			var err error
 			BeforeEach(func() {
-				cm, err = buildCAMOConfigMap()
+				cm, err = buildCAMOConfigMap(testOcmAgent)
 			})
 			It("builds one successfully", func() {
 				Expect(err).ToNot(HaveOccurred())

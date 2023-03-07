@@ -46,7 +46,7 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 	Context("When building an OCM Agent Deployment", func() {
 		It("deploys with the expected configured values", func() {
 			deployment := buildOCMAgentDeployment(testOcmAgent)
-			Expect(deployment.Name).To(Equal(ocmagenthandler.OCMAgentName))
+			Expect(deployment.Name).To(Equal(testOcmAgent.Name))
 			Expect(deployment.Namespace).To(Equal(ocmagenthandler.OCMAgentNamespace))
 			Expect(*deployment.Spec.Replicas).To(Equal(testOcmAgent.Spec.Replicas))
 			Expect(deployment.Spec.Template.Spec.Containers).NotTo(BeEmpty())
@@ -88,7 +88,7 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 		var testNamespacedName types.NamespacedName
 		var testProxy, testNoProxy oconfigv1.Proxy
 		BeforeEach(func() {
-			testNamespacedName = ocmagenthandler.BuildNamespacedName(ocmagenthandler.OCMAgentName)
+			testNamespacedName = ocmagenthandler.BuildNamespacedName(testOcmAgent.Name)
 			testDeployment = buildOCMAgentDeployment(testOcmAgent)
 			testProxy = oconfigv1.Proxy{
 				Status: oconfigv1.ProxyStatus{
@@ -191,47 +191,47 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			})
 			It("should detect a label change", func() {
 				testDeployment.Labels = map[string]string{"dummy": "value"}
-				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testOcmAgent, testconst.Logger)
 				Expect(changed).To(BeTrue())
 			})
 			It("should detect an image change", func() {
 				testDeployment.Spec.Template.Spec.Containers[0].Image = "something else"
-				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testOcmAgent, testconst.Logger)
 				Expect(changed).To(BeTrue())
 			})
 			It("should handle missing readiness probe", func() {
 				testDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe = nil
-				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testOcmAgent, testconst.Logger)
 				Expect(changed).To(BeTrue())
 			})
 			It("should handle missing liveness probe", func() {
 				testDeployment.Spec.Template.Spec.Containers[0].LivenessProbe = nil
-				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testOcmAgent, testconst.Logger)
 				Expect(changed).To(BeTrue())
 			})
 			It("should detect a readiness probe change", func() {
 				testDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet = nil
-				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testOcmAgent, testconst.Logger)
 				Expect(changed).To(BeTrue())
 			})
 			It("should detect a liveness probe change", func() {
 				testDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet = nil
-				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testOcmAgent, testconst.Logger)
 				Expect(changed).To(BeTrue())
 			})
 			It("should detect a replica change", func() {
 				replicas := int32(5000)
 				testDeployment.Spec.Replicas = &replicas
-				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testOcmAgent, testconst.Logger)
 				Expect(changed).To(BeTrue())
 			})
 			It("should detect a affinity change", func() {
 				testDeployment.Spec.Template.Spec.Affinity = nil
-				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testOcmAgent, testconst.Logger)
 				Expect(changed).To(BeTrue())
 			})
 			It("not detect a change if there are no differences", func() {
-				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testconst.Logger)
+				changed := deploymentConfigChanged(&testDeployment, &goldenDeployment, testOcmAgent, testconst.Logger)
 				Expect(changed).To(BeFalse())
 			})
 		})

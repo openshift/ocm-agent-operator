@@ -52,7 +52,7 @@ var _ = Describe("OCM Agent ServiceMonitor Handler", func() {
 	Context("When building an OCM Agent ServiceMonitor", func() {
 		It("Sets a correct name", func() {
 			sm := buildOCMAgentServiceMonitor(testOcmAgent)
-			Expect(sm.Name).To(Equal("ocm-agent-metrics"))
+			Expect(sm.Name).To(Equal(testOcmAgent.Name + "-metrics"))
 		})
 	})
 
@@ -60,7 +60,7 @@ var _ = Describe("OCM Agent ServiceMonitor Handler", func() {
 		var testServiceMonitor monitorv1.ServiceMonitor
 		var testNamespacedName types.NamespacedName
 		BeforeEach(func() {
-			testNamespacedName = oah.BuildNamespacedName(oah.OCMAgentServiceMonitorName)
+			testNamespacedName = oah.BuildNamespacedName(testOcmAgent.Name + "-metrics")
 			testServiceMonitor = buildOCMAgentServiceMonitor(testOcmAgent)
 		})
 		When("the OCM Agent serviceMonitor already exists", func() {
