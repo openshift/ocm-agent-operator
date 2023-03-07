@@ -1,0 +1,24 @@
+apiVersion: ocmagent.managed.openshift.io/v1alpha1
+kind: ManagedFleetNotificationRecord
+metadata:
+  name: test-fleet-notification-record
+  namespace: openshift-ocm-agent-operator
+spec: {}
+status:
+  managementCluster: xxx-yyy-zzz
+  notificationRecordByName:
+    - notificationName: notification A
+      resendWait: 60
+      notificationRecordItems:
+        - hostedClusterID: 22b0n23htr7cbjhgmn3iihsrf18ii9ke
+          serviceLogSentCount: 0
+          lastTransitionTime: "2023-03-07T23:45:03Z"
+        - hostedClusterID: 22b0ptk8lj7lr8kusnnmaqe9ltl0vbdh
+          serviceLogSentCount: 5
+          lastTransitionTime: "2023-03-07T23:45:03Z"
+    - notificationName: notification B
+      resendWait: 60
+      notificationRecordItems:
+        - hostedClusterID: 22b42c7dlht72ldnqs52ipc9b7hmldjk
+          serviceLogSentCount: 0
+          lastTransitionTime: "2023-03-07T23:45:03Z"
