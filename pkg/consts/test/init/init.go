@@ -58,6 +58,11 @@ var (
 		Status: ocmagentv1alpha1.OcmAgentStatus{},
 	}
 	TestConfigMapSuffix = "-cm"
+
+	MfnrNamespacedName = types.NamespacedName{
+		Name:      "test-managedfleetnotificationrecord",
+		Namespace: "test-namespace",
+	}
 )
 
 func setScheme(scheme *runtime.Scheme) *runtime.Scheme {

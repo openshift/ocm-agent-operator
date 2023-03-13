@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/openshift/ocm-agent-operator/controllers/fleetnotification"
 	"github.com/openshift/ocm-agent-operator/pkg/localmetrics"
 	"github.com/openshift/ocm-agent-operator/pkg/ocmagenthandler"
 	"github.com/openshift/ocm-agent-operator/pkg/util/namespace"
@@ -39,6 +40,7 @@ import (
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -49,7 +51,6 @@ import (
 
 	oconfigv1 "github.com/openshift/api/config/v1"
 	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-
 	// OSD metrics
 	osdmetrics "github.com/openshift/operator-custom-metrics/pkg/metrics"
 
@@ -164,13 +165,13 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "OcmAgent")
 		os.Exit(1)
 	}
-	//if err = (&fleetnotification.ManagedFleetNotificationReconciler{
-	//	Client: mgr.GetClient(),
-	//	Scheme: mgr.GetScheme(),
-	//}).SetupWithManager(mgr); err != nil {
-	//	setupLog.Error(err, "unable to create controller", "controller", "ManagedFleetNotification")
-	//	os.Exit(1)
-	//}
+	if err = (&fleetnotification.ManagedFleetNotificationReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ManagedFleetNotification")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

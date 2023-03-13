@@ -18,13 +18,21 @@ package fleetnotification
 
 import (
 	"context"
+	"fmt"
+	"time"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	NotificationRecordStaleTimeoutInHour int32 = 360
 )
 
 // ManagedFleetNotificationReconciler reconciles a ManagedFleetNotification object
@@ -55,7 +63,6 @@ func (r *ManagedFleetNotificationReconciler) Reconcile(ctx context.Context, requ
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling FleetNotification")
 
-	// TODO(user): your logic here
 	nr := ocmagentv1alpha1.ManagedFleetNotificationRecord{}
 
 	err := r.Client.Get(ctx, request.NamespacedName, &nr)
@@ -63,6 +70,26 @@ func (r *ManagedFleetNotificationReconciler) Reconcile(ctx context.Context, requ
 		return reconcile.Result{}, err
 	}
 
+	for n, rn := range nr.Status.NotificationRecordByName {
+		resendWait := rn.ResendWait
+		for i, ri := range rn.NotificationRecordItems {
+			// Consider the record is stale if the lastSendTime is older than resendWait + 15 days
+			eol := ri.LastTransitionTime.Time.Add(time.Duration(resendWait+NotificationRecordStaleTimeoutInHour) * time.Hour)
+			if time.Now().After(eol) {
+				log.Info(fmt.Sprintf("NotificationRecord for notification %s and hostedcluster %s has not been updated "+
+					"for %d hours and considered as stale, cleaning up...", rn.NotificationName, ri.HostedClusterID,
+					resendWait+NotificationRecordStaleTimeoutInHour))
+
+				patch := []byte(fmt.Sprintf(`[{"op": "remove", "path": "/status/notificationRecordByName/%d/notificationRecordItems/%d"}]`, n, i))
+
+				err = r.Client.Status().Patch(ctx, &nr, client.RawPatch(types.JSONPatchType, patch))
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+				return ctrl.Result{}, nil
+			}
+		}
+	}
 	return ctrl.Result{}, nil
 }
 
@@ -70,6 +97,6 @@ func (r *ManagedFleetNotificationReconciler) Reconcile(ctx context.Context, requ
 func (r *ManagedFleetNotificationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		// Uncomment the following line adding a pointer to an instance of the controlled resource as an argument
-		// For().
+		For(&ocmagentv1alpha1.ManagedFleetNotificationRecord{}).
 		Complete(r)
 }

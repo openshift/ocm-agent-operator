@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestOCMAgent(t *testing.T) {
+func TestFleetNotificationRecord(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "OCMAgent FleetNotification Controller Suite")
+	RunSpecs(t, "FleetNotification Controller Suite")
 }
