@@ -1,0 +1,13 @@
+apiVersion: ocmagent.managed.openshift.io/v1alpha1
+kind: ManagedFleetNotification
+metadata:
+  name: test-fleet-notification
+  namespace: openshift-ocm-agent-operator
+spec:
+  fleetNotification:
+    name: test-fleet-notification
+    summary: 'Action Required: Test Notification'
+    notificationMessage: |-
+      This is a test notification for hypershift hosted clusters.
+    severity: Warning
+    resendWait: 60
