@@ -2,6 +2,7 @@ package ocmagenthandler
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/types"
 	"reflect"
 
 	netv1 "k8s.io/api/networking/v1"
@@ -14,7 +15,25 @@ import (
 )
 
 func buildNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent) netv1.NetworkPolicy {
-	namespacedName := oah.BuildNamespacedName(oah.OCMAgentNetworkPolicyName)
+	var (
+		namespacedName    types.NamespacedName
+		namespaceSelector *metav1.LabelSelector
+	)
+	if ocmAgent.Spec.FleetMode {
+		namespacedName = oah.BuildNamespacedName(oah.OCMFleetAgentNetworkPolicyName)
+		namespaceSelector = &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{{
+				Key:      "name",
+				Operator: "In",
+				Values:   []string{"observatorium-*"},
+			}},
+		}
+	} else {
+		namespacedName = oah.BuildNamespacedName(oah.OCMAgentNetworkPolicyName)
+		namespaceSelector = &metav1.LabelSelector{
+			MatchLabels: map[string]string{"name": "openshift-monitoring"},
+		}
+	}
 	np := netv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      namespacedName.Name,
@@ -26,9 +45,7 @@ func buildNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent) netv1.NetworkPolicy 
 			},
 			Ingress: []netv1.NetworkPolicyIngressRule{{
 				From: []netv1.NetworkPolicyPeer{{
-					NamespaceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{"name": "openshift-monitoring"},
-					}},
+					NamespaceSelector: namespaceSelector},
 				}},
 			},
 			PolicyTypes: []netv1.PolicyType{
@@ -42,7 +59,12 @@ func buildNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent) netv1.NetworkPolicy 
 // ensureNetworkPolicy ensures that an OCMAgent NetworkPolicy exists on the cluster
 // and that its configuration matches what is expected.
 func (o *ocmAgentHandler) ensureNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := oah.BuildNamespacedName(oah.OCMAgentNetworkPolicyName)
+	var namespacedName types.NamespacedName
+	if ocmAgent.Spec.FleetMode {
+		namespacedName = oah.BuildNamespacedName(oah.OCMFleetAgentNetworkPolicyName)
+	} else {
+		namespacedName = oah.BuildNamespacedName(oah.OCMAgentNetworkPolicyName)
+	}
 	foundResource := &netv1.NetworkPolicy{}
 	populationFunc := func() netv1.NetworkPolicy {
 		return buildNetworkPolicy(ocmAgent)
@@ -84,7 +106,12 @@ func (o *ocmAgentHandler) ensureNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent
 }
 
 func (o *ocmAgentHandler) ensureNetworkPolicyDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := oah.BuildNamespacedName(oah.OCMAgentNetworkPolicyName)
+	var namespacedName types.NamespacedName
+	if ocmAgent.Spec.FleetMode {
+		namespacedName = oah.BuildNamespacedName(oah.OCMFleetAgentNetworkPolicyName)
+	} else {
+		namespacedName = oah.BuildNamespacedName(oah.OCMAgentNetworkPolicyName)
+	}
 	foundResource := &netv1.NetworkPolicy{}
 	// Does the resource already exist?
 	o.Log.Info("ensuring networkpolicy removed", "resource", namespacedName.String())

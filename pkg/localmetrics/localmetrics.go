@@ -16,6 +16,12 @@ var (
 		Help:      "Failed to obtain a valid pull secret",
 	}, []string{nameLabel})
 
+	MetricFleetSecretAbsent = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: metricsTag,
+		Name:      "fleet_secret_absent",
+		Help:      "Failed to obtain a vault secret for OCM service account",
+	}, []string{nameLabel})
+
 	MetricOcmAgentResourceAbsent = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "ocm_agent_resource_absent",
@@ -25,12 +31,17 @@ var (
 	MetricsList = []prometheus.Collector{
 		MetricPullSecretInvalid,
 		MetricOcmAgentResourceAbsent,
+		MetricFleetSecretAbsent,
 	}
-
 )
 
 func UpdateMetricPullSecretInvalid(ocmAgentName string) {
 	MetricPullSecretInvalid.With(prometheus.Labels{
+		nameLabel: ocmAgentName}).Set(float64(1))
+}
+
+func UpdateMetricFleetSecretAbsent(ocmAgentName string) {
+	MetricFleetSecretAbsent.With(prometheus.Labels{
 		nameLabel: ocmAgentName}).Set(float64(1))
 }
 
@@ -41,6 +52,11 @@ func UpdateMetricOcmAgentResourceAbsent() {
 
 func ResetMetricPullSecretInvalid(ocmAgentName string) {
 	MetricPullSecretInvalid.With(prometheus.Labels{
+		nameLabel: ocmAgentName}).Set(float64(0))
+}
+
+func ResetMetricFleetSecretAbsent(ocmAgentName string) {
+	MetricFleetSecretAbsent.With(prometheus.Labels{
 		nameLabel: ocmAgentName}).Set(float64(0))
 }
 

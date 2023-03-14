@@ -39,16 +39,19 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 		mockCtrl   *gomock.Controller
 
 		testOcmAgent                  ocmagentv1alpha1.OcmAgent
+		testHSOcmAgent                ocmagentv1alpha1.OcmAgent
 		testOcmAgentHandler           ocmAgentHandler
 		testOcmAccessTokenSecretValue []byte
 		testClusterPullSecretValue    []byte
 		testPullSecret                corev1.Secret
+		testHSSecret                  corev1.Secret
 	)
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockClient = clientmocks.NewMockClient(mockCtrl)
 		testOcmAgent = testconst.TestOCMAgent
+		testHSOcmAgent = testconst.TestHSOCMAgent
 		testOcmAgentHandler = ocmAgentHandler{
 			Client: mockClient,
 			Log:    testconst.Logger,
@@ -74,6 +77,17 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 				oahconst.PullSecretKey: testClusterPullSecretValue,
 			},
 		}
+		testHSSecret = corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      testHSOcmAgent.Name,
+				Namespace: testHSOcmAgent.Namespace,
+			},
+			StringData: map[string]string{
+				"OA_OCM_CLIENT_ID":     "ocm-agent-staging",
+				"OA_OCM_CLIENT_SECRET": "test",
+				"OA_OCM_URL":           "https://api.stage.openshift.com",
+			},
+		}
 	})
 
 	Context("When building an OCM Agent Access Token Secret", func() {
@@ -87,10 +101,11 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 
 	Context("Managing the OCM Agent Secret", func() {
 		var testSecret corev1.Secret
-		var testNamespacedName types.NamespacedName
+		var testNamespacedName, testHSNamespacedName types.NamespacedName
 		BeforeEach(func() {
 			testNamespacedName = oahconst.BuildNamespacedName(testOcmAgent.Spec.TokenSecret)
 			testSecret = buildOCMAgentAccessTokenSecret(testOcmAccessTokenSecretValue, testOcmAgent)
+			testHSNamespacedName = oahconst.BuildNamespacedName(testHSOcmAgent.Spec.TokenSecret)
 		})
 		When("the OCM Agent secret already exists", func() {
 			When("the secret differs from what is expected", func() {
@@ -123,6 +138,15 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 					Expect(err).To(BeNil())
 				})
 			})
+			When("the HS secret matches what is expected", func() {
+				It("Should not return error", func() {
+					gomock.InOrder(
+						mockClient.EXPECT().Get(gomock.Any(), testHSNamespacedName, gomock.Any()).Times(1).SetArg(2, testHSSecret),
+					)
+					err := testOcmAgentHandler.ensureFleetClientSecret(testHSOcmAgent)
+					Expect(err).To(BeNil())
+				})
+			})
 		})
 		When("the OCM Agent secret does not already exist", func() {
 			It("creates the secret", func() {
@@ -141,6 +165,14 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 				)
 				err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
 				Expect(err).To(BeNil())
+			})
+			It("return not found error for HS secret", func() {
+				notFound := k8serrs.NewNotFound(schema.GroupResource{}, testSecret.Name)
+				gomock.InOrder(
+					mockClient.EXPECT().Get(gomock.Any(), testHSNamespacedName, gomock.Any()).Times(1).Return(notFound),
+				)
+				err := testOcmAgentHandler.ensureFleetClientSecret(testHSOcmAgent)
+				Expect(err).To(HaveOccurred())
 			})
 		})
 		When("the access token secret should be removed", func() {

@@ -49,7 +49,7 @@ type OcmAgentSpec struct {
 	OcmAgentConfig string `json:"ocmAgentConfig"`
 
 	// FleetMode indicates if the OCM agent is running in fleet mode, default to false
-	FleetMode bool `json:"fleetMode,omitempty""`
+	FleetMode bool `json:"fleetMode,omitempty"`
 }
 
 // OcmAgentStatus defines the observed state of OcmAgent

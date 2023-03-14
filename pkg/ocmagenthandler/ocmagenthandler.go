@@ -55,15 +55,21 @@ type ocmAgentHandler struct {
 
 func (o *ocmAgentHandler) EnsureOCMAgentResourcesExist(ocmAgent ocmagentv1alpha1.OcmAgent) error {
 
-	ensureFuncs := []ensureResource{
+	var ensureFuncs []ensureResource
+	var ensureSecretFunc ensureResource
+	if ocmAgent.Spec.FleetMode {
+		ensureSecretFunc = o.ensureFleetClientSecret
+	} else {
+		ensureSecretFunc = o.ensureAccessTokenSecret
+	}
+	ensureFuncs = []ensureResource{
 		o.ensureDeployment,
 		o.ensureAllConfigMaps,
-		o.ensureAccessTokenSecret,
+		ensureSecretFunc,
 		o.ensureService,
 		o.ensureNetworkPolicy,
 		o.ensureServiceMonitor,
 	}
-
 	for _, fn := range ensureFuncs {
 		err := fn(ocmAgent)
 		if err != nil {

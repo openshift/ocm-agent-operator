@@ -98,14 +98,16 @@ func (o *ocmAgentHandler) ensureAllConfigMaps(ocmAgent ocmagentv1alpha1.OcmAgent
 		return err
 	}
 
-	// Ensure the CAMO ConfigMap
-	camoCM, err := buildCAMOConfigMap(ocmAgent)
-	if err != nil {
-		return err
-	}
-	err = o.ensureConfigMap(ocmAgent, camoCM, false)
-	if err != nil {
-		return err
+	if !ocmAgent.Spec.FleetMode {
+		// Ensure the CAMO ConfigMap
+		camoCM, err := buildCAMOConfigMap(ocmAgent)
+		if err != nil {
+			return err
+		}
+		err = o.ensureConfigMap(ocmAgent, camoCM, false)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Ensure the trusted-ca-build ConfigMap

@@ -2,8 +2,6 @@ package ocmagenthandler
 
 import (
 	"context"
-	"reflect"
-
 	oconfigv1 "github.com/openshift/api/config/v1"
 	testconst "github.com/openshift/ocm-agent-operator/pkg/consts/test/init"
 	clientmocks "github.com/openshift/ocm-agent-operator/pkg/util/test/generated/mocks/client"
@@ -11,6 +9,7 @@ import (
 	k8serrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/golang/mock/gomock"
@@ -29,12 +28,14 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 
 		testOcmAgent        ocmagentv1alpha1.OcmAgent
 		testOcmAgentHandler ocmAgentHandler
+		testHSOcmAgent      ocmagentv1alpha1.OcmAgent
 	)
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockClient = clientmocks.NewMockClient(mockCtrl)
 		testOcmAgent = testconst.TestOCMAgent
+		testHSOcmAgent = testconst.TestHSOCMAgent
 		testOcmAgentHandler = ocmAgentHandler{
 			Client: mockClient,
 			Log:    testconst.Logger,
@@ -80,6 +81,53 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().Value()).To(BeNumerically(">", 0))
 			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().Value()).To(BeNumerically(">", 0))
 
+		})
+	})
+
+	Context("When building an OCM Agent HS Deployment", func() {
+		It("deploys with the expected configured values", func() {
+			deployment := buildOCMAgentDeployment(testHSOcmAgent)
+			Expect(deployment.Name).To(Equal(testHSOcmAgent.Name))
+			Expect(deployment.Namespace).To(Equal(ocmagenthandler.OCMAgentNamespace))
+			Expect(*deployment.Spec.Replicas).To(Equal(testHSOcmAgent.Spec.Replicas))
+			Expect(deployment.Spec.Template.Spec.Containers).NotTo(BeEmpty())
+			Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(Equal(testHSOcmAgent.Spec.OcmAgentImage))
+			Expect(deployment.Spec.Template.Spec.Volumes).NotTo(BeEmpty())
+			// This is a little brittle based on the naming conventions used in the testOcmAgent
+			Expect(deployment.Spec.Template.Spec.Volumes[0].Name).To(Equal(testHSOcmAgent.Spec.OcmAgentConfig))
+			Expect(deployment.Spec.Template.Spec.Volumes[1].Name).To(Equal(testHSOcmAgent.Spec.TokenSecret))
+			Expect(deployment.Spec.Template.Spec.Volumes[2].Name).To(Equal(ocmagenthandler.TrustedCaBundleConfigMapName))
+			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(testHSOcmAgent.Spec.OcmAgentConfig))
+			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[1].Name).To(Equal(testHSOcmAgent.Spec.TokenSecret))
+			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[2].Name).To(Equal(ocmagenthandler.TrustedCaBundleConfigMapName))
+
+			// make sure LivenessProbe is part of deployment config and has defned path, port, url and scheme
+			Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet.Path).NotTo(BeEmpty())
+			Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet.Port.IntVal).To(BeNumerically(">", 0))
+			Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet.Scheme).NotTo(BeEmpty())
+
+			// make sure ReadinessProbe is part of deployment config and has defned path, port url and scheme
+			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Path).NotTo(BeEmpty())
+			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Port.IntVal).To(BeNumerically(">", 0))
+			Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Scheme).NotTo(BeEmpty())
+
+			// make sure Resources Limits is part of deployment config and has defined limits for memory and cpu
+			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Limits).NotTo(BeEmpty())
+			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Value()).To(BeNumerically(">", 0))
+			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Value()).To(BeNumerically(">", 0))
+
+			// make sure Resources Requests is part of deployment config and has defined limits for memory and cpu
+			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Requests).NotTo(BeEmpty())
+			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().Value()).To(BeNumerically(">", 0))
+			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().Value()).To(BeNumerically(">", 0))
+			Expect(func(arr []string, val string) bool {
+				for _, item := range arr {
+					if item == val {
+						return true
+					}
+				}
+				return false
+			}(deployment.Spec.Template.Spec.Containers[0].Command, "fleet-mode"))
 		})
 	})
 

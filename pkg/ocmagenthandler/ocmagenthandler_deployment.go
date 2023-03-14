@@ -212,15 +212,14 @@ func buildOCMAgentArgs(ocmAgent ocmagentv1alpha1.OcmAgent) []string {
 	command := []string{
 		oah.OCMAgentCommand,
 		"serve",
-		fmt.Sprintf("--access-token=@%s", accessTokenPath),
 		fmt.Sprintf("--services=@%s", configServicesPath),
 		fmt.Sprintf("--ocm-url=@%s", configURLPath),
 	}
 	if !ocmAgent.Spec.FleetMode {
-		command = append(command, fmt.Sprintf("--cluster-id=@%s", clusterIDPath))
+		command = append(command, fmt.Sprintf("--cluster-id=@%s", clusterIDPath), fmt.Sprintf("--access-token=@%s", accessTokenPath))
 	}
 	if ocmAgent.Spec.FleetMode {
-		command = append(command, "--fleet-mode=true")
+		command = append(command, "--fleet-mode")
 	}
 
 	return command
