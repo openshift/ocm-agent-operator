@@ -19,24 +19,33 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
+	"runtime"
+	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/openshift/ocm-agent-operator/pkg/localmetrics"
 	"github.com/openshift/ocm-agent-operator/pkg/ocmagenthandler"
 	"github.com/openshift/ocm-agent-operator/pkg/util/namespace"
+	"github.com/openshift/ocm-agent-operator/pkg/version"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"k8s.io/apimachinery/pkg/runtime"
+	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	zaplogfmt "github.com/sykesm/zap-logfmt"
+	uzap "go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	oconfigv1 "github.com/openshift/api/config/v1"
 	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -50,7 +59,7 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
+	scheme   = apiruntime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
 
@@ -59,13 +68,21 @@ var (
 	osdMetricsPath = "/metrics"
 )
 
+var log = logf.Log.WithName("cmd")
+
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
 	utilruntime.Must(ocmagentmanagedopenshiftiov1alpha1.AddToScheme(scheme))
 	utilruntime.Must(oconfigv1.Install(scheme))
 	utilruntime.Must(monitorv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+}
+
+func printVersion() {
+	log.Info(fmt.Sprintf("Operator Version: %s", version.Version))
+	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
+	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
+	log.Info(fmt.Sprintf("Version of operator-sdk: v%v", version.SDKVersion))
 }
 
 func main() {
@@ -83,7 +100,17 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
+	// Add a custom logger to log in RFC3339 format instead of unix epoch time format
+	configLog := uzap.NewProductionEncoderConfig()
+	configLog.EncodeTime = func(ts time.Time, encoder zapcore.PrimitiveArrayEncoder) {
+		encoder.AppendString(ts.UTC().Format(time.RFC3339Nano))
+	}
+	logfmtEncoder := zaplogfmt.NewEncoder(configLog)
+	logger := zap.New(zap.UseDevMode(true), zap.WriteTo(os.Stdout), zap.Encoder(logfmtEncoder))
+	logf.SetLogger(logger)
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	printVersion()
 
 	operatorNS, err := namespace.GetOperatorNamespace()
 	if err != nil {

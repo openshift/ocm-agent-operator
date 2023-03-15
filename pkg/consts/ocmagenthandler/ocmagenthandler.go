@@ -71,6 +71,8 @@ const (
 	// ResourceRequestsCPU and ResourceRequestsMemory defines the cpu and memory requests for OA deployment
 	ResourceRequestsCPU    = "1m"
 	ResourceRequestsMemory = "30Mi"
+	// ConfigMapSuffix is the suffix added to configmap name to always make it unique compared to secret name
+	ConfigMapSuffix = "-cm"
 )
 
 var (

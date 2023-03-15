@@ -15,11 +15,14 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
+	"github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 	oah "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 )
 
 func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, clusterId string) *corev1.ConfigMap {
-	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.OcmAgentConfig)
+
+	// We are ensuring to keep the configmap name always unique from secret name so adding a suffix
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name + ocmagenthandler.ConfigMapSuffix)
 
 	CMData := map[string]string{
 		oah.OCMAgentConfigServicesKey: strings.Join(ocmAgent.Spec.AgentConfig.Services, ","),
@@ -175,7 +178,7 @@ func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, cm
 func (o *ocmAgentHandler) ensureAllConfigMapsDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
 
 	cmsToDelete := []types.NamespacedName{
-		oah.BuildNamespacedName(ocmAgent.Spec.OcmAgentConfig),
+		oah.BuildNamespacedName(ocmAgent.Name),
 		oah.CAMOConfigMapNamespacedName,
 	}
 

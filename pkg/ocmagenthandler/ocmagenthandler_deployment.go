@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
+	"github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 	oah "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 )
 
@@ -32,7 +33,7 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 
 	// Define a volumes for the config
 	tokenSecretVolumeName := ocmAgent.Spec.TokenSecret
-	configVolumeName := ocmAgent.Spec.OcmAgentConfig
+	configVolumeName := ocmAgent.Name + ocmagenthandler.ConfigMapSuffix
 	trustedCaVolumeName := oah.TrustedCaBundleConfigMapName
 	var secretVolumeSourceDefaultMode int32 = 0640
 	var configVolumeSourceDefaultMode int32 = 0644
@@ -53,7 +54,7 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: ocmAgent.Spec.OcmAgentConfig,
+						Name: ocmAgent.Name + ocmagenthandler.ConfigMapSuffix,
 					},
 					DefaultMode: &configVolumeSourceDefaultMode,
 				},
@@ -99,6 +100,8 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 		{Name: "HTTP_PROXY"},
 		{Name: "HTTPS_PROXY"},
 		{Name: "NO_PROXY"},
+		{Name: "OCM_AGENT_SECRET_NAME", Value: ocmAgent.Name},
+		{Name: "OCM_AGENT_CONFIGMAP_NAME", Value: ocmAgent.Name + ocmagenthandler.ConfigMapSuffix},
 	}
 
 	// Sort volume slices by name to keep the sequence stable.
@@ -201,13 +204,16 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 // buildOCMAgentArgs returns the full command argument list to run the OCM Agent
 // in a deployment.
 func buildOCMAgentArgs(ocmAgent ocmagentv1alpha1.OcmAgent) []string {
+
+	configmapName := ocmAgent.Name + ocmagenthandler.ConfigMapSuffix
+
 	accessTokenPath := filepath.Join(oah.OCMAgentSecretMountPath, ocmAgent.Spec.TokenSecret,
 		oah.OCMAgentAccessTokenSecretKey)
-	configServicesPath := filepath.Join(oah.OCMAgentConfigMountPath, ocmAgent.Spec.OcmAgentConfig,
+	configServicesPath := filepath.Join(oah.OCMAgentConfigMountPath, configmapName,
 		oah.OCMAgentConfigServicesKey)
-	configURLPath := filepath.Join(oah.OCMAgentConfigMountPath, ocmAgent.Spec.OcmAgentConfig,
+	configURLPath := filepath.Join(oah.OCMAgentConfigMountPath, configmapName,
 		oah.OCMAgentConfigURLKey)
-	clusterIDPath := filepath.Join(oah.OCMAgentConfigMountPath, ocmAgent.Spec.OcmAgentConfig,
+	clusterIDPath := filepath.Join(oah.OCMAgentConfigMountPath, configmapName,
 		oah.OCMAgentConfigClusterID)
 	command := []string{
 		oah.OCMAgentCommand,
@@ -234,7 +240,7 @@ func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) e
 		return buildOCMAgentDeployment(ocmAgent)
 	}
 
-	envVars, err := o.buildEnvVars()
+	envVars, err := o.buildEnvVars(ocmAgent)
 	if err != nil {
 		return err
 	}
@@ -394,7 +400,7 @@ func deploymentConfigChanged(current, expected *appsv1.Deployment, ocmAgent ocma
 }
 
 // buildEnvVars build the slice of environments to set to the OCM Agent deployment
-func (o *ocmAgentHandler) buildEnvVars() ([]corev1.EnvVar, error) {
+func (o *ocmAgentHandler) buildEnvVars(ocmAgent ocmagentv1alpha1.OcmAgent) ([]corev1.EnvVar, error) {
 	envVars := []corev1.EnvVar{}
 	proxy := oconfigv1.Proxy{}
 	err := o.Client.Get(o.Ctx, oah.ProxyNamespacedName, &proxy)
@@ -406,6 +412,8 @@ func (o *ocmAgentHandler) buildEnvVars() ([]corev1.EnvVar, error) {
 	envVars = append(envVars, corev1.EnvVar{Name: "HTTP_PROXY", Value: proxyStatus.HTTPProxy})
 	envVars = append(envVars, corev1.EnvVar{Name: "HTTPS_PROXY", Value: proxyStatus.HTTPSProxy})
 	envVars = append(envVars, corev1.EnvVar{Name: "NO_PROXY", Value: proxyStatus.NoProxy})
+	envVars = append(envVars, corev1.EnvVar{Name: "OCM_AGENT_SECRET_NAME", Value: ocmAgent.Name})
+	envVars = append(envVars, corev1.EnvVar{Name: "OCM_AGENT_CONFIGMAP_NAME", Value: ocmAgent.Name + ocmagenthandler.ConfigMapSuffix})
 
 	return envVars, nil
 }

@@ -35,10 +35,9 @@ var (
 				OcmBaseUrl: "http://api.example.com",
 				Services:   []string{},
 			},
-			OcmAgentImage:  "quay.io/ocm-agent:example",
-			TokenSecret:    "example-secret",
-			Replicas:       1,
-			OcmAgentConfig: "example-config",
+			OcmAgentImage: "quay.io/ocm-agent:example",
+			TokenSecret:   "example-secret",
+			Replicas:      1,
 		},
 		Status: ocmagentv1alpha1.OcmAgentStatus{},
 	}
@@ -51,14 +50,14 @@ var (
 				OcmBaseUrl: "http://api.stage.example.com",
 				Services:   []string{},
 			},
-			OcmAgentImage:  "quay.io/ocm-agent:example",
-			TokenSecret:    "example-secret",
-			Replicas:       1,
-			OcmAgentConfig: "example-config",
-			FleetMode:      true,
+			OcmAgentImage: "quay.io/ocm-agent:example",
+			TokenSecret:   "example-secret",
+			Replicas:      1,
+			FleetMode:     true,
 		},
 		Status: ocmagentv1alpha1.OcmAgentStatus{},
 	}
+	TestConfigMapSuffix = "-cm"
 )
 
 func setScheme(scheme *runtime.Scheme) *runtime.Scheme {

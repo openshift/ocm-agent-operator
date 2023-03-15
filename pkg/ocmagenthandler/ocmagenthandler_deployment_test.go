@@ -2,6 +2,8 @@ package ocmagenthandler
 
 import (
 	"context"
+	"reflect"
+
 	oconfigv1 "github.com/openshift/api/config/v1"
 	testconst "github.com/openshift/ocm-agent-operator/pkg/consts/test/init"
 	clientmocks "github.com/openshift/ocm-agent-operator/pkg/util/test/generated/mocks/client"
@@ -9,7 +11,6 @@ import (
 	k8serrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/golang/mock/gomock"
@@ -54,11 +55,11 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(Equal(testOcmAgent.Spec.OcmAgentImage))
 			Expect(deployment.Spec.Template.Spec.Volumes).NotTo(BeEmpty())
 			// This is a little brittle based on the naming conventions used in the testOcmAgent
-			Expect(deployment.Spec.Template.Spec.Volumes[0].Name).To(Equal(testOcmAgent.Spec.OcmAgentConfig))
-			Expect(deployment.Spec.Template.Spec.Volumes[1].Name).To(Equal(testOcmAgent.Spec.TokenSecret))
+			Expect(deployment.Spec.Template.Spec.Volumes[0].Name).To(Equal(testOcmAgent.Spec.TokenSecret))
+			Expect(deployment.Spec.Template.Spec.Volumes[1].Name).To(Equal(testOcmAgent.Name + testconst.TestConfigMapSuffix))
 			Expect(deployment.Spec.Template.Spec.Volumes[2].Name).To(Equal(ocmagenthandler.TrustedCaBundleConfigMapName))
-			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(testOcmAgent.Spec.OcmAgentConfig))
-			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[1].Name).To(Equal(testOcmAgent.Spec.TokenSecret))
+			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(testOcmAgent.Spec.TokenSecret))
+			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[1].Name).To(Equal(testOcmAgent.Name + testconst.TestConfigMapSuffix))
 			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[2].Name).To(Equal(ocmagenthandler.TrustedCaBundleConfigMapName))
 
 			// make sure LivenessProbe is part of deployment config and has defned path, port, url and scheme
@@ -94,11 +95,11 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(Equal(testHSOcmAgent.Spec.OcmAgentImage))
 			Expect(deployment.Spec.Template.Spec.Volumes).NotTo(BeEmpty())
 			// This is a little brittle based on the naming conventions used in the testOcmAgent
-			Expect(deployment.Spec.Template.Spec.Volumes[0].Name).To(Equal(testHSOcmAgent.Spec.OcmAgentConfig))
-			Expect(deployment.Spec.Template.Spec.Volumes[1].Name).To(Equal(testHSOcmAgent.Spec.TokenSecret))
+			Expect(deployment.Spec.Template.Spec.Volumes[0].Name).To(Equal(testHSOcmAgent.Spec.TokenSecret))
+			Expect(deployment.Spec.Template.Spec.Volumes[1].Name).To(Equal(testHSOcmAgent.Name + testconst.TestConfigMapSuffix))
 			Expect(deployment.Spec.Template.Spec.Volumes[2].Name).To(Equal(ocmagenthandler.TrustedCaBundleConfigMapName))
-			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(testHSOcmAgent.Spec.OcmAgentConfig))
-			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[1].Name).To(Equal(testHSOcmAgent.Spec.TokenSecret))
+			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(testHSOcmAgent.Spec.TokenSecret))
+			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[1].Name).To(Equal(testHSOcmAgent.Name + testconst.TestConfigMapSuffix))
 			Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[2].Name).To(Equal(ocmagenthandler.TrustedCaBundleConfigMapName))
 
 			// make sure LivenessProbe is part of deployment config and has defned path, port, url and scheme
@@ -187,7 +188,7 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 				gomock.InOrder(
 					mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).SetArg(2, testProxy),
 				)
-				envVars, _ := testOcmAgentHandler.buildEnvVars()
+				envVars, _ := testOcmAgentHandler.buildEnvVars(testOcmAgent)
 				testDeployment.Spec.Template.Spec.Containers[0].Env = envVars
 			})
 			It("creates the deployment", func() {
