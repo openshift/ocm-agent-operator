@@ -157,6 +157,10 @@ func (fnr *ManagedFleetNotificationRecord) CanBeSent(mc, name, clusterID string)
 		return false, err
 	}
 
+	if ri.LastTransitionTime == nil {
+		return true, nil
+	}
+
 	nextSend := ri.LastTransitionTime.Time.Add(time.Duration(interval) * time.Hour)
 
 	if time.Now().After(nextSend) {
