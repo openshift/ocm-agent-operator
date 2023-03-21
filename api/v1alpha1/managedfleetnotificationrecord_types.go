@@ -171,33 +171,59 @@ func (fnr *ManagedFleetNotificationRecord) CanBeSent(mc, name, clusterID string)
 }
 
 // AddNotificationRecordItem adds a new record item to the notification record slice
-func (fnr *ManagedFleetNotificationRecord) AddNotificationRecordItem(clusterID string, rn *NotificationRecordByName) {
-	ri := NotificationRecordItem{
-		ServiceLogSentCount: 0,
-		HostedClusterID:     clusterID,
-		LastTransitionTime:  nil,
+func (fnr *ManagedFleetNotificationRecord) AddNotificationRecordItem(clusterID string, rn *NotificationRecordByName) (*NotificationRecordItem, error) {
+	for i, nfr := range fnr.Status.NotificationRecordByName {
+		if nfr.NotificationName != rn.NotificationName {
+			continue
+		}
+		for _, nfi := range nfr.NotificationRecordItems {
+			if nfi.HostedClusterID == clusterID {
+				return nil, fmt.Errorf("notification record item for notification %v and hosted cluster %v exists", rn.NotificationName, clusterID)
+			}
+		}
+		ri := NotificationRecordItem{
+			ServiceLogSentCount: 0,
+			HostedClusterID:     clusterID,
+			LastTransitionTime:  nil,
+		}
+		fnr.Status.NotificationRecordByName[i].NotificationRecordItems = append(fnr.Status.NotificationRecordByName[i].NotificationRecordItems, ri)
+		return &ri, nil
 	}
-
-	rn.NotificationRecordItems = append(rn.NotificationRecordItems, ri)
+	return nil, fmt.Errorf("notification %v does not exist", rn.NotificationName)
 }
 
 // UpdateNotificationRecordItem updates the service log sent count and timestamp for the last time sent
-func (fnr *ManagedFleetNotificationRecord) UpdateNotificationRecordItem(ri *NotificationRecordItem) *NotificationRecordItem {
-	ri.ServiceLogSentCount += 1
-	ri.LastTransitionTime = &metav1.Time{Time: time.Now()}
+func (fnr *ManagedFleetNotificationRecord) UpdateNotificationRecordItem(notificationName string, hostedClusterID string) (*NotificationRecordItem, error) {
+	for i, nfr := range fnr.Status.NotificationRecordByName {
+		if nfr.NotificationName != notificationName {
+			continue
+		}
+		for j, nfi := range nfr.NotificationRecordItems {
+			if nfi.HostedClusterID == hostedClusterID {
+				fnr.Status.NotificationRecordByName[i].NotificationRecordItems[j].ServiceLogSentCount += 1
+				fnr.Status.NotificationRecordByName[i].NotificationRecordItems[j].LastTransitionTime = &metav1.Time{Time: time.Now()}
+				return &fnr.Status.NotificationRecordByName[i].NotificationRecordItems[j], nil
+			}
+		}
+	}
 
-	return ri
+	return nil, fmt.Errorf("notification record not found for Notification %v and Hosted Cluster %v", notificationName, hostedClusterID)
 }
 
 // RemoveNotificationRecordItem removes the notification record item from the given notification name
-func (fnr *ManagedFleetNotificationRecord) RemoveNotificationRecordItem(ri *NotificationRecordItem, rn *NotificationRecordByName) *NotificationRecordByName {
-	var p int
-	for i, r := range rn.NotificationRecordItems {
-		if r.HostedClusterID == ri.HostedClusterID {
-			p = i
+func (fnr *ManagedFleetNotificationRecord) RemoveNotificationRecordItem(notificationName string, hostedClusterID string) (*NotificationRecordByName, error) {
+	for i, nfr := range fnr.Status.NotificationRecordByName {
+		if nfr.NotificationName != notificationName {
+			continue
 		}
-		rn.NotificationRecordItems = append(rn.NotificationRecordItems[:p], rn.NotificationRecordItems[p+1:]...)
+		for j, nfi := range nfr.NotificationRecordItems {
+			if nfi.HostedClusterID == hostedClusterID {
+				fnr.Status.NotificationRecordByName[i].NotificationRecordItems = append(fnr.Status.NotificationRecordByName[i].NotificationRecordItems[:j],
+					fnr.Status.NotificationRecordByName[i].NotificationRecordItems[j+1:]...)
+				return &fnr.Status.NotificationRecordByName[i], nil
+			}
+		}
 	}
 
-	return rn
+	return nil, fmt.Errorf("notification record not found for Notification %v and Hosted Cluster %v", notificationName, hostedClusterID)
 }
