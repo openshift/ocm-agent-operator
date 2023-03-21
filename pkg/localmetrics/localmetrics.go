@@ -26,7 +26,6 @@ var (
 		MetricPullSecretInvalid,
 		MetricOcmAgentResourceAbsent,
 	}
-
 )
 
 func UpdateMetricPullSecretInvalid(ocmAgentName string) {

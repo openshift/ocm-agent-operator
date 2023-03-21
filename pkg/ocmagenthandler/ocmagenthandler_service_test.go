@@ -44,10 +44,10 @@ var _ = Describe("OCM Agent Service Handler", func() {
 
 	Context("When building an OCM Agent Service", func() {
 		It("Sets a correct name", func() {
-			cm := buildOCMAgentService(testOcmAgent)
+			svc := buildOCMAgentService(testOcmAgent)
 			metricsSvc := buildOCMAgentMetricsService(testOcmAgent)
-			Expect(cm.Name).To(Equal("ocm-agent"))
-			Expect(metricsSvc.Name).To(Equal("ocm-agent-metrics"))
+			Expect(svc.Name).To(Equal(testOcmAgent.Name))
+			Expect(metricsSvc.Name).To(Equal(testOcmAgent.Name + "-metrics"))
 		})
 	})
 
@@ -55,10 +55,10 @@ var _ = Describe("OCM Agent Service Handler", func() {
 		var testService, testMetricsService corev1.Service
 		var testNamespacedName, testMetricsNamespacedName types.NamespacedName
 		BeforeEach(func() {
-			testNamespacedName = oah.BuildNamespacedName(oah.OCMAgentServiceName)
+			testNamespacedName = oah.BuildNamespacedName(testOcmAgent.Name)
 			testService = buildOCMAgentService(testOcmAgent)
 			testMetricsService = buildOCMAgentMetricsService(testOcmAgent)
-			testMetricsNamespacedName = oah.BuildNamespacedName(oah.OCMAgentMetricsServiceName)
+			testMetricsNamespacedName = oah.BuildNamespacedName(testOcmAgent.Name + "-metrics")
 		})
 		When("the OCM Agent service already exists", func() {
 			When("the service differs from what is expected", func() {

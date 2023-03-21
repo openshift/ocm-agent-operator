@@ -18,13 +18,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
+	"github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 	oah "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 )
 
 func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployment {
-	namespacedName := oah.BuildNamespacedName(oah.OCMAgentName)
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name)
 	labels := map[string]string{
-		"app": oah.OCMAgentName,
+		"app": ocmAgent.Name,
 	}
 	labelSelectors := metav1.LabelSelector{
 		MatchLabels: labels,
@@ -32,7 +33,7 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 
 	// Define a volumes for the config
 	tokenSecretVolumeName := ocmAgent.Spec.TokenSecret
-	configVolumeName := ocmAgent.Spec.OcmAgentConfig
+	configVolumeName := ocmAgent.Name + ocmagenthandler.ConfigMapSuffix
 	trustedCaVolumeName := oah.TrustedCaBundleConfigMapName
 	var secretVolumeSourceDefaultMode int32 = 0640
 	var configVolumeSourceDefaultMode int32 = 0644
@@ -53,7 +54,7 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: ocmAgent.Spec.OcmAgentConfig,
+						Name: ocmAgent.Name + ocmagenthandler.ConfigMapSuffix,
 					},
 					DefaultMode: &configVolumeSourceDefaultMode,
 				},
@@ -99,6 +100,8 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 		{Name: "HTTP_PROXY"},
 		{Name: "HTTPS_PROXY"},
 		{Name: "NO_PROXY"},
+		{Name: "OCM_AGENT_SECRET_NAME", Value: ocmAgent.Name},
+		{Name: "OCM_AGENT_CONFIGMAP_NAME", Value: ocmAgent.Name + ocmagenthandler.ConfigMapSuffix},
 	}
 
 	// Sort volume slices by name to keep the sequence stable.
@@ -163,7 +166,7 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 						VolumeMounts: volumeMounts,
 						Image:        ocmAgent.Spec.OcmAgentImage,
 						Command:      ocmAgentCommand,
-						Name:         oah.OCMAgentName,
+						Name:         ocmAgent.Name,
 						Ports: []corev1.ContainerPort{{
 							ContainerPort: oah.OCMAgentPort,
 							Name:          oah.OCMAgentPortName,
@@ -201,35 +204,43 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 // buildOCMAgentArgs returns the full command argument list to run the OCM Agent
 // in a deployment.
 func buildOCMAgentArgs(ocmAgent ocmagentv1alpha1.OcmAgent) []string {
+
+	configmapName := ocmAgent.Name + ocmagenthandler.ConfigMapSuffix
+
 	accessTokenPath := filepath.Join(oah.OCMAgentSecretMountPath, ocmAgent.Spec.TokenSecret,
 		oah.OCMAgentAccessTokenSecretKey)
-	configServicesPath := filepath.Join(oah.OCMAgentConfigMountPath, ocmAgent.Spec.OcmAgentConfig,
+	configServicesPath := filepath.Join(oah.OCMAgentConfigMountPath, configmapName,
 		oah.OCMAgentConfigServicesKey)
-	configURLPath := filepath.Join(oah.OCMAgentConfigMountPath, ocmAgent.Spec.OcmAgentConfig,
+	configURLPath := filepath.Join(oah.OCMAgentConfigMountPath, configmapName,
 		oah.OCMAgentConfigURLKey)
-	clusterIDPath := filepath.Join(oah.OCMAgentConfigMountPath, ocmAgent.Spec.OcmAgentConfig,
+	clusterIDPath := filepath.Join(oah.OCMAgentConfigMountPath, configmapName,
 		oah.OCMAgentConfigClusterID)
 	command := []string{
 		oah.OCMAgentCommand,
 		"serve",
-		fmt.Sprintf("--access-token=@%s", accessTokenPath),
 		fmt.Sprintf("--services=@%s", configServicesPath),
 		fmt.Sprintf("--ocm-url=@%s", configURLPath),
-		fmt.Sprintf("--cluster-id=@%s", clusterIDPath),
 	}
+	if !ocmAgent.Spec.FleetMode {
+		command = append(command, fmt.Sprintf("--cluster-id=@%s", clusterIDPath), fmt.Sprintf("--access-token=@%s", accessTokenPath))
+	}
+	if ocmAgent.Spec.FleetMode {
+		command = append(command, "--fleet-mode")
+	}
+
 	return command
 }
 
 // ensureDeployment ensures that an OCMAgent Deployment exists on the cluster
 // and that its configuration matches what is expected.
 func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := oah.BuildNamespacedName(oah.OCMAgentName)
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name)
 	foundResource := &appsv1.Deployment{}
 	populationFunc := func() appsv1.Deployment {
 		return buildOCMAgentDeployment(ocmAgent)
 	}
 
-	envVars, err := o.buildEnvVars()
+	envVars, err := o.buildEnvVars(ocmAgent)
 	if err != nil {
 		return err
 	}
@@ -259,7 +270,7 @@ func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) e
 		}
 	} else {
 		// It does exist, check if it is what we expected
-		if deploymentConfigChanged(foundResource, &resource, o.Log) {
+		if deploymentConfigChanged(foundResource, &resource, ocmAgent, o.Log) {
 			// Specs aren't equal, update and fix.
 			o.Log.Info("An OCMAgent deployment exists but contains unexpected configuration. Restoring.")
 			foundResource.Spec = *resource.Spec.DeepCopy()
@@ -273,7 +284,7 @@ func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) e
 
 // ensureDeploymentDeleted removes the deployment from the cluster
 func (o *ocmAgentHandler) ensureDeploymentDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := oah.BuildNamespacedName(oah.OCMAgentName)
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name)
 	foundResource := &appsv1.Deployment{}
 	// Does the resource already exist?
 	o.Log.Info("ensuring deployment removed", "resource", namespacedName.String())
@@ -295,7 +306,7 @@ func (o *ocmAgentHandler) ensureDeploymentDeleted(ocmAgent ocmagentv1alpha1.OcmA
 
 // deploymentConfigChanged flags if the two supplied deployments differ in configuration
 // that the OCM Agent Operator manages
-func deploymentConfigChanged(current, expected *appsv1.Deployment, log logr.Logger) bool {
+func deploymentConfigChanged(current, expected *appsv1.Deployment, ocmAgent ocmagentv1alpha1.OcmAgent, log logr.Logger) bool {
 	changed := false
 
 	// Compare labels
@@ -307,7 +318,7 @@ func deploymentConfigChanged(current, expected *appsv1.Deployment, log logr.Logg
 	}
 
 	// There may be multiple containers eventually, so let's do a loop
-	for _, name := range []string{oah.OCMAgentName} {
+	for _, name := range []string{ocmAgent.Name} {
 		var curImage, expImage string
 		var curReadinessProbeHTTPGet, curLivenessProbeHTTPGet, expReadinessProbeHTTPGet, expLivenessProbeHTTPGet *corev1.HTTPGetAction
 		var curEnvs, expEnvs []corev1.EnvVar
@@ -389,7 +400,7 @@ func deploymentConfigChanged(current, expected *appsv1.Deployment, log logr.Logg
 }
 
 // buildEnvVars build the slice of environments to set to the OCM Agent deployment
-func (o *ocmAgentHandler) buildEnvVars() ([]corev1.EnvVar, error) {
+func (o *ocmAgentHandler) buildEnvVars(ocmAgent ocmagentv1alpha1.OcmAgent) ([]corev1.EnvVar, error) {
 	envVars := []corev1.EnvVar{}
 	proxy := oconfigv1.Proxy{}
 	err := o.Client.Get(o.Ctx, oah.ProxyNamespacedName, &proxy)
@@ -401,6 +412,8 @@ func (o *ocmAgentHandler) buildEnvVars() ([]corev1.EnvVar, error) {
 	envVars = append(envVars, corev1.EnvVar{Name: "HTTP_PROXY", Value: proxyStatus.HTTPProxy})
 	envVars = append(envVars, corev1.EnvVar{Name: "HTTPS_PROXY", Value: proxyStatus.HTTPSProxy})
 	envVars = append(envVars, corev1.EnvVar{Name: "NO_PROXY", Value: proxyStatus.NoProxy})
+	envVars = append(envVars, corev1.EnvVar{Name: "OCM_AGENT_SECRET_NAME", Value: ocmAgent.Name})
+	envVars = append(envVars, corev1.EnvVar{Name: "OCM_AGENT_CONFIGMAP_NAME", Value: ocmAgent.Name + ocmagenthandler.ConfigMapSuffix})
 
 	return envVars, nil
 }

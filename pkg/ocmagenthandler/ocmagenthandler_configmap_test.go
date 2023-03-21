@@ -44,13 +44,13 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 		testClusterId = "9345c78b-b6b6-4f42-b242-79bfcc403b0a"
 	})
 
-	Context("When building an OCM Agent ConfigMap", func() {
+	Context("When building an OCM Agent ConfigMap ", func() {
 		var cm *corev1.ConfigMap
 		BeforeEach(func() {
 			cm = buildOCMAgentConfigMap(testOcmAgent, testClusterId)
 		})
 		It("Sets a correct name", func() {
-			Expect(cm.Name).To(Equal(testOcmAgent.Spec.OcmAgentConfig))
+			Expect(cm.Name).To(Equal(testOcmAgent.Name + testconst.TestConfigMapSuffix))
 		})
 		It("Sets the correct data", func() {
 			Expect(cm.Data).To(HaveKeyWithValue(oahconst.OCMAgentConfigClusterID, testClusterId))
@@ -63,7 +63,8 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 		var testConfigMap *corev1.ConfigMap
 		var testNamespacedName types.NamespacedName
 		BeforeEach(func() {
-			testNamespacedName = oahconst.BuildNamespacedName(testOcmAgent.Spec.OcmAgentConfig)
+			testNamespacedName = oahconst.BuildNamespacedName(testOcmAgent.Name)
+			testNamespacedName.Name = testNamespacedName.Name + testconst.TestConfigMapSuffix
 			testConfigMap = buildOCMAgentConfigMap(testOcmAgent, testClusterId)
 		})
 		When("the OCM Agent config already exists", func() {
@@ -140,7 +141,7 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 			var cm *corev1.ConfigMap
 			var err error
 			BeforeEach(func() {
-				cm, err = buildCAMOConfigMap()
+				cm, err = buildCAMOConfigMap(testOcmAgent)
 			})
 			It("builds one successfully", func() {
 				Expect(err).ToNot(HaveOccurred())
@@ -186,7 +187,8 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 		var notFound *k8serrs.StatusError
 
 		BeforeEach(func() {
-			testNamespacedName = oahconst.BuildNamespacedName(testOcmAgent.Spec.OcmAgentConfig)
+			testNamespacedName = oahconst.BuildNamespacedName(testOcmAgent.Name)
+			testNamespacedName.Name = testNamespacedName.Name + testconst.TestConfigMapSuffix
 			testConfigMap = buildOCMAgentConfigMap(testOcmAgent, testClusterId)
 			notFound = k8serrs.NewNotFound(schema.GroupResource{}, testConfigMap.Name)
 		})

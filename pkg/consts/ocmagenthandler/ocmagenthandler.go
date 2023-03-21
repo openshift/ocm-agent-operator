@@ -9,12 +9,12 @@ import (
 )
 
 const (
-	// OCMAgentName is the name of the OCM Agent Deployment and its app label identifier.
-	OCMAgentName = "ocm-agent"
 	// OCMAgentNamespace is the fall-back namespace to use for OCM Agent Deployments
 	OCMAgentNamespace = "openshift-ocm-agent-operator"
 	// OCMAgentNetworkPolicyName is the name of the network policy to restrict OCM Agent access
 	OCMAgentNetworkPolicyName = "ocm-agent-allow-only-alertmanager"
+	// OCMFleetAgentNetworkPolicyName is the name of the network policy to restrict OA for HS
+	OCMFleetAgentNetworkPolicyName = "ocm-agent-allow-rhobs-alertmanager"
 	// OCMAgentPortName is the name of the OCM Agent service port used in the OCM Agent Deployment
 	OCMAgentPortName = "ocm-agent"
 	// OCMAgentPort is the container port number used by the agent for exposing its services
@@ -30,8 +30,6 @@ const (
 	// OCMAgentCommand is the name of the OCM Agent binary to run in the deployment
 	OCMAgentCommand = "ocm-agent"
 
-	// OCMAgentServiceName is the name of the Service that serves the OCM Agent
-	OCMAgentServiceName = "ocm-agent"
 	// OCMAgentServicePort is the port number to use for the OCM Agent Service
 	OCMAgentServicePort = 8081
 	// OCMAgentServiceURLKey defines the key in the configure-alertmanager-operator ConfigMap
@@ -42,8 +40,6 @@ const (
 	// OCMAgentServiceScheme is the protocol that the OCM Agent will use
 	OCMAgentServiceScheme = "http"
 
-	// OCMAgentMetricsServiceName is the name of the service that service the OCM Agent metrics
-	OCMAgentMetricsServiceName = "ocm-agent-metrics"
 	// OCMAgentMetricsServicePort is the port number to use for OCM Agent metrics service
 	OCMAgentMetricsServicePort = 8383
 	// OCMAgentMetricsPortName is the port name ot use for OCM Agent metrics service
@@ -52,8 +48,7 @@ const (
 	OCMAgentSecretMountPath = "/secrets"
 	// OCMAgentAccessTokenSecretKey is the name of the key used in the access token secret
 	OCMAgentAccessTokenSecretKey = "access_token"
-	// OCMAgentServiceMonitorName is the name of the ServiceMonitor for OCM Agent
-	OCMAgentServiceMonitorName = "ocm-agent-metrics"
+
 	// OCMAgentConfigMountPath is the base mount path for configs in the OCM Agent container
 	OCMAgentConfigMountPath = "/configs"
 	// OCMAgentConfigServicesKey is the name of the key used for the services configmap entry
@@ -68,7 +63,7 @@ const (
 	PullSecretAuthTokenKey = "cloud.openshift.com"
 	// InjectCaBundleIndicator defines the name of the key for the label of trusted CA bundle configmap
 	InjectCaBundleIndicator = "config.openshift.io/inject-trusted-cabundle"
-	// TrustedCaBundleConfigMap defines the name of trusted CA bundle configmap
+	// TrustedCaBundleConfigMapName TrustedCaBundleConfigMap defines the name of trusted CA bundle configmap
 	TrustedCaBundleConfigMapName = "trusted-ca-bundle"
 	// ResourceLimitsCPU and ResourceLimitsMemory defines the cpu and memory limits for OA deployment
 	ResourceLimitsCPU    = "50m"
@@ -76,6 +71,8 @@ const (
 	// ResourceRequestsCPU and ResourceRequestsMemory defines the cpu and memory requests for OA deployment
 	ResourceRequestsCPU    = "1m"
 	ResourceRequestsMemory = "30Mi"
+	// ConfigMapSuffix is the suffix added to configmap name to always make it unique compared to secret name
+	ConfigMapSuffix = "-cm"
 )
 
 var (
@@ -107,10 +104,10 @@ func BuildNamespacedName(name string) types.NamespacedName {
 	return namespacedName
 }
 
-func BuildServiceURL() (string, error) {
+func BuildServiceURL(ocmAgentSvcName, ocmAgentNamespace string) (string, error) {
 	u := fmt.Sprintf("%s://%s.%s.svc.cluster.local:%d%s", OCMAgentServiceScheme,
-		OCMAgentServiceName,
-		OCMAgentNamespace,
+		ocmAgentSvcName,
+		ocmAgentNamespace,
 		OCMAgentServicePort,
 		OCMAgentWebhookReceiverPath)
 

@@ -15,22 +15,32 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
+	"github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 	oah "github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"
 )
 
 func buildOCMAgentConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, clusterId string) *corev1.ConfigMap {
-	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.OcmAgentConfig)
+
+	// We are ensuring to keep the configmap name always unique from secret name so adding a suffix
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name + ocmagenthandler.ConfigMapSuffix)
+
+	CMData := map[string]string{
+		oah.OCMAgentConfigServicesKey: strings.Join(ocmAgent.Spec.AgentConfig.Services, ","),
+		oah.OCMAgentConfigURLKey:      ocmAgent.Spec.AgentConfig.OcmBaseUrl,
+	}
+
+	if clusterId != "" {
+		CMData[oah.OCMAgentConfigClusterID] = clusterId
+	}
+
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      namespacedName.Name,
 			Namespace: namespacedName.Namespace,
 		},
-		Data: map[string]string{
-			oah.OCMAgentConfigServicesKey: strings.Join(ocmAgent.Spec.AgentConfig.Services, ","),
-			oah.OCMAgentConfigURLKey:      ocmAgent.Spec.AgentConfig.OcmBaseUrl,
-			oah.OCMAgentConfigClusterID:   clusterId,
-		},
+		Data: CMData,
 	}
+
 	return cm
 }
 
@@ -49,8 +59,8 @@ func buildTrustedCaConfigMap() *corev1.ConfigMap {
 	return cm
 }
 
-func buildCAMOConfigMap() (*corev1.ConfigMap, error) {
-	oaServiceURL, err := oah.BuildServiceURL()
+func buildCAMOConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) (*corev1.ConfigMap, error) {
+	oaServiceURL, err := oah.BuildServiceURL(ocmAgent.Name, ocmAgent.Namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -79,20 +89,28 @@ func (o *ocmAgentHandler) ensureAllConfigMaps(ocmAgent ocmagentv1alpha1.OcmAgent
 	}
 	clusterID := string(cv.Spec.ClusterID)
 
-	oaCM := buildOCMAgentConfigMap(ocmAgent, clusterID)
+	var oaCM *corev1.ConfigMap
+	if ocmAgent.Spec.FleetMode {
+		oaCM = buildOCMAgentConfigMap(ocmAgent, "")
+	} else {
+		oaCM = buildOCMAgentConfigMap(ocmAgent, clusterID)
+	}
+
 	err = o.ensureConfigMap(ocmAgent, oaCM, true)
 	if err != nil {
 		return err
 	}
 
-	// Ensure the CAMO ConfigMap
-	camoCM, err := buildCAMOConfigMap()
-	if err != nil {
-		return err
-	}
-	err = o.ensureConfigMap(ocmAgent, camoCM, false)
-	if err != nil {
-		return err
+	if !ocmAgent.Spec.FleetMode {
+		// Ensure the CAMO ConfigMap
+		camoCM, err := buildCAMOConfigMap(ocmAgent)
+		if err != nil {
+			return err
+		}
+		err = o.ensureConfigMap(ocmAgent, camoCM, false)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Ensure the trusted-ca-build ConfigMap
@@ -160,7 +178,7 @@ func (o *ocmAgentHandler) ensureConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent, cm
 func (o *ocmAgentHandler) ensureAllConfigMapsDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
 
 	cmsToDelete := []types.NamespacedName{
-		oah.BuildNamespacedName(ocmAgent.Spec.OcmAgentConfig),
+		oah.BuildNamespacedName(ocmAgent.Name),
 		oah.CAMOConfigMapNamespacedName,
 	}
 

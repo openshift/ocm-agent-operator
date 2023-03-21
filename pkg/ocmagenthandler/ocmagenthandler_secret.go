@@ -80,6 +80,24 @@ func (o *ocmAgentHandler) ensureAccessTokenSecret(ocmAgent ocmagentv1alpha1.OcmA
 	return nil
 }
 
+func (o *ocmAgentHandler) ensureFleetClientSecret(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.TokenSecret)
+	foundResource := &corev1.Secret{}
+	// Does the resource already exist?
+	o.Log.Info("ensuring fleetmode secret exists", "resource", namespacedName.String())
+	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
+		if k8serrors.IsNotFound(err) {
+			// It does not exist, so must be created.
+			o.Log.Info("An OCMAgent secret for Hypershift does not exist. Fleet mode OCMAgent will not work as expected")
+			return err
+		} else {
+			// Return unexpectedly
+			return err
+		}
+	}
+	return nil
+}
+
 func (o *ocmAgentHandler) ensureAccessTokenSecretDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.TokenSecret)
 	foundResource := &corev1.Secret{}

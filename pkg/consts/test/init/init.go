@@ -22,6 +22,10 @@ var (
 		Name:      "ocm-agent",
 		Namespace: "test-namespace",
 	}
+	OCMAgentHSNamespacedName = types.NamespacedName{
+		Name:      "ocm-agent-hypershift",
+		Namespace: "test-namespace",
+	}
 	TestOCMAgent = ocmagentv1alpha1.OcmAgent{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-ocm-agent",
@@ -31,13 +35,29 @@ var (
 				OcmBaseUrl: "http://api.example.com",
 				Services:   []string{},
 			},
-			OcmAgentImage:  "quay.io/ocm-agent:example",
-			TokenSecret:    "example-secret",
-			Replicas:       1,
-			OcmAgentConfig: "example-config",
+			OcmAgentImage: "quay.io/ocm-agent:example",
+			TokenSecret:   "example-secret",
+			Replicas:      1,
 		},
 		Status: ocmagentv1alpha1.OcmAgentStatus{},
 	}
+	TestHSOCMAgent = ocmagentv1alpha1.OcmAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-ocm-agent-hypershift",
+		},
+		Spec: ocmagentv1alpha1.OcmAgentSpec{
+			AgentConfig: ocmagentv1alpha1.AgentConfig{
+				OcmBaseUrl: "http://api.stage.example.com",
+				Services:   []string{},
+			},
+			OcmAgentImage: "quay.io/ocm-agent:example",
+			TokenSecret:   "example-secret",
+			Replicas:      1,
+			FleetMode:     true,
+		},
+		Status: ocmagentv1alpha1.OcmAgentStatus{},
+	}
+	TestConfigMapSuffix = "-cm"
 )
 
 func setScheme(scheme *runtime.Scheme) *runtime.Scheme {

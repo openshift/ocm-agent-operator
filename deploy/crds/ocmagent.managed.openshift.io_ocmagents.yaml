@@ -52,10 +52,10 @@ spec:
                 - ocmBaseUrl
                 - services
                 type: object
-              ocmAgentConfig:
-                description: OcmAgentConfig defines the configmap name which generated
-                  by operator and consumed by OCM Agent service
-                type: string
+              fleetMode:
+                description: FleetMode indicates if the OCM agent is running in fleet
+                  mode, default to false
+                type: boolean
               ocmAgentImage:
                 description: OcmAgentImage defines the image which will be used by
                   the OCM Agent
@@ -71,7 +71,6 @@ spec:
                 type: string
             required:
             - agentConfig
-            - ocmAgentConfig
             - ocmAgentImage
             - replicas
             - tokenSecret

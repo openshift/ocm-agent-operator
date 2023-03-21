@@ -13,9 +13,9 @@ import (
 )
 
 func buildOCMAgentServiceMonitor(ocmAgent ocmagentv1alpha1.OcmAgent) monitorv1.ServiceMonitor {
-	namespacedName := oah.BuildNamespacedName(oah.OCMAgentServiceMonitorName)
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name + "-metrics")
 	labels := map[string]string{
-		"app": oah.OCMAgentName,
+		"app": ocmAgent.Name,
 	}
 	sm := monitorv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{
@@ -38,7 +38,7 @@ func buildOCMAgentServiceMonitor(ocmAgent ocmagentv1alpha1.OcmAgent) monitorv1.S
 // ensureServiceMonitor ensures that an OCMAgent serviceMonitor exists on the cluster
 // and that its configuration matches what is expected.
 func (o *ocmAgentHandler) ensureServiceMonitor(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := oah.BuildNamespacedName(oah.OCMAgentServiceMonitorName)
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name + "-metrics")
 	foundResource := &monitorv1.ServiceMonitor{}
 
 	populationFunc := func() monitorv1.ServiceMonitor {
@@ -82,7 +82,7 @@ func (o *ocmAgentHandler) ensureServiceMonitor(ocmAgent ocmagentv1alpha1.OcmAgen
 }
 
 func (o *ocmAgentHandler) ensureServiceMonitorDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	namespacedName := oah.BuildNamespacedName(oah.OCMAgentServiceMonitorName)
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name + "-metrics")
 	foundResource := &monitorv1.ServiceMonitor{}
 	// Does the resource already exist?
 	o.Log.Info("ensuring serviceMonitor removed", "resource", namespacedName.String())

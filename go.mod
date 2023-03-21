@@ -11,6 +11,8 @@ require (
 	github.com/openshift/operator-custom-metrics v0.4.3-0.20220322205053-7b528cc0d6eb
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.55.0
 	github.com/prometheus/client_golang v1.12.1
+	github.com/sykesm/zap-logfmt v0.0.4
+	go.uber.org/zap v1.19.1
 	k8s.io/api v0.23.5
 	k8s.io/apimachinery v0.23.5
 	k8s.io/client-go v12.0.0+incompatible
@@ -68,7 +70,6 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
-	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/net v0.0.0-20211209124913-491a49abca63 // indirect
