@@ -86,9 +86,12 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesAbsent(ocmAgent ocmagentv1alpha
 		o.ensureDeploymentDeleted,
 		o.ensureServiceDeleted,
 		o.ensureAllConfigMapsDeleted,
-		o.ensureAccessTokenSecretDeleted,
 		o.ensureNetworkPolicyDeleted,
 		o.ensureServiceMonitorDeleted,
+	}
+
+	if !ocmAgent.Spec.FleetMode {
+		ensureFuncs = append(ensureFuncs, o.ensureAccessTokenSecretDeleted)
 	}
 
 	for _, fn := range ensureFuncs {
