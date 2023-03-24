@@ -24,9 +24,22 @@ rules:
     resources:
       - managednotifications
       - managednotifications/status 
+      - managedfleetnotifications
     verbs:
       - get
       - list
       - watch
       - patch
       - update
+  - apiGroups:
+      - ocmagent.managed.openshift.io
+    resources:
+      - managedfleetnotificationrecords
+      - managedfleetnotificationrecords/status
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+      - update
+      - create
