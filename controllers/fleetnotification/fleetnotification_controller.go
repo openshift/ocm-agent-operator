@@ -25,7 +25,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
@@ -98,5 +100,14 @@ func (r *ManagedFleetNotificationReconciler) SetupWithManager(mgr ctrl.Manager) 
 	return ctrl.NewControllerManagedBy(mgr).
 		// Uncomment the following line adding a pointer to an instance of the controlled resource as an argument
 		For(&ocmagentv1alpha1.ManagedFleetNotificationRecord{}).
+		WithEventFilter(eventPredicates()).
 		Complete(r)
+}
+
+func eventPredicates() predicate.Predicate {
+	return predicate.Funcs{
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return false
+		},
+	}
 }
