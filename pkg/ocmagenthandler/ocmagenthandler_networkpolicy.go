@@ -25,7 +25,7 @@ func buildNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent) netv1.NetworkPolicy 
 			MatchExpressions: []metav1.LabelSelectorRequirement{{
 				Key:      "name",
 				Operator: "In",
-				Values:   []string{"observatorium-*"},
+				Values:   []string{"observatorium-mst-production"},
 			}},
 		}
 	} else {
