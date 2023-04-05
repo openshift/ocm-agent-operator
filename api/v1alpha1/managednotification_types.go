@@ -245,15 +245,6 @@ func (conditions Conditions) GetCondition(t NotificationConditionType) *Notifica
 	return nil
 }
 
-// NewNotificationRecord adds a new notification record status for the given name
-func (m *ManagedNotificationStatus) NewNotificationRecord(n string) {
-	r := NotificationRecord{
-		Name:                n,
-		ServiceLogSentCount: 0,
-		Conditions:          []NotificationCondition{},
-	}
-	m.NotificationRecords = append(m.NotificationRecords, r)
-}
 
 // GetNotificationRecord retrieves the notification record associated with the given name
 func (nrs NotificationRecords) GetNotificationRecord(name string) *NotificationRecord {
