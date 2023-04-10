@@ -188,7 +188,7 @@ var _ = Describe("OCMAgent Controller MFNR Type", func() {
 					LastTransitionTime: &metav1.Time{Time: time.Now().Add(time.Duration(-5) * time.Hour)},
 				} 
 			})
-			It("will resend", func() {
+			It("will resend notification", func() {
 				cansend, err := testMNFR.CanBeSent("test-mc-id","test-notification-1", "test-hc-1-1")
 				Expect(cansend).To(BeTrue())
 				Expect(err).To(BeNil())
