@@ -12,6 +12,11 @@ import (
 
 var _ = Describe("OCMAgent Controller MFNR Type", func() {
 
+	const (
+		testManagementCluster = "test-mc-id"
+		testNotificationName  = "test-notification-1"
+	)
+
 	var (
 		testMNFR *v1alpha1.ManagedFleetNotificationRecord
 	)
@@ -143,6 +148,54 @@ var _ = Describe("OCMAgent Controller MFNR Type", func() {
 				nr := testMNFR.Status.NotificationRecordByName[0]
 				_, err := testMNFR.RemoveNotificationRecordItem(nr.NotificationName, "nope")
 				Expect(err).NotTo(BeNil())
+			})
+		})
+	})
+
+	Context("When checking if a firing notification can be sent", func() {
+		When("there is no defined notification", func() {
+			It("will raise an error", func() {
+				cansend, err := testMNFR.CanBeSent("test-mc-id-1", testNotificationName, "test-hc-1-1")
+				Expect(cansend).To(BeFalse())
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		When("there is no notification history for the notification", func() {
+			BeforeEach(func() {
+				testMNFR.Status.NotificationRecordByName[0].NotificationRecordItems = []v1alpha1.NotificationRecordItem{}
+			})
+			It("will send", func() {
+				cansend, err := testMNFR.CanBeSent(testManagementCluster, testNotificationName, "test-hc-12")
+				Expect(cansend).To(BeTrue())
+				Expect(err).To(BeNil())
+			})
+		})
+
+		When("the current time is within the dont-resend window", func() {
+			BeforeEach(func() {
+				testMNFR.Status.NotificationRecordByName[0].NotificationRecordItems[0] = v1alpha1.NotificationRecordItem{
+					LastTransitionTime: &metav1.Time{Time: time.Now().Add(time.Duration(-5) * time.Minute)},
+					HostedClusterID:    "test-hc-13",
+				}
+			})
+			It("will not resend", func() {
+				cansend, err := testMNFR.CanBeSent(testManagementCluster, testNotificationName, "test-hc-13")
+				Expect(cansend).To(BeFalse())
+				Expect(err).To(BeNil())
+			})
+		})
+
+		When("the current time is outside the dont-resend window", func() {
+			BeforeEach(func() {
+				testMNFR.Status.NotificationRecordByName[0].NotificationRecordItems[2] = v1alpha1.NotificationRecordItem{
+					LastTransitionTime: &metav1.Time{Time: time.Now().Add(time.Duration(-5) * time.Hour)},
+				}
+			})
+			It("will resend notification", func() {
+				cansend, err := testMNFR.CanBeSent(testManagementCluster, testNotificationName, "test-hc-14")
+				Expect(cansend).To(BeTrue())
+				Expect(err).To(BeNil())
 			})
 		})
 	})
