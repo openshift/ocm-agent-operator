@@ -52,9 +52,9 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 			nph = buildNetworkPolicy(testHSOcmAgent)
 		})
 		It("Has the expected name and namespace", func() {
-			Expect(np.Name).To(Equal(oah.OCMAgentNetworkPolicyName))
+			Expect(np.Name).To(Equal(testOcmAgent.Name + oah.OCMAgentNetworkPolicySuffix))
 			Expect(np.Namespace).To(Equal(oah.OCMAgentNamespace))
-			Expect(nph.Name).To(Equal(oah.OCMFleetAgentNetworkPolicyName))
+			Expect(nph.Name).To(Equal(testHSOcmAgent.Name + oah.OCMFleetAgentNetworkPolicySuffix))
 			Expect(nph.Namespace).To(Equal(oah.OCMAgentNamespace))
 		})
 	})

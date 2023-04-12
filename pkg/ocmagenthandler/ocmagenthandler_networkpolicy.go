@@ -2,8 +2,9 @@ package ocmagenthandler
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/types"
 	"reflect"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	netv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -20,16 +21,16 @@ func buildNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent) netv1.NetworkPolicy 
 		namespaceSelector *metav1.LabelSelector
 	)
 	if ocmAgent.Spec.FleetMode {
-		namespacedName = oah.BuildNamespacedName(oah.OCMFleetAgentNetworkPolicyName)
+		namespacedName = oah.BuildNamespacedName(ocmAgent.Name + oah.OCMFleetAgentNetworkPolicySuffix)
 		namespaceSelector = &metav1.LabelSelector{
 			MatchExpressions: []metav1.LabelSelectorRequirement{{
 				Key:      "name",
 				Operator: "In",
-				Values:   []string{"observatorium-mst-production","openshift-monitoring"},
+				Values:   []string{"observatorium-mst-production", "openshift-monitoring"},
 			}},
 		}
 	} else {
-		namespacedName = oah.BuildNamespacedName(oah.OCMAgentNetworkPolicyName)
+		namespacedName = oah.BuildNamespacedName(ocmAgent.Name + oah.OCMAgentNetworkPolicySuffix)
 		namespaceSelector = &metav1.LabelSelector{
 			MatchLabels: map[string]string{"name": "openshift-monitoring"},
 		}
@@ -61,9 +62,9 @@ func buildNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent) netv1.NetworkPolicy 
 func (o *ocmAgentHandler) ensureNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	var namespacedName types.NamespacedName
 	if ocmAgent.Spec.FleetMode {
-		namespacedName = oah.BuildNamespacedName(oah.OCMFleetAgentNetworkPolicyName)
+		namespacedName = oah.BuildNamespacedName(ocmAgent.Name + oah.OCMFleetAgentNetworkPolicySuffix)
 	} else {
-		namespacedName = oah.BuildNamespacedName(oah.OCMAgentNetworkPolicyName)
+		namespacedName = oah.BuildNamespacedName(ocmAgent.Name + oah.OCMAgentNetworkPolicySuffix)
 	}
 	foundResource := &netv1.NetworkPolicy{}
 	populationFunc := func() netv1.NetworkPolicy {
@@ -108,9 +109,9 @@ func (o *ocmAgentHandler) ensureNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent
 func (o *ocmAgentHandler) ensureNetworkPolicyDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	var namespacedName types.NamespacedName
 	if ocmAgent.Spec.FleetMode {
-		namespacedName = oah.BuildNamespacedName(oah.OCMFleetAgentNetworkPolicyName)
+		namespacedName = oah.BuildNamespacedName(ocmAgent.Name + oah.OCMFleetAgentNetworkPolicySuffix)
 	} else {
-		namespacedName = oah.BuildNamespacedName(oah.OCMAgentNetworkPolicyName)
+		namespacedName = oah.BuildNamespacedName(ocmAgent.Name + oah.OCMAgentNetworkPolicySuffix)
 	}
 	foundResource := &netv1.NetworkPolicy{}
 	// Does the resource already exist?
