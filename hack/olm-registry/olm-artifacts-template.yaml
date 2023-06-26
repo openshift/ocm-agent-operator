@@ -55,6 +55,8 @@ objects:
             namespace: openshift-ocm-agent-operator
           spec:
             sourceType: grpc
+            grpcPodConfig:
+              securityContextConfig: restricted
             image: ${REGISTRY_IMG}@${IMAGE_DIGEST}
             displayName: OCM Agent Operator
             publisher: Red Hat
