@@ -34,6 +34,9 @@ const (
 	SeverityFatal   NotificationSeverity = "Fatal"
 )
 
+// +kubebuilder:validation:Pattern=`^https?:\/\/.+$`
+type NotificationReferenceType string
+
 type Notification struct {
 
 	// The name of the notification used to associate with an alert
@@ -47,6 +50,12 @@ type Notification struct {
 
 	// The body text of the Service Log notification when the alert is resolved
 	ResolvedDesc string `json:"resolvedBody,omitempty"`
+
+	// LogType is a categorization property that can be used to group service logs for aggregation and managing notification preferences.
+	LogType string `json:"logType,omitempty"`
+
+	// References useful for context or remediation - this could be links to documentation, KB articles, etc
+	References []NotificationReferenceType `json:"references,omitempty"`
 
 	// +kubebuilder:validation:Enum={"Debug","Info","Warning","Error","Fatal"}
 	// The severity of the Service Log notification
@@ -244,7 +253,6 @@ func (conditions Conditions) GetCondition(t NotificationConditionType) *Notifica
 	}
 	return nil
 }
-
 
 // GetNotificationRecord retrieves the notification record associated with the given name
 func (nrs NotificationRecords) GetNotificationRecord(name string) *NotificationRecord {
