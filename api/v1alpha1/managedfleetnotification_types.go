@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,6 +32,12 @@ type FleetNotification struct {
 
 	// The body text of the Service Log notification when the alert is active
 	NotificationMessage string `json:"notificationMessage"`
+
+	// LogType is a categorization property that can be used to group service logs for aggregation and managing notification preferences.
+	LogType string `json:"logType,omitempty"`
+
+	// References useful for context or remediation - this could be links to documentation, KB articles, etc
+	References []NotificationReferenceType `json:"references,omitempty"`
 
 	// +kubebuilder:validation:Enum={"Debug","Info","Warning","Error","Fatal"}
 	// Re-use the severity definitation in managednotification_types
