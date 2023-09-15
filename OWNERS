@@ -1,6 +1,5 @@
 reviewers:
 - bmeng
-- mrbarge
 - ravitri
 - a7vicky
 - rendhalver
@@ -10,6 +9,5 @@ reviewers:
 - devppratik
 
 approvers:
-- mrbarge
 - bmeng
 - ravitri
