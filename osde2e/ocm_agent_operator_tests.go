@@ -10,6 +10,7 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/openshift/osde2e-common/pkg/clients/openshift"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/e2e-framework/klient/k8s"
 	"sigs.k8s.io/e2e-framework/klient/k8s/resources"
 	"sigs.k8s.io/e2e-framework/klient/wait"
@@ -35,6 +37,8 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		secretName         = "ocm-access-token"
 		serviceMonitorName = "ocm-agent-metrics"
 		serviceName        = "ocm-agent"
+		operatorName       = "ocm-agent-operator"
+		operatorNamespace  = "openshift-ocm-agent-operator"
 
 		deployments = []string{
 			deploymentName,
@@ -124,5 +128,13 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		Expect(wait.For(conditions.New(client).ResourcesFound(resources))).Should(BeNil(), "some resources were never found")
 	})
 
-	// TODO: ginkgo.It("can be upgraded", ...)
+	ginkgo.It("can be upgraded", func(ctx context.Context) {
+		log.SetLogger(ginkgo.GinkgoLogr)
+		k8sClient, err := openshift.New(ginkgo.GinkgoLogr)
+		Expect(err).ShouldNot(HaveOccurred(), "unable to setup k8s client")
+
+		ginkgo.By("forcing operator upgrade")
+		err = k8sClient.UpgradeOperator(ctx, operatorName, operatorNamespace)
+		Expect(err).NotTo(HaveOccurred(), "operator upgrade failed")
+	})
 })
