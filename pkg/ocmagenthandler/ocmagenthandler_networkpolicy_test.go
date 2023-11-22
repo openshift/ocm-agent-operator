@@ -45,18 +45,104 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 		}
 	})
 
+	Context("When building an OCM Agent NetworkPolicy for MUO", func() {
+		var muoNetworkPolicy netv1.NetworkPolicy
+
+		BeforeEach(func() {
+			muoNetworkPolicy = buildNetworkPolicyForMUO(testOcmAgent)
+		})
+
+		It("Should have the expected name and namespace for MUO", func() {
+			Expect(muoNetworkPolicy.Name).To(Equal(testOcmAgent.Name + "-allow-muo-communication"))
+			Expect(muoNetworkPolicy.Namespace).To(Equal(oah.OCMAgentNamespace))
+		})
+
+		It("Should include an ingress rule to allow traffic from the MUO namespace", func() {
+			Expect(len(muoNetworkPolicy.Spec.Ingress)).To(Equal(1))
+			Expect(muoNetworkPolicy.Spec.Ingress[0].From).To(HaveLen(1))
+
+			nsSelector := muoNetworkPolicy.Spec.Ingress[0].From[0].NamespaceSelector
+			Expect(nsSelector).NotTo(BeNil())
+			Expect(nsSelector.MatchLabels).To(HaveKeyWithValue("kubernetes.io/metadata.name", "openshift-managed-upgrade-operator"))
+		})
+
+		It("Should apply to pods with the correct app label", func() {
+			Expect(muoNetworkPolicy.Spec.PodSelector.MatchLabels).To(HaveKeyWithValue("app", testOcmAgent.Name))
+		})
+	})
+
+	Context("Managing the OCM Agent NetworkPolicy for MUO", func() {
+		var testMUONetworkPolicy netv1.NetworkPolicy
+		var testMUONamespacedName types.NamespacedName
+
+		BeforeEach(func() {
+			testMUONetworkPolicy = buildNetworkPolicyForMUO(testOcmAgent)
+			testMUONamespacedName = types.NamespacedName{
+				Namespace: testMUONetworkPolicy.Namespace,
+				Name:      testMUONetworkPolicy.Name,
+			}
+		})
+
+		When("the MUO network policy does not already exist", func() {
+			It("creates the MUO network policy", func() {
+				notFound := k8serrs.NewNotFound(schema.GroupResource{}, testMUONetworkPolicy.Name)
+				gomock.InOrder(
+					mockClient.EXPECT().Get(gomock.Any(), testMUONamespacedName, gomock.Any()).Return(notFound),
+					mockClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
+						func(ctx context.Context, d *netv1.NetworkPolicy, opts ...client.CreateOptions) error {
+							Expect(reflect.DeepEqual(d.Spec, testMUONetworkPolicy.Spec)).To(BeTrue())
+							return nil
+						}),
+				)
+				err := testOcmAgentHandler.ensureNetworkPolicyForMUO(testOcmAgent)
+				Expect(err).To(BeNil())
+			})
+		})
+
+		When("the MUO network policy already exists", func() {
+			When("the MUO network policy differs from what is expected", func() {
+				BeforeEach(func() {
+					testMUONetworkPolicy.Spec.PodSelector.MatchLabels = map[string]string{"fake": "fake"}
+				})
+				It("updates the MUO network policy", func() {
+					gomock.InOrder(
+						mockClient.EXPECT().Get(gomock.Any(), testMUONamespacedName, gomock.Any()).SetArg(2, testMUONetworkPolicy),
+						mockClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, d *netv1.NetworkPolicy, opts ...client.UpdateOptions) error {
+								Expect(reflect.DeepEqual(d.Spec, buildNetworkPolicyForMUO(testOcmAgent).Spec)).To(BeTrue())
+								return nil
+							}),
+					)
+					err := testOcmAgentHandler.ensureNetworkPolicyForMUO(testOcmAgent)
+					Expect(err).To(BeNil())
+				})
+			})
+			When("the MUO network policy matches what is expected", func() {
+				It("does not update the MUO network policy", func() {
+					gomock.InOrder(
+						mockClient.EXPECT().Get(gomock.Any(), testMUONamespacedName, gomock.Any()).SetArg(2, testMUONetworkPolicy),
+					)
+					err := testOcmAgentHandler.ensureNetworkPolicyForMUO(testOcmAgent)
+					Expect(err).To(BeNil())
+				})
+			})
+		})
+	})
+
 	Context("When building an OCM Agent NetworkPolicy", func() {
 		var np, nph netv1.NetworkPolicy
 		BeforeEach(func() {
 			np = buildNetworkPolicy(testOcmAgent)
 			nph = buildNetworkPolicy(testHSOcmAgent)
 		})
+
 		It("Has the expected name and namespace", func() {
 			Expect(np.Name).To(Equal(testOcmAgent.Name + oah.OCMAgentNetworkPolicySuffix))
 			Expect(np.Namespace).To(Equal(oah.OCMAgentNamespace))
 			Expect(nph.Name).To(Equal(testHSOcmAgent.Name + oah.OCMFleetAgentNetworkPolicySuffix))
 			Expect(nph.Namespace).To(Equal(oah.OCMAgentNamespace))
 		})
+
 	})
 
 	Context("Managing the OCM Agent NetworkPolicy", func() {
