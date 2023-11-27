@@ -67,7 +67,7 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesExist(ocmAgent ocmagentv1alpha1
 		o.ensureAllConfigMaps,
 		ensureSecretFunc,
 		o.ensureService,
-		o.ensureNetworkPolicy,
+		o.ensureAllNetworkPolicies,
 		o.ensureServiceMonitor,
 	}
 	for _, fn := range ensureFuncs {
@@ -86,7 +86,7 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesAbsent(ocmAgent ocmagentv1alpha
 		o.ensureDeploymentDeleted,
 		o.ensureServiceDeleted,
 		o.ensureAllConfigMapsDeleted,
-		o.ensureNetworkPolicyDeleted,
+		o.ensureAllNetworkPoliciesDeleted,
 		o.ensureServiceMonitorDeleted,
 	}
 

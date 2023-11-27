@@ -35,6 +35,7 @@ func buildNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent) netv1.NetworkPolicy 
 			MatchLabels: map[string]string{"name": "openshift-monitoring"},
 		}
 	}
+
 	np := netv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      namespacedName.Name,
@@ -54,7 +55,55 @@ func buildNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent) netv1.NetworkPolicy 
 			},
 		},
 	}
+
 	return np
+}
+
+func buildNetworkPolicyForMUO(ocmAgent ocmagentv1alpha1.OcmAgent) netv1.NetworkPolicy {
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name + "-allow-muo-communication")
+
+	np := netv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      namespacedName.Name,
+			Namespace: namespacedName.Namespace,
+		},
+		Spec: netv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{"app": ocmAgent.Name},
+			},
+			Ingress: []netv1.NetworkPolicyIngressRule{
+				{
+					From: []netv1.NetworkPolicyPeer{
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"kubernetes.io/metadata.name": "openshift-managed-upgrade-operator"},
+							},
+						},
+					},
+				},
+			},
+			PolicyTypes: []netv1.PolicyType{
+				netv1.PolicyTypeIngress,
+			},
+		},
+	}
+
+	return np
+}
+
+func (o *ocmAgentHandler) ensureAllNetworkPolicies(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+	err := o.ensureNetworkPolicy(ocmAgent)
+	if err != nil {
+		return err
+	}
+
+	// Ensure MUO network policy
+	err = o.ensureNetworkPolicyForMUO(ocmAgent)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ensureNetworkPolicy ensures that an OCMAgent NetworkPolicy exists on the cluster
@@ -106,6 +155,50 @@ func (o *ocmAgentHandler) ensureNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent
 	return nil
 }
 
+func (o *ocmAgentHandler) ensureNetworkPolicyForMUO(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name + "-allow-muo-communication")
+	foundResource := &netv1.NetworkPolicy{}
+
+	// Check if the resource already exist
+	o.Log.Info("ensuring MUO networkpolicy exists", "resource", namespacedName.String())
+	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
+		if k8serrors.IsNotFound(err) {
+			// If Network policy doesn't exist, create it.
+			o.Log.Info("MUO NetworkPolicy does not exist; will be created.")
+			resource := buildNetworkPolicyForMUO(ocmAgent)
+			if err := controllerutil.SetControllerReference(&ocmAgent, &resource, o.Scheme); err != nil {
+				return err
+			}
+			return o.Client.Create(o.Ctx, &resource)
+		}
+		return err
+	} else {
+		// If Network policy exists, check if it needs updating.
+		resource := buildNetworkPolicyForMUO(ocmAgent)
+		if !reflect.DeepEqual(foundResource.Spec, resource.Spec) {
+			o.Log.Info("MUO NetworkPolicy exists but is outdated. Updating.")
+			foundResource.Spec = *resource.Spec.DeepCopy()
+			return o.Client.Update(context.TODO(), foundResource)
+		}
+	}
+	return nil
+}
+
+func (o *ocmAgentHandler) ensureAllNetworkPoliciesDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+	err := o.ensureNetworkPolicyDeleted(ocmAgent)
+	if err != nil {
+		return err
+	}
+
+	// Delete MUO network policy
+	err = o.ensureNetworkPolicyForMUODeleted(ocmAgent)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (o *ocmAgentHandler) ensureNetworkPolicyDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	var namespacedName types.NamespacedName
 	if ocmAgent.Spec.FleetMode {
@@ -130,4 +223,21 @@ func (o *ocmAgentHandler) ensureNetworkPolicyDeleted(ocmAgent ocmagentv1alpha1.O
 		return err
 	}
 	return nil
+}
+
+func (o *ocmAgentHandler) ensureNetworkPolicyForMUODeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name + "-allow-muo-communication")
+	foundResource := &netv1.NetworkPolicy{}
+
+	// Check if the network policy exists
+	o.Log.Info("ensuring MUO networkpolicy is removed", "resource", namespacedName.String())
+	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
+		if !k8serrors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}
+
+	// Delete the network policy
+	return o.Client.Delete(o.Ctx, foundResource)
 }
