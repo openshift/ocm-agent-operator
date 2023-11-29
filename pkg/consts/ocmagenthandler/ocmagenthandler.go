@@ -73,6 +73,8 @@ const (
 	ResourceRequestsMemory = "30Mi"
 	// ConfigMapSuffix is the suffix added to configmap name to always make it unique compared to secret name
 	ConfigMapSuffix = "-cm"
+	// PDBSuffix is the suffix added to PDB name to always make it unique
+	PDBSuffix = "-pdb"
 )
 
 var (

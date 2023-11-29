@@ -82,6 +82,16 @@ var _ = Describe("OCM Agent Deployment Handler", func() {
 			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().Value()).To(BeNumerically(">", 0))
 			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().Value()).To(BeNumerically(">", 0))
 
+			// Validate Pod Anti-Affinity
+			Expect(deployment.Spec.Template.Spec.Affinity).NotTo(BeNil())
+			Expect(deployment.Spec.Template.Spec.Affinity.PodAntiAffinity).NotTo(BeNil())
+			Expect(deployment.Spec.Template.Spec.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution).NotTo(BeEmpty())
+
+			podAntiAffinity := deployment.Spec.Template.Spec.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0]
+			Expect(podAntiAffinity.Weight).To(Equal(int32(100)))
+			Expect(podAntiAffinity.PodAffinityTerm.TopologyKey).To(Equal("kubernetes.io/hostname"))
+			Expect(podAntiAffinity.PodAffinityTerm.LabelSelector.MatchLabels).To(HaveKeyWithValue("app", "ocm-agent"))
+
 		})
 	})
 
