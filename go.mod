@@ -23,6 +23,8 @@ require (
 	sigs.k8s.io/e2e-framework v0.2.0
 )
 
+require go.uber.org/mock v0.3.0
+
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
