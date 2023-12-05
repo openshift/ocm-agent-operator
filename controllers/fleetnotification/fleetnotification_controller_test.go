@@ -1,15 +1,16 @@
 package fleetnotification_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"time"
 
 	testconst "github.com/openshift/ocm-agent-operator/pkg/consts/test/init"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
 	"github.com/openshift/ocm-agent-operator/controllers/fleetnotification"

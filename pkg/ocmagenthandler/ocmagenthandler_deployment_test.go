@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
 	"github.com/openshift/ocm-agent-operator/pkg/consts/ocmagenthandler"

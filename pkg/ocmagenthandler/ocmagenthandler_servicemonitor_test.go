@@ -4,8 +4,8 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/golang/mock/gomock"
 	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"go.uber.org/mock/gomock"
 
 	k8serrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
