@@ -69,6 +69,7 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesExist(ocmAgent ocmagentv1alpha1
 		o.ensureService,
 		o.ensureAllNetworkPolicies,
 		o.ensureServiceMonitor,
+		o.ensurePodDisruptionBudget,
 	}
 	for _, fn := range ensureFuncs {
 		err := fn(ocmAgent)
@@ -88,6 +89,7 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesAbsent(ocmAgent ocmagentv1alpha
 		o.ensureAllConfigMapsDeleted,
 		o.ensureAllNetworkPoliciesDeleted,
 		o.ensureServiceMonitorDeleted,
+		o.ensurePodDisruptionBudgetDeleted,
 	}
 
 	if !ocmAgent.Spec.FleetMode {
