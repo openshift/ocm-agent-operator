@@ -69,8 +69,11 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesExist(ocmAgent ocmagentv1alpha1
 		o.ensureService,
 		o.ensureAllNetworkPolicies,
 		o.ensureServiceMonitor,
-		o.ensurePodDisruptionBudget,
 	}
+	if ocmAgent.Spec.Replicas > 1 {
+		ensureFuncs = append(ensureFuncs, o.ensurePodDisruptionBudget)
+	}
+
 	for _, fn := range ensureFuncs {
 		err := fn(ocmAgent)
 		if err != nil {
