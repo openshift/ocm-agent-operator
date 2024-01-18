@@ -186,9 +186,10 @@ func (fnr *ManagedFleetNotificationRecord) AddNotificationRecordItem(clusterID s
 			}
 		}
 		ri := NotificationRecordItem{
-			FiringNotificationSentCount: 0,
-			HostedClusterID:             clusterID,
-			LastTransitionTime:          nil,
+			FiringNotificationSentCount:   0,
+			ResolvedNotificationSentCount: 0,
+			HostedClusterID:               clusterID,
+			LastTransitionTime:            nil,
 		}
 		fnr.Status.NotificationRecordByName[i].NotificationRecordItems = append(fnr.Status.NotificationRecordByName[i].NotificationRecordItems, ri)
 		return &ri, nil
