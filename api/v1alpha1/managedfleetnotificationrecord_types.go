@@ -18,8 +18,9 @@ package v1alpha1
 
 import (
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ManagedFleetNotificationRecordStatus defines the observed state of ManagedFleetNotificationRecord
@@ -45,10 +46,13 @@ type NotificationRecordItem struct {
 	// The uuid for the hosted cluster per entry
 	HostedClusterID string `json:"hostedClusterID"`
 
-	// ServiceLogSentCount records the number of service logs sent for the notification
-	ServiceLogSentCount int `json:"serviceLogSentCount"`
+	// FiringNotificationSentCount records the number of notifications sent for the alert status firing
+	FiringNotificationSentCount int `json:"firingNotificationSentCount"`
 
-	// The last service log sent timestamp
+	// ResolvedNotificationSentCount records the number of notifications sent for the alert status resolving
+	ResolvedNotificationSentCount int `json:"resolvedNotificationSentCount"`
+
+	// The last notification sent timestamp
 	LastTransitionTime *metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
@@ -137,8 +141,8 @@ func (fnr *ManagedFleetNotificationRecord) HasNotificationRecordItem(mc, name, c
 	return false
 }
 
-// CanBeSent checks if the service log for the notification can be sent for the given hosted cluster
-func (fnr *ManagedFleetNotificationRecord) CanBeSent(mc, name, clusterID string) (bool, error) {
+// FiringCanBeSent checks if the notification can be sent for a firing alert for the given hosted cluster
+func (fnr *ManagedFleetNotificationRecord) FiringCanBeSent(mc, name, clusterID string) (bool, error) {
 	rn, err := fnr.GetNotificationRecordByName(mc, name)
 	if err != nil {
 		return false, err
@@ -182,9 +186,9 @@ func (fnr *ManagedFleetNotificationRecord) AddNotificationRecordItem(clusterID s
 			}
 		}
 		ri := NotificationRecordItem{
-			ServiceLogSentCount: 0,
-			HostedClusterID:     clusterID,
-			LastTransitionTime:  nil,
+			FiringNotificationSentCount: 0,
+			HostedClusterID:             clusterID,
+			LastTransitionTime:          nil,
 		}
 		fnr.Status.NotificationRecordByName[i].NotificationRecordItems = append(fnr.Status.NotificationRecordByName[i].NotificationRecordItems, ri)
 		return &ri, nil
@@ -192,15 +196,20 @@ func (fnr *ManagedFleetNotificationRecord) AddNotificationRecordItem(clusterID s
 	return nil, fmt.Errorf("notification %v does not exist", rn.NotificationName)
 }
 
-// UpdateNotificationRecordItem updates the service log sent count and timestamp for the last time sent
-func (fnr *ManagedFleetNotificationRecord) UpdateNotificationRecordItem(notificationName string, hostedClusterID string) (*NotificationRecordItem, error) {
+// UpdateNotificationRecordItem updates the notification sent count and timestamp for the last time sent
+func (fnr *ManagedFleetNotificationRecord) UpdateNotificationRecordItem(notificationName string, hostedClusterID string, statusFiring bool) (*NotificationRecordItem, error) {
 	for i, nfr := range fnr.Status.NotificationRecordByName {
 		if nfr.NotificationName != notificationName {
 			continue
 		}
 		for j, nfi := range nfr.NotificationRecordItems {
 			if nfi.HostedClusterID == hostedClusterID {
-				fnr.Status.NotificationRecordByName[i].NotificationRecordItems[j].ServiceLogSentCount += 1
+				if statusFiring {
+					fnr.Status.NotificationRecordByName[i].NotificationRecordItems[j].FiringNotificationSentCount += 1
+				} else {
+					fnr.Status.NotificationRecordByName[i].NotificationRecordItems[j].ResolvedNotificationSentCount += 1
+				}
+
 				fnr.Status.NotificationRecordByName[i].NotificationRecordItems[j].LastTransitionTime = &metav1.Time{Time: time.Now()}
 				return &fnr.Status.NotificationRecordByName[i].NotificationRecordItems[j], nil
 			}
