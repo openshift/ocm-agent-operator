@@ -81,7 +81,6 @@ spec:
                     description: The summary line of the notification
                     type: string
                 required:
-                - limitedSupport
                 - name
                 - notificationMessage
                 - resendWait

@@ -47,7 +47,7 @@ type FleetNotification struct {
 	ResendWait int32 `json:"resendWait"`
 
 	// Whether or not limited support should be sent for this notification
-	LimitedSupport bool `json:"limitedSupport"`
+	LimitedSupport bool `json:"limitedSupport,omitempty"`
 }
 
 type ManagedFleetNotificationSpec struct {
