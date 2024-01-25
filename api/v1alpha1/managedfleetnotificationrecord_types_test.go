@@ -35,19 +35,22 @@ var _ = Describe("OCMAgent Controller MFNR Type", func() {
 						ResendWait:       1,
 						NotificationRecordItems: []v1alpha1.NotificationRecordItem{
 							{
-								HostedClusterID:     "test-hc-1-1",
-								ServiceLogSentCount: 0,
-								LastTransitionTime:  nil,
+								HostedClusterID:               "test-hc-1-1",
+								FiringNotificationSentCount:   0,
+								ResolvedNotificationSentCount: 0,
+								LastTransitionTime:            nil,
 							},
 							{
-								HostedClusterID:     "test-hc-1-2",
-								ServiceLogSentCount: 1,
-								LastTransitionTime:  &metav1.Time{Time: time.Now().Add(time.Duration(-5) * time.Hour)},
+								HostedClusterID:               "test-hc-1-2",
+								FiringNotificationSentCount:   1,
+								ResolvedNotificationSentCount: 1,
+								LastTransitionTime:            &metav1.Time{Time: time.Now().Add(time.Duration(-5) * time.Hour)},
 							},
 							{
-								HostedClusterID:     "test-hc-1-3",
-								ServiceLogSentCount: 0,
-								LastTransitionTime:  nil,
+								HostedClusterID:               "test-hc-1-3",
+								FiringNotificationSentCount:   0,
+								ResolvedNotificationSentCount: 0,
+								LastTransitionTime:            nil,
 							},
 						},
 					},
@@ -56,9 +59,9 @@ var _ = Describe("OCMAgent Controller MFNR Type", func() {
 						ResendWait:       24,
 						NotificationRecordItems: []v1alpha1.NotificationRecordItem{
 							{
-								HostedClusterID:     "test-hc-2-1",
-								ServiceLogSentCount: 0,
-								LastTransitionTime:  nil,
+								HostedClusterID:             "test-hc-2-1",
+								FiringNotificationSentCount: 0,
+								LastTransitionTime:          nil,
 							},
 						},
 					},
@@ -70,24 +73,32 @@ var _ = Describe("OCMAgent Controller MFNR Type", func() {
 	Context("When updating a notification record item", func() {
 		Context("When the notification record item already exists", func() {
 			It("will update it correctly", func() {
+				firing := true
 				nr := testMNFR.Status.NotificationRecordByName[0]
 				nri := testMNFR.Status.NotificationRecordByName[0].NotificationRecordItems[1]
-				nri2, err := testMNFR.UpdateNotificationRecordItem(nr.NotificationName, nri.HostedClusterID)
+				nri2, err := testMNFR.UpdateNotificationRecordItem(nr.NotificationName, nri.HostedClusterID, firing)
 				Expect(err).To(BeNil())
-				Expect(nri2.ServiceLogSentCount).To(Equal(2))
-				Expect(testMNFR.Status.NotificationRecordByName[0].NotificationRecordItems[1].ServiceLogSentCount).To(Equal(2))
+				Expect(nri2.FiringNotificationSentCount).To(Equal(2))
+				Expect(testMNFR.Status.NotificationRecordByName[0].NotificationRecordItems[1].FiringNotificationSentCount).To(Equal(2))
+
+				nri2, err = testMNFR.UpdateNotificationRecordItem(nr.NotificationName, nri.HostedClusterID, !firing)
+				Expect(err).To(BeNil())
+				Expect(nri2.ResolvedNotificationSentCount).To(Equal(2))
+				Expect(testMNFR.Status.NotificationRecordByName[0].NotificationRecordItems[1].ResolvedNotificationSentCount).To(Equal(2))
 			})
 		})
 		Context("When the notification does not exist", func() {
 			It("will return an error", func() {
-				_, err := testMNFR.UpdateNotificationRecordItem("nope", "nope")
+				firing := false
+				_, err := testMNFR.UpdateNotificationRecordItem("nope", "nope", firing)
 				Expect(err).NotTo(BeNil())
 			})
 		})
 		Context("When the notification record item does not exist", func() {
 			It("will return an error", func() {
+				firing := false
 				nr := testMNFR.Status.NotificationRecordByName[0]
-				_, err := testMNFR.UpdateNotificationRecordItem(nr.NotificationName, "nope")
+				_, err := testMNFR.UpdateNotificationRecordItem(nr.NotificationName, "nope", firing)
 				Expect(err).NotTo(BeNil())
 			})
 		})
@@ -155,7 +166,7 @@ var _ = Describe("OCMAgent Controller MFNR Type", func() {
 	Context("When checking if a firing notification can be sent", func() {
 		When("there is no defined notification", func() {
 			It("will raise an error", func() {
-				cansend, err := testMNFR.CanBeSent("test-mc-id-1", testNotificationName, "test-hc-1-1")
+				cansend, err := testMNFR.FiringCanBeSent("test-mc-id-1", testNotificationName, "test-hc-1-1")
 				Expect(cansend).To(BeFalse())
 				Expect(err).To(HaveOccurred())
 			})
@@ -166,7 +177,7 @@ var _ = Describe("OCMAgent Controller MFNR Type", func() {
 				testMNFR.Status.NotificationRecordByName[0].NotificationRecordItems = []v1alpha1.NotificationRecordItem{}
 			})
 			It("will send", func() {
-				cansend, err := testMNFR.CanBeSent(testManagementCluster, testNotificationName, "test-hc-12")
+				cansend, err := testMNFR.FiringCanBeSent(testManagementCluster, testNotificationName, "test-hc-12")
 				Expect(cansend).To(BeTrue())
 				Expect(err).To(BeNil())
 			})
@@ -180,7 +191,7 @@ var _ = Describe("OCMAgent Controller MFNR Type", func() {
 				}
 			})
 			It("will not resend", func() {
-				cansend, err := testMNFR.CanBeSent(testManagementCluster, testNotificationName, "test-hc-13")
+				cansend, err := testMNFR.FiringCanBeSent(testManagementCluster, testNotificationName, "test-hc-13")
 				Expect(cansend).To(BeFalse())
 				Expect(err).To(BeNil())
 			})
@@ -193,7 +204,7 @@ var _ = Describe("OCMAgent Controller MFNR Type", func() {
 				}
 			})
 			It("will resend notification", func() {
-				cansend, err := testMNFR.CanBeSent(testManagementCluster, testNotificationName, "test-hc-14")
+				cansend, err := testMNFR.FiringCanBeSent(testManagementCluster, testNotificationName, "test-hc-14")
 				Expect(cansend).To(BeTrue())
 				Expect(err).To(BeNil())
 			})

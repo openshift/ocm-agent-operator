@@ -39,6 +39,10 @@ spec:
               fleetNotification:
                 description: FleetNotification defines the desired spec of ManagedFleetNotification
                 properties:
+                  limitedSupport:
+                    description: Whether or not limited support should be sent for
+                      this notification
+                    type: boolean
                   logType:
                     description: LogType is a categorization property that can be
                       used to group service logs for aggregation and managing notification
@@ -49,8 +53,8 @@ spec:
                       an alert
                     type: string
                   notificationMessage:
-                    description: The body text of the Service Log notification when
-                      the alert is active
+                    description: The body text of the notification when the alert
+                      is active
                     type: string
                   references:
                     description: References useful for context or remediation - this
@@ -61,7 +65,7 @@ spec:
                     type: array
                   resendWait:
                     description: Measured in hours. The minimum time interval that
-                      must elapse between active Service Log notifications
+                      must elapse between active notifications
                     format: int32
                     type: integer
                   severity:
@@ -74,7 +78,7 @@ spec:
                     - Fatal
                     type: string
                   summary:
-                    description: The summary line of the Service Log notification
+                    description: The summary line of the notification
                     type: string
                 required:
                 - name

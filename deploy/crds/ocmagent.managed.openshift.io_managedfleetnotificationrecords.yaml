@@ -58,20 +58,25 @@ spec:
                         description: NotificationRecordItem defines the basic structure
                           of a notification record
                         properties:
+                          firingNotificationSentCount:
+                            description: FiringNotificationSentCount records the number
+                              of notifications sent for the alert status firing
+                            type: integer
                           hostedClusterID:
                             description: The uuid for the hosted cluster per entry
                             type: string
                           lastTransitionTime:
-                            description: The last service log sent timestamp
+                            description: The last notification sent timestamp
                             format: date-time
                             type: string
-                          serviceLogSentCount:
-                            description: ServiceLogSentCount records the number of
-                              service logs sent for the notification
+                          resolvedNotificationSentCount:
+                            description: ResolvedNotificationSentCount records the
+                              number of notifications sent for the alert status resolving
                             type: integer
                         required:
+                        - firingNotificationSentCount
                         - hostedClusterID
-                        - serviceLogSentCount
+                        - resolvedNotificationSentCount
                         type: object
                       type: array
                     resendWait:

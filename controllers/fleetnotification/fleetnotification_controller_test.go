@@ -70,9 +70,9 @@ var _ = Describe("FleetNotification Controller", func() {
 							{
 								NotificationRecordItems: []ocmagentv1alpha1.NotificationRecordItem{
 									{
-										HostedClusterID:     "1234-5678-12345678",
-										ServiceLogSentCount: 1,
-										LastTransitionTime:  &metav1.Time{Time: time.Now()},
+										HostedClusterID:             "1234-5678-12345678",
+										FiringNotificationSentCount: 1,
+										LastTransitionTime:          &metav1.Time{Time: time.Now()},
 									},
 								},
 							},
@@ -102,9 +102,9 @@ var _ = Describe("FleetNotification Controller", func() {
 							{
 								NotificationRecordItems: []ocmagentv1alpha1.NotificationRecordItem{
 									{
-										HostedClusterID:     "1234-5678-12345678",
-										ServiceLogSentCount: 2,
-										LastTransitionTime:  &metav1.Time{Time: time.Date(2022, time.November, 10, 23, 0, 0, 0, time.UTC)},
+										HostedClusterID:             "1234-5678-12345678",
+										FiringNotificationSentCount: 2,
+										LastTransitionTime:          &metav1.Time{Time: time.Date(2022, time.November, 10, 23, 0, 0, 0, time.UTC)},
 									},
 								},
 							},
