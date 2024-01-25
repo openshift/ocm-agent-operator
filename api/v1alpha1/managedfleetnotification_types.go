@@ -27,10 +27,10 @@ type FleetNotification struct {
 	// The name of the notification used to associate with an alert
 	Name string `json:"name"`
 
-	// The summary line of the Service Log notification
+	// The summary line of the notification
 	Summary string `json:"summary"`
 
-	// The body text of the Service Log notification when the alert is active
+	// The body text of the notification when the alert is active
 	NotificationMessage string `json:"notificationMessage"`
 
 	// LogType is a categorization property that can be used to group service logs for aggregation and managing notification preferences.
@@ -43,8 +43,11 @@ type FleetNotification struct {
 	// Re-use the severity definitation in managednotification_types
 	Severity NotificationSeverity `json:"severity"`
 
-	// Measured in hours. The minimum time interval that must elapse between active Service Log notifications
+	// Measured in hours. The minimum time interval that must elapse between active notifications
 	ResendWait int32 `json:"resendWait"`
+
+	// Whether or not limited support should be sent for this notification
+	LimitedSupport bool `json:"limitedSupport"`
 }
 
 type ManagedFleetNotificationSpec struct {
