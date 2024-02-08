@@ -4,11 +4,11 @@
 
 ### golang
 
-A recent Go distribution (>=1.17) with enabled Go modules.
+A recent Go distribution (>=1.20) with enabled Go modules.
 
 ```shell
 $ go version
-go version go1.17.11 linux/amd64
+go version go1.20.13 linux/amd64
 ```
 
 ### operator-sdk
