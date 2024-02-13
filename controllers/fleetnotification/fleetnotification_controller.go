@@ -75,16 +75,24 @@ func (r *ManagedFleetNotificationReconciler) Reconcile(ctx context.Context, requ
 	for n, rn := range nr.Status.NotificationRecordByName {
 		resendWait := rn.ResendWait
 		for i, ri := range rn.NotificationRecordItems {
+			// If the LastTransitionTime is nil, consider the item as stale
+			if ri.LastTransitionTime == nil {
+				log.Info(fmt.Sprintf("NotificationRecord for notification %s and hostedcluster %s has an empty lastTransitionTime, cleaning up... ",
+					rn.NotificationName, ri.HostedClusterID))
+				err := r.patchRemove(ctx, &nr, n, i)
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+				return ctrl.Result{}, nil
+			}
+
 			// Consider the record is stale if the lastSendTime is older than resendWait + 15 days
 			eol := ri.LastTransitionTime.Time.Add(time.Duration(resendWait+NotificationRecordStaleTimeoutInHour) * time.Hour)
 			if time.Now().After(eol) {
 				log.Info(fmt.Sprintf("NotificationRecord for notification %s and hostedcluster %s has not been updated "+
 					"for %d hours and considered as stale, cleaning up...", rn.NotificationName, ri.HostedClusterID,
 					resendWait+NotificationRecordStaleTimeoutInHour))
-
-				patch := []byte(fmt.Sprintf(`[{"op": "remove", "path": "/status/notificationRecordByName/%d/notificationRecordItems/%d"}]`, n, i))
-
-				err = r.Client.Status().Patch(ctx, &nr, client.RawPatch(types.JSONPatchType, patch))
+				err := r.patchRemove(ctx, &nr, n, i)
 				if err != nil {
 					return ctrl.Result{}, err
 				}
@@ -93,6 +101,19 @@ func (r *ManagedFleetNotificationReconciler) Reconcile(ctx context.Context, requ
 		}
 	}
 	return ctrl.Result{}, nil
+}
+
+func (r *ManagedFleetNotificationReconciler) patchRemove(ctx context.Context, notificationRecord *ocmagentv1alpha1.ManagedFleetNotificationRecord,
+	notificationRecordByNameSlot int, notificationRecordItemSlot int) error {
+	patch := []byte(fmt.Sprintf(`[{"op": "remove", "path": "/status/notificationRecordByName/%d/notificationRecordItems/%d"}]`,
+		notificationRecordByNameSlot, notificationRecordItemSlot))
+
+	err := r.Client.Status().Patch(ctx, notificationRecord, client.RawPatch(types.JSONPatchType, patch))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

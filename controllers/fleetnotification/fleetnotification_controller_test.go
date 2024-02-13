@@ -123,5 +123,39 @@ var _ = Describe("FleetNotification Controller", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
+
+		When("There is notification record which has an nil last transition time", func() {
+			BeforeEach(func() {
+				testFleetNotificationRecord = &ocmagentv1alpha1.ManagedFleetNotificationRecord{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      testconst.MfnrNamespacedName.Name,
+						Namespace: testconst.MfnrNamespacedName.Namespace,
+					},
+					Status: ocmagentv1alpha1.ManagedFleetNotificationRecordStatus{
+						NotificationRecordByName: []ocmagentv1alpha1.NotificationRecordByName{
+							{
+								NotificationRecordItems: []ocmagentv1alpha1.NotificationRecordItem{
+									{
+										HostedClusterID:             "1234-5678-12345678",
+										FiringNotificationSentCount: 2,
+										LastTransitionTime:          nil,
+									},
+								},
+							},
+						},
+					},
+				}
+			})
+			It("Will need to do the garbage collection for it", func() {
+				gomock.InOrder(
+					mockClient.EXPECT().Get(gomock.Any(), testconst.MfnrNamespacedName, gomock.Any()).Times(1).SetArg(2, *testFleetNotificationRecord),
+					mockClient.EXPECT().Status().Return(mockStatusWriter),
+					mockStatusWriter.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).SetArg(1, *testFleetNotificationRecord),
+				)
+				_, err := fleetNotificationReconciler.Reconcile(testconst.Context, reconcile.Request{NamespacedName: testconst.MfnrNamespacedName})
+				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
 	})
 })
