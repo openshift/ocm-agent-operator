@@ -10,16 +10,16 @@ require (
 	github.com/onsi/gomega v1.30.0
 	github.com/openshift/api v3.9.1-0.20190424152011-77b8897ec79a+incompatible
 	github.com/openshift/operator-custom-metrics v0.5.1
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.71.2
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.67.1
 	github.com/prometheus/client_golang v1.18.0
 	github.com/sykesm/zap-logfmt v0.0.4
 	go.uber.org/zap v1.26.0
-	k8s.io/api v0.29.1
-	k8s.io/apimachinery v0.29.1
-	k8s.io/client-go v0.29.1
+	k8s.io/api v0.29.0
+	k8s.io/apimachinery v0.29.0
+	k8s.io/client-go v0.29.0
 	k8s.io/kube-openapi v0.0.0-20240126223410-2919ad4fcfec
-	sigs.k8s.io/controller-runtime v0.17.0
-	sigs.k8s.io/controller-tools v0.14.0
+	sigs.k8s.io/controller-runtime v0.17.2
+	sigs.k8s.io/controller-tools v0.12.1
 	sigs.k8s.io/e2e-framework v0.2.0
 )
 
@@ -27,8 +27,6 @@ require go.uber.org/mock v0.3.0
 
 require (
 	github.com/google/gnostic-models v0.6.9-0.20230804172637-c7be7c783f49 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
-	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3 // indirect
 )
 
@@ -88,8 +86,8 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.29.1 // indirect
-	k8s.io/component-base v0.29.1 // indirect
+	k8s.io/apiextensions-apiserver v0.29.0 // indirect
+	k8s.io/component-base v0.29.0 // indirect
 	k8s.io/gengo v0.0.0-20240129211411-f967bbeff4b4 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e // indirect
@@ -100,6 +98,9 @@ require (
 
 replace (
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20220414050251-a83e6f8f1d50
+	k8s.io/api => k8s.io/api v0.28.2
+	k8s.io/apimachinery => k8s.io/apimachinery v0.28.2
+	k8s.io/client-go => k8s.io/client-go v0.28.2
 	sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws v0.2.1-0.20201125052318-b85a18cbf338
 	sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.0.0-20210209143830-3442c7a36c1e
 )
