@@ -29,7 +29,7 @@ func buildOCMAgentPodDisruptionBudget(ocmAgent ocmagentv1alpha1.OcmAgent) *v1.Po
 			},
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "ocm-agent",
+					"app": ocmAgent.Name,
 				},
 			},
 		},
