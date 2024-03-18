@@ -4,17 +4,22 @@ import (
 	"fmt"
 	"net/url"
 
-	ns "github.com/openshift/ocm-agent-operator/pkg/util/namespace"
 	"k8s.io/apimachinery/pkg/types"
+
+	ns "github.com/openshift/ocm-agent-operator/pkg/util/namespace"
 )
 
 const (
 	// OCMAgentNamespace is the fall-back namespace to use for OCM Agent Deployments
 	OCMAgentNamespace = "openshift-ocm-agent-operator"
-	// OCMAgentNetworkPolicyName is the name of the network policy to restrict OCM Agent access
-	OCMAgentNetworkPolicySuffix = "-allow-only-alertmanager"
-	// OCMFleetAgentNetworkPolicyName is the name of the network policy to restrict OA for HS
-	OCMFleetAgentNetworkPolicySuffix = "-allow-rhobs-alertmanager"
+	// OCMAgentDefaultNetworkPolicySuffix is the name of the network policy to restrict OCM Agent access
+	OCMAgentDefaultNetworkPolicySuffix = "-allow-only-alertmanager"
+	// OCMAgentRHOBSNetworkPolicySuffix is the name of the network policy to restrict OA for rhobs
+	OCMAgentRHOBSNetworkPolicySuffix = "-allow-rhobs-alertmanager"
+	// OCMAgentOBONetworkPolicySuffix is the name of the network policy to restrict OA for obo
+	OCMAgentOBONetworkPolicySuffix = "-allow-obo-alertmanager"
+	// OCMAgentMUONetworkPolicySuffix is the name of the network policy to restrict OA for MUO
+	OCMAgentMUONetworkPolicySuffix = "-allow-muo-communication"
 	// OCMAgentPortName is the name of the OCM Agent service port used in the OCM Agent Deployment
 	OCMAgentPortName = "ocm-agent"
 	// OCMAgentPort is the container port number used by the agent for exposing its services
@@ -74,7 +79,11 @@ const (
 	// ConfigMapSuffix is the suffix added to configmap name to always make it unique compared to secret name
 	ConfigMapSuffix = "-cm"
 	// PDBSuffix is the suffix added to PDB name to always make it unique
-	PDBSuffix = "-pdb"
+	PDBSuffix          = "-pdb"
+	NamespaceMonitorng = "openshift-monitoring"
+	NamespaceMUO       = "openshift-managed-upgrade-operator"
+	NamespaceRHOBS     = "observatorium-mst-production"
+	NamespaceOBO       = "openshift-observability-operator"
 )
 
 var (
