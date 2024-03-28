@@ -6,9 +6,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/go-logr/logr"
-	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
 )
 
 //go:generate mockgen -source $GOFILE -destination ../../pkg/util/test/generated/mocks/$GOPACKAGE/interfaces.go -package mocks
