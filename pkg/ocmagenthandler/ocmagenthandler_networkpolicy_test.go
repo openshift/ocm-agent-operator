@@ -2,7 +2,6 @@ package ocmagenthandler
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 
 	"go.uber.org/mock/gomock"
@@ -139,7 +138,6 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 		When("network policy exists", func() {
 			It("should be able to delete the networkpolicy", func() {
 				networkPolicy = buildNetworkPolicy(testOcmAgent, testNamespace)
-				fmt.Println(networkPolicy)
 				mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, networkPolicy)
 				mockClient.EXPECT().Delete(gomock.Any(), gomock.Any())
 				err := testOcmAgentHandler.ensureNetworkPolicyDeleted(testOcmAgent, testNamespace)
