@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ev
+set -evx
 
 usage() {
     cat <<EOF
