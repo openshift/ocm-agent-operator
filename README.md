@@ -11,7 +11,7 @@ The Operator manages the [OCM Agent](https://github.com/openshift/ocm-agent) ser
 
 ### For Developers
 
-* [Design](./docs/design.md) -- Describes the interaction between the operator and the custom resource definition.
+* [Design](./docs/design.md) -- Describes the interaction between the operator and the Custom Resource Definition (CRD).
 * [Development](./docs/development.md) -- Instructions for developing and deploying the operator.
 * [Testing](./docs/testing.md) -- Instructions for writing tests.
 * [How To Test](./docs/how-to-test.md) -- Instructions on how to test the OCM Agent Operator
