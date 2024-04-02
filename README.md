@@ -5,7 +5,7 @@
 [![GoDoc](https://godoc.org/github.com/openshift/ocm-agent-operator?status.svg)](https://pkg.go.dev/mod/github.com/openshift/ocm-agent-operator)
 [![License](https://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
-Operator to manage the [OCM Agent](https://github.com/openshift/ocm-agent) service running on managed OpenShift clusters.
+The Operator manages the [OCM Agent](https://github.com/openshift/ocm-agent) service running on managed OpenShift clusters.
 
 ## Documentation
 
