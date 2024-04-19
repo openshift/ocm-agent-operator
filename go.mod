@@ -2,8 +2,6 @@ module github.com/openshift/ocm-agent-operator
 
 go 1.21
 
-toolchain go1.22.2
-
 require (
 	github.com/go-logr/logr v1.4.1
 	github.com/golang/mock v1.6.0
