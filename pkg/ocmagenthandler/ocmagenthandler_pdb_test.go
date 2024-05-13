@@ -9,6 +9,7 @@ import (
 	clientmocks "github.com/openshift/ocm-agent-operator/pkg/util/test/generated/mocks/client"
 	v1 "k8s.io/api/policy/v1"
 	k8serrs "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -64,13 +65,58 @@ var _ = Describe("OCM Agent Pod Disruption Budget Handler", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("updates the PDB if it exists but differs from the expected", func() {
+		It("updates the PDB if MinAvailable differs from the expected", func() {
 			differentPDB := testPDB
 			differentPDB.Spec.MinAvailable = &intstr.IntOrString{IntVal: 2}
+
+			// Mock the Get call to return this modified PDB
 			mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, differentPDB)
+
+			// Expect the Update to be called with the correct spec
 			mockClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
 				func(ctx context.Context, pdb *v1.PodDisruptionBudget, opts ...client.UpdateOptions) error {
-					Expect(pdb.Spec).To(Equal(buildOCMAgentPodDisruptionBudget(testOcmAgent).Spec))
+					expectedPDB := buildOCMAgentPodDisruptionBudget(testOcmAgent)
+					Expect(pdb.Spec.MinAvailable).To(Equal(expectedPDB.Spec.MinAvailable))
+					return nil
+				},
+			)
+			err := testOcmAgentHandler.ensurePodDisruptionBudget(testOcmAgent)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("updates the PDB if Selector.MatchLabels differs from the expected", func() {
+			differentPDB := testPDB
+			differentPDB.Spec.Selector = &metav1.LabelSelector{
+				MatchLabels: map[string]string{"key": "oldValue"},
+			}
+
+			// Mock the Get call to return this modified PDB
+			mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, differentPDB)
+
+			// Expect the Update to be called with the correct spec
+			mockClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(ctx context.Context, pdb *v1.PodDisruptionBudget, opts ...client.UpdateOptions) error {
+					expectedPDB := buildOCMAgentPodDisruptionBudget(testOcmAgent)
+					Expect(pdb.Spec.Selector.MatchLabels).To(Equal(expectedPDB.Spec.Selector.MatchLabels))
+					return nil
+				},
+			)
+			err := testOcmAgentHandler.ensurePodDisruptionBudget(testOcmAgent)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("updates the PDB if MaxUnavailable differs from the expected", func() {
+			differentPDB := testPDB
+			differentPDB.Spec.MaxUnavailable = &intstr.IntOrString{IntVal: 1}
+
+			// Mock the Get call to return this modified PDB
+			mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, differentPDB)
+
+			// Expect the Update to be called with the correct spec
+			mockClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(ctx context.Context, pdb *v1.PodDisruptionBudget, opts ...client.UpdateOptions) error {
+					expectedPDB := buildOCMAgentPodDisruptionBudget(testOcmAgent)
+					Expect(pdb.Spec.MaxUnavailable).To(Equal(expectedPDB.Spec.MaxUnavailable))
 					return nil
 				},
 			)
