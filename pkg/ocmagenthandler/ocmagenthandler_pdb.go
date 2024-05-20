@@ -52,17 +52,12 @@ func (o *ocmAgentHandler) ensurePodDisruptionBudget(ocmAgent ocmagentv1alpha1.Oc
 			if err := controllerutil.SetControllerReference(&ocmAgent, pdb, o.Scheme); err != nil {
 				return err
 			}
-			// and create it now
-			err = o.Client.Create(context.TODO(), pdb)
-
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
+			// Create it now
+			return o.Client.Create(context.TODO(), pdb)
 		}
+		return err
 	} else {
-		if !reflect.DeepEqual(foundPDB.Spec.MinAvailable, pdb.Spec.MinAvailable) {
+		if !reflect.DeepEqual(foundPDB.Spec, pdb.Spec) {
 			foundPDB.Spec = *pdb.Spec.DeepCopy()
 			o.Log.Info("Updating Pod Disruption Budget", "PDB.Namespace", foundPDB.Namespace, "PDB.Name", foundPDB.Name)
 			err = o.Client.Update(context.TODO(), foundPDB)
@@ -71,7 +66,6 @@ func (o *ocmAgentHandler) ensurePodDisruptionBudget(ocmAgent ocmagentv1alpha1.Oc
 			}
 		}
 	}
-
 	return nil
 }
 
