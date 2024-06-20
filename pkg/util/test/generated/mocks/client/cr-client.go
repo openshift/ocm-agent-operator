@@ -5,6 +5,7 @@
 //
 //	mockgen -destination ../../generated/mocks/client/cr-client.go -package client sigs.k8s.io/controller-runtime/pkg/client Client,StatusWriter
 //
+
 // Package client is a generated GoMock package.
 package client
 
