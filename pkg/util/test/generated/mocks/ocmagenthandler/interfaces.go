@@ -5,6 +5,7 @@
 //
 //	mockgen -source ocmagenthandler.go -destination ../../pkg/util/test/generated/mocks/ocmagenthandler/interfaces.go -package mocks
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
