@@ -84,7 +84,7 @@ func init() {
 // GetNotificationRecordByMC gets the notification with the given name
 func (fnr *ManagedFleetNotificationRecord) GetNotificationRecordByMC(mc string) (*ManagedFleetNotificationRecord, error) {
 	if mc != fnr.Status.ManagementCluster {
-		return nil, fmt.Errorf("cannot find the notificaiton with management cluster: %s", mc)
+		return nil, fmt.Errorf("cannot find the notification with management cluster: %s", mc)
 	}
 
 	return fnr, nil
