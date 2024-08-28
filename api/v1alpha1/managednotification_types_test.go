@@ -175,6 +175,22 @@ var _ = Describe("OCMAgent Controller", func() {
 			})
 		})
 
+		When("the current time is within the dont-resend window but ConditionServiceLogSent status is false", func() {
+			BeforeEach(func() {
+				testManagedNotification.Status.NotificationRecords[0].Conditions[2] = v1alpha1.NotificationCondition{
+					Type:               v1alpha1.ConditionServiceLogSent,
+					Status:             corev1.ConditionFalse,
+					LastTransitionTime: &metav1.Time{Time: time.Now().Add(time.Duration(-5) * time.Minute)},
+					Reason:             "test",
+				}
+			})
+			It("will resend", func() {
+				cansend, err := testManagedNotification.CanBeSent(testNotificationName, true)
+				Expect(cansend).To(BeTrue())
+				Expect(err).To(BeNil())
+			})
+		})
+
 		When("the current time is outside the dont-resend window", func() {
 			BeforeEach(func() {
 				testManagedNotification.Status.NotificationRecords[0].Conditions[2] = v1alpha1.NotificationCondition{
