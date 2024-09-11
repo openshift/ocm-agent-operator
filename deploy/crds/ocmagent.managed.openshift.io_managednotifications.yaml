@@ -79,8 +79,8 @@ spec:
                       - Debug
                       - Info
                       - Warning
-                      - Error
-                      - Fatal
+                      - Major
+                      - Critical
                       type: string
                     summary:
                       description: The summary line of the Service Log notification

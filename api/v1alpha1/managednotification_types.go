@@ -57,7 +57,7 @@ type Notification struct {
 	// References useful for context or remediation - this could be links to documentation, KB articles, etc
 	References []NotificationReferenceType `json:"references,omitempty"`
 
-	// +kubebuilder:validation:Enum={"Debug","Info","Warning","Error","Fatal"}
+	// +kubebuilder:validation:Enum={"Debug","Info","Warning","Major","Critical"}
 	// The severity of the Service Log notification
 	Severity NotificationSeverity `json:"severity"`
 
