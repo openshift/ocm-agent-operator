@@ -27,11 +27,11 @@ import (
 type NotificationSeverity string
 
 const (
-	SeverityDebug   NotificationSeverity = "Debug"
-	SeverityWarning NotificationSeverity = "Warning"
-	SeverityInfo    NotificationSeverity = "Info"
-	SeverityError   NotificationSeverity = "Error"
-	SeverityFatal   NotificationSeverity = "Fatal"
+	SeverityDebug    NotificationSeverity = "Debug"
+	SeverityWarning  NotificationSeverity = "Warning"
+	SeverityInfo     NotificationSeverity = "Info"
+	SeverityMajor    NotificationSeverity = "Major"
+	SeverityCritical NotificationSeverity = "Critical"
 )
 
 // +kubebuilder:validation:Pattern=`^https?:\/\/.+$`
