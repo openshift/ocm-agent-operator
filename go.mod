@@ -27,6 +27,8 @@ require go.uber.org/mock v0.3.0
 
 require (
 	github.com/google/gnostic-models v0.6.9-0.20230804172637-c7be7c783f49 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
+	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3 // indirect
 	k8s.io/gengo/v2 v2.0.0-20240228010128-51d4e06bde70 // indirect
 )
@@ -97,9 +99,9 @@ require (
 
 replace (
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20220414050251-a83e6f8f1d50
-	k8s.io/api => k8s.io/api v0.28.2
-	k8s.io/apimachinery => k8s.io/apimachinery v0.28.2
-	k8s.io/client-go => k8s.io/client-go v0.28.2
+	k8s.io/api => k8s.io/api v0.30.1
+	k8s.io/apimachinery => k8s.io/apimachinery v0.30.1
+	k8s.io/client-go => k8s.io/client-go v0.30.1
 	sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws v0.2.1-0.20201125052318-b85a18cbf338
 	sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.0.0-20210209143830-3442c7a36c1e
 )
