@@ -5,8 +5,10 @@
 package osde2etests
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -19,9 +21,10 @@ const (
 // Test entrypoint. osde2e runs this as a test suite on test pod.
 func TestOcmAgentOperator(t *testing.T) {
 	RegisterFailHandler(Fail)
-
 	suiteConfig, reporterConfig := GinkgoConfiguration()
-	reporterConfig.JUnitReport = filepath.Join(testResultsDirectory, jUnitOutputFilename)
+ 	if _, ok := os.LookupEnv("DISABLE_JUNIT_REPORT"); !ok {
+		reporterConfig.JUnitReport = filepath.Join(testResultsDirectory, jUnitOutputFilename)
+	}
 	RunSpecs(t, "Ocm Agent Operator", suiteConfig, reporterConfig)
 
 }
