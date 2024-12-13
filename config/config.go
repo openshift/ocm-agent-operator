@@ -18,4 +18,6 @@ const (
 	OperatorConfigMapName string = "ocm-agent-cm"
 	OperatorName          string = "ocm-agent-operator"
 	OperatorNamespace     string = "openshift-ocm-agent-permissions"
+
+	EnableOLMSkipRange = "true"
 )

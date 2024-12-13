@@ -76,6 +76,7 @@ objects:
           spec:
             targetNamespaces:
               - openshift-ocm-agent-operator
+            upgradeStrategy: TechPreviewUnsafeFailForward
         - apiVersion: operators.coreos.com/v1alpha1
           kind: Subscription
           metadata:
