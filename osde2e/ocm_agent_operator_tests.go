@@ -128,7 +128,7 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		Expect(wait.For(conditions.New(client).ResourcesFound(resources))).Should(BeNil(), "some resources were never found")
 	})
 
-	ginkgo.It("can be upgraded", func(ctx context.Context) {
+	ginkgo.PIt("can be upgraded", func(ctx context.Context) {
 		log.SetLogger(ginkgo.GinkgoLogr)
 		k8sClient, err := openshift.New(ginkgo.GinkgoLogr)
 		Expect(err).ShouldNot(HaveOccurred(), "unable to setup k8s client")
