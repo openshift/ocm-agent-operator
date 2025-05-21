@@ -141,8 +141,8 @@ func (o *ocmAgentHandler) ensureServiceDeleted(ocmAgent ocmagentv1alpha1.OcmAgen
 
 // serviceConfigChanged flags if the two supplied services differ in configuration
 // that the OCM Agent Operator manages
-func serviceConfigChanged(current, expected *corev1.Service, log logr.Logger) bool {
-	changed := false
+func serviceConfigChanged(current, expected *corev1.Service, log logr.Logger) (changed bool) {
+	changed = false
 
 	if !reflect.DeepEqual(current.Labels, expected.Labels) {
 		changed = true

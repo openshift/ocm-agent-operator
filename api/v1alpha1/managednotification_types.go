@@ -213,7 +213,7 @@ func (m *ManagedNotification) CanBeSent(n string, firing bool) (bool, error) {
 			return true, nil
 		}
 		now := time.Now()
-		nextresend := sentCondition.LastTransitionTime.Time.Add(time.Duration(t.ResendWait) * time.Hour)
+		nextresend := sentCondition.LastTransitionTime.Add(time.Duration(t.ResendWait) * time.Hour)
 		if now.Before(nextresend) && sentCondition.Status == corev1.ConditionTrue {
 			return false, nil
 		}

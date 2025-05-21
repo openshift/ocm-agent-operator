@@ -165,7 +165,7 @@ func (fnr *ManagedFleetNotificationRecord) FiringCanBeSent(mc, name, clusterID s
 		return true, nil
 	}
 
-	nextSend := ri.LastTransitionTime.Time.Add(time.Duration(interval) * time.Hour)
+	nextSend := ri.LastTransitionTime.Add(time.Duration(interval) * time.Hour)
 
 	if time.Now().After(nextSend) {
 		return true, nil
