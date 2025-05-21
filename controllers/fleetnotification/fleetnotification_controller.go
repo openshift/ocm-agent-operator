@@ -67,7 +67,7 @@ func (r *ManagedFleetNotificationReconciler) Reconcile(ctx context.Context, requ
 
 	nr := ocmagentv1alpha1.ManagedFleetNotificationRecord{}
 
-	err := r.Client.Get(ctx, request.NamespacedName, &nr)
+	err := r.Get(ctx, request.NamespacedName, &nr)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -87,7 +87,7 @@ func (r *ManagedFleetNotificationReconciler) Reconcile(ctx context.Context, requ
 			}
 
 			// Consider the record is stale if the lastSendTime is older than resendWait + 15 days
-			eol := ri.LastTransitionTime.Time.Add(time.Duration(resendWait+NotificationRecordStaleTimeoutInHour) * time.Hour)
+			eol := ri.LastTransitionTime.Add(time.Duration(resendWait+NotificationRecordStaleTimeoutInHour) * time.Hour)
 			if time.Now().After(eol) {
 				log.Info(fmt.Sprintf("NotificationRecord for notification %s and hostedcluster %s has not been updated "+
 					"for %d hours and considered as stale, cleaning up...", rn.NotificationName, ri.HostedClusterID,
