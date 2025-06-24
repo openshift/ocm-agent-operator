@@ -1,22 +1,12 @@
 reviewers:
 - bmeng
-- ravitri
 - a7vicky
-- devppratik
 - xiaoyu74
 - typeid
 - hectorakemp
-- Tafhim
-- tkong-redhat
-- chamalabey
-- TheUndeadKing
-- vaidehi411
-- charlesgong
-- rbhilare
+- srep-functional-team-hulk
 
 approvers:
-- bmeng
-- ravitri
 - a7vicky
 - srep-team-leads
 - srep-functional-leads
