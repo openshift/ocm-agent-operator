@@ -104,6 +104,6 @@ replace (
 	k8s.io/api => k8s.io/api v0.31.1
 	k8s.io/apimachinery => k8s.io/apimachinery v0.31.1
 	k8s.io/client-go => k8s.io/client-go v0.31.1
-	sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws v0.2.1-0.20201125052318-b85a18cbf338
+	sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws d35191344745
 	sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.0.0-20210209143830-3442c7a36c1e
 )
