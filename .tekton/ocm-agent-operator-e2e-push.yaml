@@ -7,19 +7,14 @@ metadata:
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/cancel-in-progress: "false"
     pipelinesascode.tekton.dev/max-keep-runs: "3"
-    pipelinesascode.tekton.dev/on-cel-expression: |
-      event == "push" 
-      && target_branch == "master"
-      && ("**/*.go".pathChanged() ||
-          "**/go.*".pathChanged() ||
-          "build/Dockerfile".pathChanged() ||
-          ".tekton/ocm-agent-operator-push.yaml".pathChanged() )
+    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch
+      == "master"
   creationTimestamp: null
   labels:
     appstudio.openshift.io/application: ocm-agent-operator
-    appstudio.openshift.io/component: ocm-agent-operator
+    appstudio.openshift.io/component: ocm-agent-operator-e2e
     pipelines.appstudio.openshift.io/type: build
-  name: ocm-agent-operator-on-push
+  name: ocm-agent-operator-e2e-on-push
   namespace: ocm-agent-operator-tenant
 spec:
   params:
@@ -28,14 +23,15 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/redhat-user-workloads/ocm-agent-operator-tenant/openshift/ocm-agent-operator:{{revision}}
+    value: quay.io/redhat-user-workloads/ocm-agent-operator-tenant/openshift/ocm-agent-operator-e2e:{{revision}}
   - name: dockerfile
-    value: build/Dockerfile
+    value: test/e2e/Dockerfile
   - name: path-context
     value: .
   pipelineSpec:
     description: |
       This pipeline is ideal for building container images from a Containerfile while maintaining trust after pipeline customization.
+
       _Uses `buildah` to create a container image leveraging [trusted artifacts](https://konflux-ci.dev/architecture/ADR/0036-trusted-artifacts.html). It also optionally creates a source image and runs some build-time tests. Information is shared between tasks using OCI artifacts instead of PVCs. EC will pass the [`trusted_task.trusted`](https://conforma.dev/docs/policy/packages/release_trusted_task.html#trusted_task__trusted) policy as long as all data used to build the artifact is generated from trusted tasks.
       This pipeline is pushed as a Tekton bundle to [quay.io](https://quay.io/repository/konflux-ci/tekton-catalog/pipeline-docker-build-oci-ta?tab=tags)_
     finally:
@@ -601,7 +597,7 @@ spec:
     - name: netrc
       optional: true
   taskRunTemplate:
-    serviceAccountName: build-pipeline-ocm-agent-operator
+    serviceAccountName: build-pipeline-ocm-agent-operator-e2e
   workspaces:
   - name: git-auth
     secret:
