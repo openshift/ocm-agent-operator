@@ -2,12 +2,15 @@ package ocmagenthandler
 
 import (
 	"context"
+	"errors"
 	"reflect"
 
 	"go.uber.org/mock/gomock"
 
+	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrs "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,17 +48,17 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 	})
 
 	Context("When building an OCM Agent ConfigMap ", func() {
-		var cm *corev1.ConfigMap
-		BeforeEach(func() {
-			cm = buildOCMAgentConfigMap(testOcmAgent, testClusterId)
-		})
-		It("Sets a correct name", func() {
+		It("Sets correct name and data with cluster ID", func() {
+			cm := buildOCMAgentConfigMap(testOcmAgent, testClusterId)
 			Expect(cm.Name).To(Equal(testOcmAgent.Name + testconst.TestConfigMapSuffix))
-		})
-		It("Sets the correct data", func() {
 			Expect(cm.Data).To(HaveKeyWithValue(oahconst.OCMAgentConfigClusterID, testClusterId))
 			Expect(cm.Data).To(HaveKeyWithValue(oahconst.OCMAgentConfigURLKey, testOcmAgent.Spec.AgentConfig.OcmBaseUrl))
 			Expect(cm.Data).To(HaveKey(oahconst.OCMAgentConfigServicesKey))
+		})
+		It("Should not include cluster ID when empty", func() {
+			cm := buildOCMAgentConfigMap(testOcmAgent, "")
+			Expect(cm.Data).ToNot(HaveKey(oahconst.OCMAgentConfigClusterID))
+			Expect(cm.Data).To(HaveKeyWithValue(oahconst.OCMAgentConfigURLKey, testOcmAgent.Spec.AgentConfig.OcmBaseUrl))
 		})
 	})
 
@@ -72,7 +75,7 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 				BeforeEach(func() {
 					testConfigMap.Data = map[string]string{"fake": "fake"}
 				})
-				It("updates the configmap", func() {
+				It("updates the configmap and handles update failures", func() {
 					goldenConfig := buildOCMAgentConfigMap(testOcmAgent, testClusterId)
 					gomock.InOrder(
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, *testConfigMap),
@@ -82,8 +85,17 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 								return nil
 							}),
 					)
-					err := testOcmAgentHandler.ensureConfigMap(testOcmAgent, testConfigMap, true)
+					err := testOcmAgentHandler.ensureConfigMap(testOcmAgent, goldenConfig, true)
 					Expect(err).To(BeNil())
+
+					// Test update failure
+					testError := errors.New("update failed")
+					gomock.InOrder(
+						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, *testConfigMap),
+						mockClient.EXPECT().Update(gomock.Any(), gomock.Any()).Return(testError),
+					)
+					err = testOcmAgentHandler.ensureConfigMap(testOcmAgent, goldenConfig, true)
+					Expect(err).To(Equal(testError))
 				})
 			})
 			When("the configmap matches what is expected", func() {
@@ -98,8 +110,10 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 
 		})
 		When("the OCM Agent configmap does not already exist", func() {
-			It("creates the configmap", func() {
+			It("creates the configmap and handles create/get failures", func() {
 				notFound := k8serrs.NewNotFound(schema.GroupResource{}, testConfigMap.Name)
+
+				// Test successful creation
 				gomock.InOrder(
 					mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Return(notFound),
 					mockClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -110,74 +124,89 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 				)
 				err := testOcmAgentHandler.ensureConfigMap(testOcmAgent, testConfigMap, true)
 				Expect(err).To(BeNil())
+
+				// Test create failure
+				createError := errors.New("create failed")
+				gomock.InOrder(
+					mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Return(notFound),
+					mockClient.EXPECT().Create(gomock.Any(), gomock.Any()).Return(createError),
+				)
+				err = testOcmAgentHandler.ensureConfigMap(testOcmAgent, testConfigMap, true)
+				Expect(err).To(Equal(createError))
+
+				// Test unexpected get error
+				getError := errors.New("get failed")
+				mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Return(getError)
+				err = testOcmAgentHandler.ensureConfigMap(testOcmAgent, testConfigMap, true)
+				Expect(err).To(Equal(getError))
 			})
 		})
-		When("the OCM Agent configmap should be removed", func() {
-			When("the configmap is already removed", func() {
-				It("does nothing", func() {
-					notFound := k8serrs.NewNotFound(schema.GroupResource{}, testConfigMap.Name)
-					gomock.InOrder(
-						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(notFound),
-					)
-					err := testOcmAgentHandler.ensureConfigMapDeleted(testNamespacedName)
-					Expect(err).To(BeNil())
-				})
-			})
-			When("the configmap exists on the cluster", func() {
-				It("removes the configmap", func() {
-					gomock.InOrder(
-						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, *testConfigMap),
-						mockClient.EXPECT().Delete(gomock.Any(), testConfigMap),
-					)
-					err := testOcmAgentHandler.ensureConfigMapDeleted(testNamespacedName)
-					Expect(err).To(BeNil())
-				})
+		When("removing configmaps", func() {
+			It("handles deletion scenarios and errors", func() {
+				// Test: configmap already removed
+				notFound := k8serrs.NewNotFound(schema.GroupResource{}, testConfigMap.Name)
+				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(notFound)
+				err := testOcmAgentHandler.ensureConfigMapDeleted(testNamespacedName)
+				Expect(err).To(BeNil())
+
+				// Test: successful deletion
+				gomock.InOrder(
+					mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, *testConfigMap),
+					mockClient.EXPECT().Delete(gomock.Any(), testConfigMap).Return(nil),
+				)
+				err = testOcmAgentHandler.ensureConfigMapDeleted(testNamespacedName)
+				Expect(err).To(BeNil())
+
+				// Test: delete failure
+				deleteError := errors.New("delete failed")
+				gomock.InOrder(
+					mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, *testConfigMap),
+					mockClient.EXPECT().Delete(gomock.Any(), testConfigMap).Return(deleteError),
+				)
+				err = testOcmAgentHandler.ensureConfigMapDeleted(testNamespacedName)
+				Expect(err).To(Equal(deleteError))
+
+				// Test: get error during deletion
+				getError := errors.New("get failed during delete")
+				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(getError)
+				err = testOcmAgentHandler.ensureConfigMapDeleted(testNamespacedName)
+				Expect(err).To(Equal(getError))
 			})
 		})
 	})
 
 	Context("Managing the CAMO ConfigMap", func() {
-		When("building the CAMO configmap", func() {
-			var cm *corev1.ConfigMap
-			var err error
-			BeforeEach(func() {
-				cm, err = buildCAMOConfigMap(testOcmAgent)
-			})
-			It("builds one successfully", func() {
-				Expect(err).ToNot(HaveOccurred())
-				Expect(cm.Name).To(Equal(oahconst.CAMOConfigMapNamespacedName.Name))
-				Expect(cm.Namespace).To(Equal(oahconst.CAMOConfigMapNamespacedName.Namespace))
-				Expect(cm.Data).To(HaveKey(oahconst.OCMAgentServiceURLKey))
-			})
+		It("builds successfully and handles URL errors", func() {
+			// Test successful build
+			cm, err := buildCAMOConfigMap(testOcmAgent)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(cm.Name).To(Equal(oahconst.CAMOConfigMapNamespacedName.Name))
+			Expect(cm.Namespace).To(Equal(oahconst.CAMOConfigMapNamespacedName.Namespace))
+			Expect(cm.Data).To(HaveKey(oahconst.OCMAgentServiceURLKey))
+
+			// Test URL build failure
+			invalidAgent := testOcmAgent
+			invalidAgent.Name = "invalid name with spaces"
+			invalidAgent.Namespace = "invalid\nnamespace"
+			cm, err = buildCAMOConfigMap(invalidAgent)
+			Expect(err).To(HaveOccurred())
+			Expect(cm).To(BeNil())
 		})
 	})
 
 	Context("Managing the Trusted CA configmap", func() {
-		var testcm *corev1.ConfigMap
-		var testNamespacedName types.NamespacedName
-		When("building the Trusted CA configmap", func() {
-			BeforeEach(func() {
-				testcm = buildTrustedCaConfigMap()
-			})
-			It("builds successfully", func() {
-				Expect(testcm.Name).To(Equal("trusted-ca-bundle"))
-				Expect(testcm.Namespace).To(Equal(oahconst.OCMAgentNamespace))
-				Expect(testcm.ObjectMeta.Labels).Should(HaveKey(oahconst.InjectCaBundleIndicator))
-			})
-		})
-		When("the trusted ca bundle being updated", func() {
-			BeforeEach(func() {
-				testcm = buildTrustedCaConfigMap()
-				testcm.Data = map[string]string{"aaa": "bbb"}
-				testNamespacedName = oahconst.BuildNamespacedName(testcm.Name)
-			})
-			It("does not update the configmap", func() {
-				gomock.InOrder(
-					mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, *testcm),
-				)
-				err := testOcmAgentHandler.ensureConfigMap(testOcmAgent, testcm, true)
-				Expect(err).To(BeNil())
-			})
+		It("builds successfully and skips updates", func() {
+			testcm := buildTrustedCaConfigMap()
+			Expect(testcm.Name).To(Equal("trusted-ca-bundle"))
+			Expect(testcm.Namespace).To(Equal(oahconst.OCMAgentNamespace))
+			Expect(testcm.ObjectMeta.Labels).Should(HaveKey(oahconst.InjectCaBundleIndicator))
+
+			// Test that trusted CA bundle updates are skipped
+			testcm.Data = map[string]string{"aaa": "bbb"}
+			testNamespacedName := oahconst.BuildNamespacedName(testcm.Name)
+			mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, *testcm)
+			err := testOcmAgentHandler.ensureConfigMap(testOcmAgent, testcm, true)
+			Expect(err).To(BeNil())
 		})
 	})
 
@@ -220,5 +249,64 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 			Expect(err).To(BeNil())
 		})
 
+	})
+
+	Context("Testing remaining functions", func() {
+		It("fetchClusterVersion handles success and failure", func() {
+			testClusterVersion := &configv1.ClusterVersion{
+				ObjectMeta: metav1.ObjectMeta{Name: "version"},
+				Spec:       configv1.ClusterVersionSpec{ClusterID: "test-cluster-id"},
+			}
+
+			// Test successful fetch
+			mockClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).
+				SetArg(2, *testClusterVersion).Return(nil)
+			clusterVersion, err := testOcmAgentHandler.fetchClusterVersion()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(clusterVersion.Spec.ClusterID)).To(Equal("test-cluster-id"))
+
+			// Test fetch failure
+			testError := errors.New("cluster version not found")
+			mockClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).Return(testError)
+			clusterVersion, err = testOcmAgentHandler.fetchClusterVersion()
+			Expect(err).To(Equal(testError))
+			Expect(clusterVersion).To(BeNil())
+		})
+
+		It("ensureAllConfigMaps handles fleet mode and errors", func() {
+			testClusterVersion := &configv1.ClusterVersion{
+				ObjectMeta: metav1.ObjectMeta{Name: "version"},
+				Spec:       configv1.ClusterVersionSpec{ClusterID: "test-cluster-id"},
+			}
+
+			// Test fleet mode (no CAMO, no cluster ID)
+			testOcmAgent.Spec.FleetMode = true
+			mockClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).SetArg(2, *testClusterVersion)
+			mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(k8serrs.NewNotFound(schema.GroupResource{}, "")).Times(2)
+			mockClient.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+			err := testOcmAgentHandler.ensureAllConfigMaps(testOcmAgent)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Test cluster version fetch error
+			fetchError := errors.New("fetch failed")
+			mockClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).Return(fetchError)
+			err = testOcmAgentHandler.ensureAllConfigMaps(testOcmAgent)
+			Expect(err).To(Equal(fetchError))
+		})
+
+		It("ensureAllConfigMapsDeleted handles deletion scenarios", func() {
+			// Test successful deletion
+			testCM := &corev1.ConfigMap{}
+			mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, *testCM).Times(2)
+			mockClient.EXPECT().Delete(gomock.Any(), testCM).Return(nil).Times(2)
+			err := testOcmAgentHandler.ensureAllConfigMapsDeleted(testOcmAgent)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Test deletion error
+			deleteError := errors.New("delete failed")
+			mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(deleteError)
+			err = testOcmAgentHandler.ensureAllConfigMapsDeleted(testOcmAgent)
+			Expect(err).To(Equal(deleteError))
+		})
 	})
 })
