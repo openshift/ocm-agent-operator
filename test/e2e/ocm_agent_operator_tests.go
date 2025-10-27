@@ -213,4 +213,55 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		verifyExists(testOCMAgentNetPolicy, &networkingv1.NetworkPolicy{})
 		verifyExists(testOCMAgentNetPolicyMUO, &networkingv1.NetworkPolicy{})
 	})
+
+	ginkgo.It("recreates ConfigMap after deletion", func(ctx context.Context) {
+		const (
+			waitTimeout  = 60 * time.Second
+			waitInterval = 5 * time.Second
+		)
+		// Get initial ConfigMap state
+		ginkgo.By("getting initial ConfigMap state")
+		originalCm := &corev1.ConfigMap{}
+		err := client.Get(ctx, testOCMAgentConfigMap, namespace, originalCm)
+		Expect(err).Should(BeNil(), "failed to get original ConfigMap")
+
+		originalUID := string(originalCm.UID)
+		originalResourceVersion := originalCm.ResourceVersion
+
+		// Remove finalizers and delete
+		ginkgo.By("deleting ConfigMap")
+		originalCm.Finalizers = []string{}
+		_ = client.Update(ctx, originalCm)
+
+		err = client.Delete(ctx, originalCm)
+		Expect(err).Should(BeNil(), "failed to delete ConfigMap")
+
+		// Wait for deletion (or recreation with different UID)
+		ginkgo.By("verifying ConfigMap is deleted or recreated")
+		Eventually(func() bool {
+			cm := &corev1.ConfigMap{}
+			err := client.Get(ctx, testOCMAgentConfigMap, namespace, cm)
+			return err != nil || string(cm.UID) != originalUID
+		}, 60*time.Second, waitInterval).Should(BeTrue(), "ConfigMap should be deleted or recreated")
+
+		// Wait for operator to recreate
+		ginkgo.By("waiting for operator to recreate ConfigMap")
+		var recreatedCm *corev1.ConfigMap
+		Eventually(func() bool {
+			cm := &corev1.ConfigMap{}
+			err := client.Get(ctx, testOCMAgentConfigMap, namespace, cm)
+			if err == nil && string(cm.UID) != originalUID {
+				recreatedCm = cm
+				return true
+			}
+			return false
+		}, waitTimeout, waitInterval).Should(BeTrue(), "ConfigMap should be recreated")
+
+		// Verify it's a new ConfigMap
+		ginkgo.By("verifying ConfigMap is a new instance")
+		Expect(string(recreatedCm.UID)).NotTo(Equal(originalUID), "UID must be different")
+		Expect(recreatedCm.ResourceVersion).NotTo(Equal(originalResourceVersion), "ResourceVersion must be different")
+		Expect(recreatedCm.OwnerReferences).To(HaveLen(1), "ConfigMap should have ownerReference")
+		Expect(recreatedCm.OwnerReferences[0].Kind).To(Equal("OcmAgent"))
+	})
 })
