@@ -6,7 +6,9 @@ package osde2etests
 
 import (
 	"context"
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -17,7 +19,9 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/e2e-framework/klient/k8s"
@@ -39,6 +43,13 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		serviceName        = "ocm-agent"
 		operatorName       = "ocm-agent-operator"
 		operatorNamespace  = "openshift-ocm-agent-operator"
+
+		// Test-specific resource names
+		testOCMAgentName         = "test-ocm-agent"
+		testOCMAgentConfigMap    = testOCMAgentName + "-cm"
+		testOCMAgentServiceMon   = testOCMAgentName + "-metrics"
+		testOCMAgentNetPolicy    = testOCMAgentName + "-allow-only-alertmanager"
+		testOCMAgentNetPolicyMUO = testOCMAgentName + "-allow-muo-communication"
 
 		deployments = []string{
 			deploymentName,
@@ -136,5 +147,70 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		ginkgo.By("forcing operator upgrade")
 		err = k8sClient.UpgradeOperator(ctx, operatorName, operatorNamespace)
 		Expect(err).NotTo(HaveOccurred(), "operator upgrade failed")
+	})
+
+	ginkgo.It("create a new OcmAgent CR and verify operator-created resources", func(ctx context.Context) {
+		const (
+			waitTimeout  = 60 * time.Second
+			waitInterval = 5 * time.Second
+		)
+
+		ginkgo.By("Setting up GroupVersionKind for OcmAgent CR")
+		ocmAgentCR := &unstructured.Unstructured{}
+		ocmAgentCR.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "ocmagent.managed.openshift.io",
+			Version: "v1alpha1",
+			Kind:    "OcmAgent",
+		})
+		ginkgo.By("Cleaning up existing OcmAgent CR if present")
+		err := client.Get(ctx, testOCMAgentName, namespace, ocmAgentCR)
+		if err == nil {
+			Expect(client.Delete(ctx, ocmAgentCR)).To(BeNil(), "Failed to delete existing OcmAgent CR")
+			Eventually(func() bool {
+				err := client.Get(ctx, testOCMAgentName, namespace, ocmAgentCR)
+				return err != nil
+			}, waitTimeout, waitInterval).Should(BeTrue(), "OcmAgent CR not deleted in time")
+		}
+		ginkgo.By("Creating a new OcmAgent CR")
+		newOcmAgent := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "ocmagent.managed.openshift.io/v1alpha1",
+				"kind":       "OcmAgent",
+				"metadata": map[string]interface{}{
+					"name":      testOCMAgentName,
+					"namespace": namespace,
+				},
+				"spec": map[string]interface{}{
+					"agentConfig": map[string]interface{}{
+						"ocmBaseUrl": "https://api.stage.openshift.com",
+						"services":   []interface{}{"service_logs", "clusters_mgmt"},
+					},
+					"ocmAgentImage": "quay.io/app-sre/ocm-agent:latest",
+					"replicas":      int64(1),
+					"tokenSecret":   "ocm-access-token",
+				},
+			},
+		}
+		newOcmAgent.SetGroupVersionKind(ocmAgentCR.GroupVersionKind())
+		Expect(client.Create(ctx, newOcmAgent)).To(BeNil(), "Failed to create new OcmAgent CR")
+		ginkgo.By("Waiting for Deployment to be ready")
+		Eventually(func() bool {
+			deploy := &appsv1.Deployment{}
+			err := client.Get(ctx, testOCMAgentName, namespace, deploy)
+			if err != nil || deploy.Spec.Replicas == nil {
+				return false
+			}
+			return deploy.Status.ReadyReplicas == *deploy.Spec.Replicas && deploy.Status.ReadyReplicas > 0
+		}, waitTimeout, waitInterval).Should(BeTrue(), "Deployment not ready")
+		ginkgo.By("Verifying operator-created resources exist")
+		verifyExists := func(name string, obj k8s.Object) {
+			Expect(client.Get(ctx, name, namespace, obj)).To(BeNil(), fmt.Sprintf("%T %s not found", obj, name))
+		}
+		verifyExists(testOCMAgentName, &appsv1.Deployment{})
+		verifyExists(testOCMAgentName, &corev1.Service{})
+		verifyExists(testOCMAgentConfigMap, &corev1.ConfigMap{})
+		verifyExists(testOCMAgentServiceMon, &monitoringv1.ServiceMonitor{})
+		verifyExists(testOCMAgentNetPolicy, &networkingv1.NetworkPolicy{})
+		verifyExists(testOCMAgentNetPolicyMUO, &networkingv1.NetworkPolicy{})
 	})
 })
