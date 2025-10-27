@@ -264,4 +264,49 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		Expect(recreatedCm.OwnerReferences).To(HaveLen(1), "ConfigMap should have ownerReference")
 		Expect(recreatedCm.OwnerReferences[0].Kind).To(Equal("OcmAgent"))
 	})
+
+	ginkgo.It("deletes test OCMAgent CR and verifies cleanup", func(ctx context.Context) {
+		const (
+			waitTimeout  = 60 * time.Second
+			waitInterval = 5 * time.Second
+		)
+		ocmAgentCR := &unstructured.Unstructured{}
+		ocmAgentCR.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "ocmagent.managed.openshift.io",
+			Version: "v1alpha1",
+			Kind:    "OcmAgent",
+		})
+		err := client.Get(ctx, testOCMAgentName, namespace, ocmAgentCR)
+		if err != nil {
+			ginkgo.Skip(fmt.Sprintf("OcmAgent CR '%s' not found in namespace '%s'; skipping test", testOCMAgentName, namespace))
+		}
+		resourceExists := func(name string, obj k8s.Object) {
+			Expect(client.Get(ctx, name, namespace, obj)).To(BeNil(), fmt.Sprintf("Expected resource %T %s to exist", obj, name))
+		}
+
+		resourceExists(testOCMAgentName, &appsv1.Deployment{})
+		resourceExists(testOCMAgentName, &corev1.Service{})
+		resourceExists(testOCMAgentConfigMap, &corev1.ConfigMap{})
+		resourceExists(testOCMAgentServiceMon, &monitoringv1.ServiceMonitor{})
+		resourceExists(testOCMAgentNetPolicy, &networkingv1.NetworkPolicy{})
+		resourceExists(testOCMAgentNetPolicyMUO, &networkingv1.NetworkPolicy{})
+
+		Expect(client.Delete(ctx, ocmAgentCR)).To(BeNil(), "Failed to delete OcmAgent CR")
+		Eventually(func() bool {
+			err := client.Get(ctx, testOCMAgentName, namespace, ocmAgentCR)
+			return err != nil
+		}, waitTimeout, waitInterval).Should(BeTrue(), "OcmAgent CR not deleted in expected time")
+		checkDeleted := func(name string, obj k8s.Object) {
+			Eventually(func() bool {
+				err := client.Get(ctx, name, namespace, obj)
+				return err != nil
+			}, waitTimeout, waitInterval).Should(BeTrue(), fmt.Sprintf("%T %s was not deleted", obj, name))
+		}
+		checkDeleted(testOCMAgentName, &appsv1.Deployment{})
+		checkDeleted(testOCMAgentName, &corev1.Service{})
+		checkDeleted(testOCMAgentConfigMap, &corev1.ConfigMap{})
+		checkDeleted(testOCMAgentServiceMon, &monitoringv1.ServiceMonitor{})
+		checkDeleted(testOCMAgentNetPolicy, &networkingv1.NetworkPolicy{})
+		checkDeleted(testOCMAgentNetPolicyMUO, &networkingv1.NetworkPolicy{})
+	})
 })
