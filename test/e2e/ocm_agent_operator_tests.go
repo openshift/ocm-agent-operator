@@ -6,7 +6,9 @@ package osde2etests
 
 import (
 	"context"
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -17,6 +19,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -24,6 +27,14 @@ import (
 	"sigs.k8s.io/e2e-framework/klient/k8s/resources"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
+)
+
+// MFN test constants - only values used multiple times
+const (
+	mfnAPIVersion    = "ocmagent.managed.openshift.io/v1alpha1"
+	mfnKind          = "ManagedFleetNotification"
+	mfnTestName      = "test-mfn-no-controller"
+	noControllerWait = 10 * time.Second
 )
 
 var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
@@ -136,5 +147,92 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		ginkgo.By("forcing operator upgrade")
 		err = k8sClient.UpgradeOperator(ctx, operatorName, operatorNamespace)
 		Expect(err).NotTo(HaveOccurred(), "operator upgrade failed")
+	})
+	ginkgo.It("validates ManagedFleetNotification has no controller behavior", func(ctx context.Context) {
+		ginkgo.By("ensuring test prerequisites")
+		Expect(client.Get(ctx, namespace, "", &corev1.Namespace{})).Should(BeNil(), "namespace %s must exist", namespace)
+
+		ginkgo.By("cleaning up existing MFN if present for idempotency")
+		existingMFN := &unstructured.Unstructured{}
+		existingMFN.SetAPIVersion(mfnAPIVersion)
+		existingMFN.SetKind(mfnKind)
+		err := client.Get(ctx, mfnTestName, namespace, existingMFN)
+		if err == nil {
+			ginkgo.By("deleting existing MFN resource")
+			Expect(client.Delete(ctx, existingMFN)).Should(BeNil(), "failed to delete existing MFN")
+			Eventually(func() bool {
+				checkMFN := &unstructured.Unstructured{}
+				checkMFN.SetAPIVersion(mfnAPIVersion)
+				checkMFN.SetKind(mfnKind)
+				err := client.Get(ctx, mfnTestName, namespace, checkMFN)
+				return err != nil
+			}, 30*time.Second, 1*time.Second).Should(BeTrue(), "existing MFN should be deleted")
+		}
+
+		ginkgo.By("creating new ManagedFleetNotification CR")
+		mfn := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": mfnAPIVersion,
+				"kind":       mfnKind,
+				"metadata": map[string]interface{}{
+					"name":      mfnTestName,
+					"namespace": namespace,
+				},
+				"spec": map[string]interface{}{
+					"fleetNotification": map[string]interface{}{
+						"name":                "test-notification-e2e",
+						"summary":             "E2E Test MFN No Controller",
+						"notificationMessage": "Testing MFN has no controller behavior",
+						"severity":            "Info",
+						"resendWait":          1,
+					},
+				},
+			},
+		}
+		Expect(client.Create(ctx, mfn)).Should(BeNil(), "failed to create ManagedFleetNotification")
+
+		ginkgo.DeferCleanup(func() {
+			ginkgo.By("cleaning up MFN test resource")
+			_ = client.Delete(ctx, mfn)
+		})
+
+		ginkgo.By("capturing baseline resource version for no-controller verification")
+		baseline := &unstructured.Unstructured{}
+		baseline.SetAPIVersion(mfnAPIVersion)
+		baseline.SetKind(mfnKind)
+		Expect(client.Get(ctx, mfnTestName, namespace, baseline)).Should(BeNil(), "failed to get created MFN")
+		originalVersion := baseline.GetResourceVersion()
+		originalGeneration := baseline.GetGeneration()
+
+		ginkgo.By("verifying MFN spec matches expected values")
+		spec := baseline.Object["spec"].(map[string]interface{})
+		fleetNotif := spec["fleetNotification"].(map[string]interface{})
+		Expect(fleetNotif["name"]).To(Equal("test-notification-e2e"))
+		Expect(fleetNotif["severity"]).To(Equal("Info"))
+		Expect(fleetNotif["resendWait"]).To(Equal(int64(1)))
+
+		ginkgo.By("monitoring MFN for no controller activity over time")
+		Consistently(func() []interface{} {
+			current := &unstructured.Unstructured{}
+			current.SetAPIVersion(mfnAPIVersion)
+			current.SetKind(mfnKind)
+			if err := client.Get(ctx, mfnTestName, namespace, current); err != nil {
+				ginkgo.Fail(fmt.Sprintf("Failed to get MFN resource during monitoring: %v", err))
+				return nil
+			}
+			return []interface{}{current.GetResourceVersion(), current.GetGeneration()}
+		}, noControllerWait, 1*time.Second).Should(Equal([]interface{}{originalVersion, originalGeneration}))
+
+		ginkgo.By("verifying final state shows no controller modifications")
+		final := &unstructured.Unstructured{}
+		final.SetAPIVersion(mfnAPIVersion)
+		final.SetKind(mfnKind)
+		Expect(client.Get(ctx, mfnTestName, namespace, final)).Should(BeNil())
+		Expect(final.Object["status"]).To(BeNil())
+
+		metadata := final.Object["metadata"].(map[string]interface{})
+		if finalizers, exists := metadata["finalizers"]; exists {
+			Expect(finalizers).To(BeEmpty())
+		}
 	})
 })
