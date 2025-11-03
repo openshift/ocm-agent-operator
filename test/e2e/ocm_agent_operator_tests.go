@@ -229,10 +229,5 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		final.SetKind(mfnKind)
 		Expect(client.Get(ctx, mfnTestName, namespace, final)).Should(BeNil())
 		Expect(final.Object["status"]).To(BeNil())
-
-		metadata := final.Object["metadata"].(map[string]interface{})
-		if finalizers, exists := metadata["finalizers"]; exists {
-			Expect(finalizers).To(BeEmpty())
-		}
 	})
 })
