@@ -7,6 +7,7 @@ package osde2etests
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -155,6 +156,22 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 			waitInterval = 5 * time.Second
 		)
 
+		ginkgo.By("Resolving OCM base URL from environment or operator ConfigMap")
+		baseURL := os.Getenv("OCM_BASE_URL")
+		if baseURL == "" {
+			// Fallback to reading from operator's ConfigMap if env var is not set
+			cm := &corev1.ConfigMap{}
+			err := client.Get(ctx, configMapName, namespace, cm)
+			if err == nil {
+				if val, ok := cm.Data["ocmBaseURL"]; ok && val != "" {
+					baseURL = val
+				}
+			}
+		}
+		if baseURL == "" {
+			ginkgo.Skip("OCM_BASE_URL not set via environment variable or operator ConfigMap; skipping test. Please set OCM_BASE_URL env var or ensure ocm-agent-cm ConfigMap has ocmBaseURL key")
+		}
+
 		ginkgo.By("Setting up GroupVersionKind for OcmAgent CR")
 		ocmAgentCR := &unstructured.Unstructured{}
 		ocmAgentCR.SetGroupVersionKind(schema.GroupVersionKind{
@@ -182,7 +199,7 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 				},
 				"spec": map[string]interface{}{
 					"agentConfig": map[string]interface{}{
-						"ocmBaseUrl": "https://api.stage.openshift.com",
+						"ocmBaseUrl": baseURL,
 						"services":   []interface{}{"service_logs", "clusters_mgmt"},
 					},
 					"ocmAgentImage": "quay.io/app-sre/ocm-agent:latest",
@@ -265,7 +282,7 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		Expect(recreatedCm.OwnerReferences[0].Kind).To(Equal("OcmAgent"))
 	})
 
-	ginkgo.It("deletes test OCMAgent CR and verifies cleanup", func(ctx context.Context) {
+	ginkgo.It("deletes test OCM Agent and verifies cleanup", func(ctx context.Context) {
 		const (
 			waitTimeout  = 60 * time.Second
 			waitInterval = 5 * time.Second

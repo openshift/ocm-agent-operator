@@ -34,6 +34,8 @@ parameters:
     value: 'TRUE'
   - name: CAD_PAGERDUTY_ROUTING_KEY
     required: false
+  - name: OCM_BASE_URL
+    required: false
 objects:
   - apiVersion: batch/v1
     kind: Job
@@ -85,4 +87,6 @@ objects:
                 - name: USE_EXISTING_CLUSTER
                   value: ${USE_EXISTING_CLUSTER}
                 - name: CAD_PAGERDUTY_ROUTING_KEY
-                  value: ${CAD_PAGERDUTY_ROUTING_KEY}                 
+                  value: ${CAD_PAGERDUTY_ROUTING_KEY}
+                - name: OCM_BASE_URL
+                  value: ${OCM_BASE_URL}
