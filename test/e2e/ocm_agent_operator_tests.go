@@ -6,7 +6,9 @@ package osde2etests
 
 import (
 	"context"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -15,9 +17,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/e2e-framework/klient/k8s"
@@ -136,5 +141,140 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		ginkgo.By("forcing operator upgrade")
 		err = k8sClient.UpgradeOperator(ctx, operatorName, operatorNamespace)
 		Expect(err).NotTo(HaveOccurred(), "operator upgrade failed")
+	})
+
+	ginkgo.It("respects replicas parameter and creates PDB when replicas > 1", func(ctx context.Context) {
+		testOCMAgentName := "test-ocm-agent-replicas"
+		testOCMAgentPDB := testOCMAgentName + "-pdb"
+		testReplicas := int64(2)
+
+		baseURL := os.Getenv("OCM_BASE_URL")
+		if baseURL == "" {
+			cm := &corev1.ConfigMap{}
+			if err := client.Get(ctx, configMapName, namespace, cm); err == nil {
+				baseURL = cm.Data["ocmBaseURL"]
+			}
+		}
+		if baseURL == "" {
+			ginkgo.Skip("OCM_BASE_URL not set")
+		}
+
+		gvk := schema.GroupVersionKind{
+			Group:   "ocmagent.managed.openshift.io",
+			Version: "v1alpha1",
+			Kind:    "OcmAgent",
+		}
+
+		ocmAgentCR := &unstructured.Unstructured{}
+		ocmAgentCR.SetGroupVersionKind(gvk)
+		if err := client.Get(ctx, testOCMAgentName, namespace, ocmAgentCR); err == nil {
+			Expect(client.Delete(ctx, ocmAgentCR)).To(BeNil())
+		}
+
+		newOcmAgent := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "ocmagent.managed.openshift.io/v1alpha1",
+				"kind":       "OcmAgent",
+				"metadata":   map[string]interface{}{"name": testOCMAgentName, "namespace": namespace},
+				"spec": map[string]interface{}{
+					"agentConfig": map[string]interface{}{
+						"ocmBaseUrl": baseURL,
+						"services":   []interface{}{"service_logs", "clusters_mgmt"},
+					},
+					"ocmAgentImage": "quay.io/app-sre/ocm-agent:latest",
+					"replicas":      testReplicas,
+					"tokenSecret":   "ocm-access-token",
+				},
+			},
+		}
+		newOcmAgent.SetGroupVersionKind(gvk)
+		Expect(client.Create(ctx, newOcmAgent)).To(BeNil())
+
+		var deployment *appsv1.Deployment
+		Eventually(func() bool {
+			deploy := &appsv1.Deployment{}
+			if err := client.Get(ctx, testOCMAgentName, namespace, deploy); err != nil {
+				return false
+			}
+			deployment = deploy
+			return deploy.Spec.Replicas != nil &&
+				*deploy.Spec.Replicas == int32(testReplicas) &&
+				deploy.Status.ReadyReplicas == int32(testReplicas)
+		}, 120*time.Second, 5*time.Second).Should(BeTrue())
+
+		Expect(*deployment.Spec.Replicas).To(Equal(int32(testReplicas)))
+
+		pdb := &policyv1.PodDisruptionBudget{}
+		Eventually(func() bool {
+			return client.Get(ctx, testOCMAgentPDB, namespace, pdb) == nil
+		}, 120*time.Second, 5*time.Second).Should(BeTrue())
+
+		Expect(pdb.Spec.MinAvailable.IntVal).To(Equal(int32(1)))
+		Expect(pdb.Spec.Selector.MatchLabels["app"]).To(Equal(testOCMAgentName))
+
+		Expect(client.Delete(ctx, newOcmAgent)).To(BeNil())
+	})
+
+	ginkgo.It("respects ocmAgentImage parameter", func(ctx context.Context) {
+		testOCMAgentName := "test-ocm-agent-image"
+		customImage := "quay.io/app-sre/ocm-agent:test-image"
+
+		baseURL := os.Getenv("OCM_BASE_URL")
+		if baseURL == "" {
+			cm := &corev1.ConfigMap{}
+			if err := client.Get(ctx, configMapName, namespace, cm); err == nil {
+				baseURL = cm.Data["ocmBaseURL"]
+			}
+		}
+		if baseURL == "" {
+			ginkgo.Skip("OCM_BASE_URL not set")
+		}
+
+		gvk := schema.GroupVersionKind{
+			Group:   "ocmagent.managed.openshift.io",
+			Version: "v1alpha1",
+			Kind:    "OcmAgent",
+		}
+
+		ocmAgentCR := &unstructured.Unstructured{}
+		ocmAgentCR.SetGroupVersionKind(gvk)
+		if err := client.Get(ctx, testOCMAgentName, namespace, ocmAgentCR); err == nil {
+			Expect(client.Delete(ctx, ocmAgentCR)).To(BeNil())
+		}
+
+		newOcmAgent := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "ocmagent.managed.openshift.io/v1alpha1",
+				"kind":       "OcmAgent",
+				"metadata":   map[string]interface{}{"name": testOCMAgentName, "namespace": namespace},
+				"spec": map[string]interface{}{
+					"agentConfig": map[string]interface{}{
+						"ocmBaseUrl": baseURL,
+						"services":   []interface{}{"service_logs", "clusters_mgmt"},
+					},
+					"ocmAgentImage": customImage,
+					"replicas":      int64(1),
+					"tokenSecret":   "ocm-access-token",
+				},
+			},
+		}
+		newOcmAgent.SetGroupVersionKind(gvk)
+		Expect(client.Create(ctx, newOcmAgent)).To(BeNil())
+
+		var deployment *appsv1.Deployment
+		Eventually(func() bool {
+			deploy := &appsv1.Deployment{}
+			if err := client.Get(ctx, testOCMAgentName, namespace, deploy); err != nil {
+				return false
+			}
+			deployment = deploy
+			return deploy.Spec.Replicas != nil &&
+				deploy.Status.ReadyReplicas == *deploy.Spec.Replicas &&
+				deploy.Status.ReadyReplicas > 0
+		}, 120*time.Second, 5*time.Second).Should(BeTrue())
+
+		Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(Equal(customImage))
+
+		Expect(client.Delete(ctx, newOcmAgent)).To(BeNil())
 	})
 })
