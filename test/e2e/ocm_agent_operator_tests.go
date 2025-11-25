@@ -641,5 +641,4 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 			cleanupOcmAgentCRAfterTest(ctx, tc.crName, newOcmAgent, waitTimeout, waitInterval)
 		}
 	})
-
 })
