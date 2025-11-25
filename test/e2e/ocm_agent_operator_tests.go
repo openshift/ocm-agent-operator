@@ -7,6 +7,7 @@ package osde2etests
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,6 +60,13 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		serviceName        = "ocm-agent"
 		operatorName       = "ocm-agent-operator"
 		operatorNamespace  = "openshift-ocm-agent-operator"
+
+		// Test-specific resource names
+		testOCMAgentName         = "test-ocm-agent"
+		testOCMAgentConfigMap    = testOCMAgentName + "-cm"
+		testOCMAgentServiceMon   = testOCMAgentName + "-metrics"
+		testOCMAgentNetPolicy    = testOCMAgentName + "-allow-only-alertmanager"
+		testOCMAgentNetPolicyMUO = testOCMAgentName + "-allow-muo-communication"
 
 		deployments = []string{
 			deploymentName,
@@ -155,6 +164,183 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		ginkgo.By("forcing operator upgrade")
 		err = k8sClient.UpgradeOperator(ctx, operatorName, operatorNamespace)
 		Expect(err).NotTo(HaveOccurred(), "operator upgrade failed")
+	})
+
+	ginkgo.It("create a new OcmAgent CR and verify operator-created resources", func(ctx context.Context) {
+		const (
+			waitTimeout  = 60 * time.Second
+			waitInterval = 5 * time.Second
+		)
+
+		ginkgo.By("Resolving OCM base URL from environment or operator ConfigMap")
+		baseURL := os.Getenv("OCM_BASE_URL")
+		if baseURL == "" {
+			// Fallback to reading from operator's ConfigMap if env var is not set
+			cm := &corev1.ConfigMap{}
+			err := client.Get(ctx, configMapName, namespace, cm)
+			if err == nil {
+				if val, ok := cm.Data["ocmBaseURL"]; ok && val != "" {
+					baseURL = val
+				}
+			}
+		}
+		if baseURL == "" {
+			ginkgo.Skip("OCM_BASE_URL not set via environment variable or operator ConfigMap; skipping test. Please set OCM_BASE_URL env var or ensure ocm-agent-cm ConfigMap has ocmBaseURL key")
+		}
+
+		ginkgo.By("Setting up GroupVersionKind for OcmAgent CR")
+		ocmAgentCR := &unstructured.Unstructured{}
+		ocmAgentCR.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "ocmagent.managed.openshift.io",
+			Version: "v1alpha1",
+			Kind:    "OcmAgent",
+		})
+		ginkgo.By("Cleaning up existing OcmAgent CR if present")
+		err := client.Get(ctx, testOCMAgentName, namespace, ocmAgentCR)
+		if err == nil {
+			Expect(client.Delete(ctx, ocmAgentCR)).To(BeNil(), "Failed to delete existing OcmAgent CR")
+			Eventually(func() bool {
+				err := client.Get(ctx, testOCMAgentName, namespace, ocmAgentCR)
+				return err != nil
+			}, waitTimeout, waitInterval).Should(BeTrue(), "OcmAgent CR not deleted in time")
+		}
+		ginkgo.By("Creating a new OcmAgent CR")
+		newOcmAgent := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "ocmagent.managed.openshift.io/v1alpha1",
+				"kind":       "OcmAgent",
+				"metadata": map[string]interface{}{
+					"name":      testOCMAgentName,
+					"namespace": namespace,
+				},
+				"spec": map[string]interface{}{
+					"agentConfig": map[string]interface{}{
+						"ocmBaseUrl": baseURL,
+						"services":   []interface{}{"service_logs", "clusters_mgmt"},
+					},
+					"ocmAgentImage": "quay.io/app-sre/ocm-agent:latest",
+					"replicas":      int64(1),
+					"tokenSecret":   "ocm-access-token",
+				},
+			},
+		}
+		newOcmAgent.SetGroupVersionKind(ocmAgentCR.GroupVersionKind())
+		Expect(client.Create(ctx, newOcmAgent)).To(BeNil(), "Failed to create new OcmAgent CR")
+		ginkgo.By("Waiting for Deployment to be ready")
+		Eventually(func() bool {
+			deploy := &appsv1.Deployment{}
+			err := client.Get(ctx, testOCMAgentName, namespace, deploy)
+			if err != nil || deploy.Spec.Replicas == nil {
+				return false
+			}
+			return deploy.Status.ReadyReplicas == *deploy.Spec.Replicas && deploy.Status.ReadyReplicas > 0
+		}, waitTimeout, waitInterval).Should(BeTrue(), "Deployment not ready")
+		ginkgo.By("Verifying operator-created resources exist")
+		verifyExists := func(name string, obj k8s.Object) {
+			Expect(client.Get(ctx, name, namespace, obj)).To(BeNil(), fmt.Sprintf("%T %s not found", obj, name))
+		}
+		verifyExists(testOCMAgentName, &appsv1.Deployment{})
+		verifyExists(testOCMAgentName, &corev1.Service{})
+		verifyExists(testOCMAgentConfigMap, &corev1.ConfigMap{})
+		verifyExists(testOCMAgentServiceMon, &monitoringv1.ServiceMonitor{})
+		verifyExists(testOCMAgentNetPolicy, &networkingv1.NetworkPolicy{})
+		verifyExists(testOCMAgentNetPolicyMUO, &networkingv1.NetworkPolicy{})
+	})
+
+	ginkgo.It("recreates ConfigMap after deletion", func(ctx context.Context) {
+		const (
+			waitTimeout  = 60 * time.Second
+			waitInterval = 5 * time.Second
+		)
+		// Get initial ConfigMap state
+		ginkgo.By("getting initial ConfigMap state")
+		originalCm := &corev1.ConfigMap{}
+		err := client.Get(ctx, testOCMAgentConfigMap, namespace, originalCm)
+		Expect(err).Should(BeNil(), "failed to get original ConfigMap")
+
+		originalUID := string(originalCm.UID)
+		originalResourceVersion := originalCm.ResourceVersion
+
+		// Remove finalizers and delete
+		ginkgo.By("deleting ConfigMap")
+		originalCm.Finalizers = []string{}
+		_ = client.Update(ctx, originalCm)
+
+		err = client.Delete(ctx, originalCm)
+		Expect(err).Should(BeNil(), "failed to delete ConfigMap")
+
+		// Wait for deletion (or recreation with different UID)
+		ginkgo.By("verifying ConfigMap is deleted or recreated")
+		Eventually(func() bool {
+			cm := &corev1.ConfigMap{}
+			err := client.Get(ctx, testOCMAgentConfigMap, namespace, cm)
+			return err != nil || string(cm.UID) != originalUID
+		}, 60*time.Second, waitInterval).Should(BeTrue(), "ConfigMap should be deleted or recreated")
+
+		// Wait for operator to recreate
+		ginkgo.By("waiting for operator to recreate ConfigMap")
+		var recreatedCm *corev1.ConfigMap
+		Eventually(func() bool {
+			cm := &corev1.ConfigMap{}
+			err := client.Get(ctx, testOCMAgentConfigMap, namespace, cm)
+			if err == nil && string(cm.UID) != originalUID {
+				recreatedCm = cm
+				return true
+			}
+			return false
+		}, waitTimeout, waitInterval).Should(BeTrue(), "ConfigMap should be recreated")
+
+		// Verify it's a new ConfigMap
+		ginkgo.By("verifying ConfigMap is a new instance")
+		Expect(string(recreatedCm.UID)).NotTo(Equal(originalUID), "UID must be different")
+		Expect(recreatedCm.ResourceVersion).NotTo(Equal(originalResourceVersion), "ResourceVersion must be different")
+		Expect(recreatedCm.OwnerReferences).To(HaveLen(1), "ConfigMap should have ownerReference")
+		Expect(recreatedCm.OwnerReferences[0].Kind).To(Equal("OcmAgent"))
+	})
+
+	ginkgo.It("deletes test OCM Agent and verifies cleanup", func(ctx context.Context) {
+		const (
+			waitTimeout  = 60 * time.Second
+			waitInterval = 5 * time.Second
+		)
+		ocmAgentCR := &unstructured.Unstructured{}
+		ocmAgentCR.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "ocmagent.managed.openshift.io",
+			Version: "v1alpha1",
+			Kind:    "OcmAgent",
+		})
+		err := client.Get(ctx, testOCMAgentName, namespace, ocmAgentCR)
+		if err != nil {
+			ginkgo.Skip(fmt.Sprintf("OcmAgent CR '%s' not found in namespace '%s'; skipping test", testOCMAgentName, namespace))
+		}
+		resourceExists := func(name string, obj k8s.Object) {
+			Expect(client.Get(ctx, name, namespace, obj)).To(BeNil(), fmt.Sprintf("Expected resource %T %s to exist", obj, name))
+		}
+
+		resourceExists(testOCMAgentName, &appsv1.Deployment{})
+		resourceExists(testOCMAgentName, &corev1.Service{})
+		resourceExists(testOCMAgentConfigMap, &corev1.ConfigMap{})
+		resourceExists(testOCMAgentServiceMon, &monitoringv1.ServiceMonitor{})
+		resourceExists(testOCMAgentNetPolicy, &networkingv1.NetworkPolicy{})
+		resourceExists(testOCMAgentNetPolicyMUO, &networkingv1.NetworkPolicy{})
+
+		Expect(client.Delete(ctx, ocmAgentCR)).To(BeNil(), "Failed to delete OcmAgent CR")
+		Eventually(func() bool {
+			err := client.Get(ctx, testOCMAgentName, namespace, ocmAgentCR)
+			return err != nil
+		}, waitTimeout, waitInterval).Should(BeTrue(), "OcmAgent CR not deleted in expected time")
+		checkDeleted := func(name string, obj k8s.Object) {
+			Eventually(func() bool {
+				err := client.Get(ctx, name, namespace, obj)
+				return err != nil
+			}, waitTimeout, waitInterval).Should(BeTrue(), fmt.Sprintf("%T %s was not deleted", obj, name))
+		}
+		checkDeleted(testOCMAgentName, &appsv1.Deployment{})
+		checkDeleted(testOCMAgentName, &corev1.Service{})
+		checkDeleted(testOCMAgentConfigMap, &corev1.ConfigMap{})
+		checkDeleted(testOCMAgentServiceMon, &monitoringv1.ServiceMonitor{})
+		checkDeleted(testOCMAgentNetPolicy, &networkingv1.NetworkPolicy{})
+		checkDeleted(testOCMAgentNetPolicyMUO, &networkingv1.NetworkPolicy{})
 	})
 	ginkgo.It("validates ManagedFleetNotification has no controller behavior", func(ctx context.Context) {
 		ginkgo.By("ensuring test prerequisites")
