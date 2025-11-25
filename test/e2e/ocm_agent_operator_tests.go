@@ -67,6 +67,84 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		Expect(monitoringv1.AddToScheme(client.GetScheme())).Should(BeNil(), "unable to register monitoringv1 api scheme")
 	})
 
+	cleanupOcmAgentCR := func(ctx context.Context, crName string, timeout, interval time.Duration) {
+		ocmAgentCR := &unstructured.Unstructured{}
+		ocmAgentCR.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "ocmagent.managed.openshift.io",
+			Version: "v1alpha1",
+			Kind:    "OcmAgent",
+		})
+		err := client.Get(ctx, crName, namespace, ocmAgentCR)
+		if err == nil {
+			Expect(client.Delete(ctx, ocmAgentCR)).To(BeNil())
+			Eventually(func() bool {
+				err := client.Get(ctx, crName, namespace, ocmAgentCR)
+				return err != nil
+			}, timeout, interval).Should(BeTrue())
+		}
+	}
+
+	createOcmAgentCR := func(ctx context.Context, crName string, spec map[string]interface{}) *unstructured.Unstructured {
+		ocmAgentCR := &unstructured.Unstructured{}
+		ocmAgentCR.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "ocmagent.managed.openshift.io",
+			Version: "v1alpha1",
+			Kind:    "OcmAgent",
+		})
+
+		newOcmAgent := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "ocmagent.managed.openshift.io/v1alpha1",
+				"kind":       "OcmAgent",
+				"metadata": map[string]interface{}{
+					"name":      crName,
+					"namespace": namespace,
+				},
+				"spec": spec,
+			},
+		}
+		newOcmAgent.SetGroupVersionKind(ocmAgentCR.GroupVersionKind())
+		Expect(client.Create(ctx, newOcmAgent)).To(BeNil(), "Failed to create OcmAgent CR")
+		return newOcmAgent
+	}
+
+	waitForDeploymentReady := func(ctx context.Context, crName string, expectedReplicas int32, timeout, interval time.Duration) {
+		Eventually(func() bool {
+			deploy := &appsv1.Deployment{}
+			err := client.Get(ctx, crName, namespace, deploy)
+			if err != nil || deploy.Spec.Replicas == nil {
+				return false
+			}
+			return *deploy.Spec.Replicas == expectedReplicas &&
+				deploy.Status.ReadyReplicas == expectedReplicas &&
+				deploy.Status.ReadyReplicas > 0
+		}, timeout, interval).Should(BeTrue(),
+			fmt.Sprintf("Deployment should have %d ready replicas", expectedReplicas))
+	}
+
+	cleanupOcmAgentCRAfterTest := func(ctx context.Context, crName string, ocmAgent *unstructured.Unstructured, timeout, interval time.Duration) {
+		Expect(client.Delete(ctx, ocmAgent)).To(BeNil())
+		Eventually(func() bool {
+			err := client.Get(ctx, crName, namespace, ocmAgent)
+			return err != nil
+		}, timeout, interval).Should(BeTrue())
+	}
+
+	getOCMBaseURL := func(ctx context.Context) string {
+		baseURL := os.Getenv("OCM_BASE_URL")
+		if baseURL == "" {
+			// Fallback to reading from operator's ConfigMap if env var is not set
+			cm := &corev1.ConfigMap{}
+			err := client.Get(ctx, configMapName, namespace, cm)
+			if err == nil {
+				if val, ok := cm.Data["ocmBaseURL"]; ok && val != "" {
+					baseURL = val
+				}
+			}
+		}
+		return baseURL
+	}
+
 	ginkgo.It("is installed", func(ctx context.Context) {
 		ginkgo.By("checking the namespace exists")
 		err := client.Get(ctx, namespace, "", &corev1.Namespace{})
@@ -326,4 +404,242 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		checkDeleted(testOCMAgentNetPolicy, &networkingv1.NetworkPolicy{})
 		checkDeleted(testOCMAgentNetPolicyMUO, &networkingv1.NetworkPolicy{})
 	})
+
+	ginkgo.It("creates OcmAgent CR with different replica counts", func(ctx context.Context) {
+		const (
+			waitTimeout  = 60 * time.Second
+			waitInterval = 5 * time.Second
+		)
+
+		testCases := []struct {
+			name     string
+			replicas int32
+			crName   string
+		}{
+			{"single replica", 1, "test-ocm-agent-replicas-1"},
+			{"multiple replicas", 3, "test-ocm-agent-replicas-3"},
+		}
+
+		// Get OCM Base URL for tests
+		baseURL := getOCMBaseURL(ctx)
+		if baseURL == "" {
+			baseURL = "https://api.stage.openshift.com" // Fallback default
+		}
+
+		for _, tc := range testCases {
+			ginkgo.By(fmt.Sprintf("Testing with %d replicas: %s", tc.replicas, tc.name))
+
+			// Clean up if exists
+			cleanupOcmAgentCR(ctx, tc.crName, waitTimeout, waitInterval)
+
+			// Create OcmAgent CR with specific replica count
+			spec := map[string]interface{}{
+				"agentConfig": map[string]interface{}{
+					"ocmBaseUrl": baseURL,
+					"services":   []interface{}{"service_logs"},
+				},
+				"ocmAgentImage": "quay.io/app-sre/ocm-agent:latest",
+				"replicas":      int64(tc.replicas),
+				"tokenSecret":   "ocm-access-token",
+			}
+			newOcmAgent := createOcmAgentCR(ctx, tc.crName, spec)
+
+			// Wait for deployment to be ready
+			waitForDeploymentReady(ctx, tc.crName, tc.replicas, waitTimeout, waitInterval)
+
+			// Cleanup
+			cleanupOcmAgentCRAfterTest(ctx, tc.crName, newOcmAgent, waitTimeout, waitInterval)
+		}
+	})
+
+	ginkgo.It("creates OcmAgent CR with different ocmAgentImage and verifies agent is running", func(ctx context.Context) {
+		const (
+			waitTimeout  = 90 * time.Second // Longer timeout for image pull
+			waitInterval = 5 * time.Second
+		)
+
+		testCases := []struct {
+			name          string
+			ocmAgentImage string
+			crName        string
+		}{
+			{
+				name:          "latest tag",
+				ocmAgentImage: "quay.io/app-sre/ocm-agent:latest",
+				crName:        "test-ocm-agent-image-latest",
+			},
+		}
+
+		// Get OCM Base URL for tests
+		baseURL := getOCMBaseURL(ctx)
+		if baseURL == "" {
+			baseURL = "https://api.stage.openshift.com" // Fallback default
+		}
+
+		for _, tc := range testCases {
+			ginkgo.By(fmt.Sprintf("Testing %s with image %s", tc.name, tc.ocmAgentImage))
+
+			// Clean up if exists
+			cleanupOcmAgentCR(ctx, tc.crName, waitTimeout, waitInterval)
+
+			// Create OcmAgent CR
+			spec := map[string]interface{}{
+				"agentConfig": map[string]interface{}{
+					"ocmBaseUrl": baseURL,
+					"services":   []interface{}{"service_logs"},
+				},
+				"ocmAgentImage": tc.ocmAgentImage,
+				"replicas":      int64(1),
+				"tokenSecret":   "ocm-access-token",
+			}
+			newOcmAgent := createOcmAgentCR(ctx, tc.crName, spec)
+
+			// Wait for deployment to be ready
+			waitForDeploymentReady(ctx, tc.crName, 1, waitTimeout, waitInterval)
+
+			// Verify deployment uses correct image
+			deploy := &appsv1.Deployment{}
+			Expect(client.Get(ctx, tc.crName, namespace, deploy)).To(BeNil())
+			Expect(len(deploy.Spec.Template.Spec.Containers)).Should(BeNumerically(">", 0))
+			container := deploy.Spec.Template.Spec.Containers[0]
+			Expect(container.Image).Should(Equal(tc.ocmAgentImage),
+				"Deployment should use the specified image")
+
+			// CRITICAL: Verify pods are actually running with the correct image
+			ginkgo.By("Verifying pods are running with the correct image")
+			var podList corev1.PodList
+			Eventually(func() bool {
+				err := client.List(ctx, &podList, resources.WithLabelSelector(fmt.Sprintf("app=%s", tc.crName)))
+				if err != nil {
+					return false
+				}
+				if len(podList.Items) == 0 {
+					return false
+				}
+				// Filter pods by namespace and check all pods are running and using the correct image
+				for _, pod := range podList.Items {
+					if pod.Namespace != namespace {
+						continue
+					}
+					if pod.Status.Phase != corev1.PodRunning {
+						return false
+					}
+					if len(pod.Spec.Containers) == 0 || pod.Spec.Containers[0].Image != tc.ocmAgentImage {
+						return false
+					}
+					// Verify container is actually running (not just created)
+					containerRunning := false
+					for _, status := range pod.Status.ContainerStatuses {
+						if status.Name == tc.crName && status.State.Running != nil {
+							containerRunning = true
+							break
+						}
+					}
+					if !containerRunning {
+						return false
+					}
+				}
+				return true
+			}, waitTimeout, waitInterval).Should(BeTrue(),
+				"Pods should be running with the correct image")
+
+			// Verify pod container status - ensure it's not in error state
+			for _, pod := range podList.Items {
+				for _, status := range pod.Status.ContainerStatuses {
+					if status.Name == tc.crName {
+						Expect(status.State.Waiting).Should(BeNil(),
+							fmt.Sprintf("Container should not be waiting. Reason: %v", status.State.Waiting))
+						Expect(status.State.Terminated).Should(BeNil(),
+							fmt.Sprintf("Container should not be terminated. Reason: %v", status.State.Terminated))
+						Expect(status.Ready).Should(BeTrue(),
+							"Container should be ready (readiness probe passed)")
+					}
+				}
+			}
+
+			// Cleanup
+			cleanupOcmAgentCRAfterTest(ctx, tc.crName, newOcmAgent, waitTimeout, waitInterval)
+		}
+	})
+
+	ginkgo.It("creates OcmAgent CR with different agentConfig values", func(ctx context.Context) {
+		const (
+			waitTimeout  = 60 * time.Second
+			waitInterval = 5 * time.Second
+		)
+
+		// Get OCM Base URL for tests
+		baseURL := getOCMBaseURL(ctx)
+		if baseURL == "" {
+			baseURL = "https://api.stage.openshift.com" // Fallback default
+		}
+
+		testCases := []struct {
+			name     string
+			services []interface{}
+			crName   string
+		}{
+			{
+				name:     "single service",
+				services: []interface{}{"service_logs"},
+				crName:   "test-ocm-agent-single-service",
+			},
+			{
+				name:     "multiple services",
+				services: []interface{}{"service_logs", "clusters_mgmt"},
+				crName:   "test-ocm-agent-multiple-services",
+			},
+		}
+
+		for _, tc := range testCases {
+			ginkgo.By(fmt.Sprintf("Testing %s", tc.name))
+
+			// Clean up if exists
+			cleanupOcmAgentCR(ctx, tc.crName, waitTimeout, waitInterval)
+
+			// Create OcmAgent CR
+			spec := map[string]interface{}{
+				"agentConfig": map[string]interface{}{
+					"ocmBaseUrl": baseURL,
+					"services":   tc.services,
+				},
+				"ocmAgentImage": "quay.io/app-sre/ocm-agent:latest",
+				"replicas":      int64(1),
+				"tokenSecret":   "ocm-access-token",
+			}
+			newOcmAgent := createOcmAgentCR(ctx, tc.crName, spec)
+
+			// Wait for deployment to be ready
+			waitForDeploymentReady(ctx, tc.crName, 1, waitTimeout, waitInterval)
+
+			// Verify ConfigMap contains correct values
+			configMapName := tc.crName + "-cm"
+			cm := &corev1.ConfigMap{}
+			Eventually(func() bool {
+				err := client.Get(ctx, configMapName, namespace, cm)
+				return err == nil && cm.Data != nil
+			}, waitTimeout, waitInterval).Should(BeTrue(), "ConfigMap should exist with data")
+
+			// Verify OCM Base URL
+			Expect(cm.Data).Should(HaveKey("ocmBaseURL"), "ConfigMap should have ocmBaseURL")
+			Expect(cm.Data["ocmBaseURL"]).Should(Equal(baseURL),
+				"ConfigMap ocmBaseURL should match spec")
+
+			// Verify services
+			Expect(cm.Data).Should(HaveKey("services"), "ConfigMap should have services")
+			servicesStr := cm.Data["services"]
+			servicesList := strings.Split(servicesStr, ",")
+			Expect(len(servicesList)).Should(Equal(len(tc.services)),
+				"Number of services should match")
+
+			for _, expectedService := range tc.services {
+				Expect(servicesList).Should(ContainElement(expectedService),
+					fmt.Sprintf("Services should contain %s", expectedService))
+			}
+
+			// Cleanup
+			cleanupOcmAgentCRAfterTest(ctx, tc.crName, newOcmAgent, waitTimeout, waitInterval)
+		}
+	})
+
 })
