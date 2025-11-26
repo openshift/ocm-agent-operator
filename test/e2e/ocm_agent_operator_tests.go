@@ -23,12 +23,28 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/e2e-framework/klient/k8s"
 	"sigs.k8s.io/e2e-framework/klient/k8s/resources"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
+
+	ocmagentv1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
+)
+
+// MFN test constants - only values used multiple times
+const (
+	mfnAPIVersion    = "ocmagent.managed.openshift.io/v1alpha1"
+	mfnKind          = "ManagedFleetNotification"
+	mfnTestName      = "test-mfn-no-controller"
+	noControllerWait = 10 * time.Second
+
+	mfnrKind     = "ManagedFleetNotificationRecord"
+	mfnrTestName = "test-mfnr-stale-deletion"
 )
 
 var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
@@ -640,5 +656,243 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 			// Cleanup
 			cleanupOcmAgentCRAfterTest(ctx, tc.crName, newOcmAgent, waitTimeout, waitInterval)
 		}
+	ginkgo.It("validates ManagedFleetNotification has no controller behavior", func(ctx context.Context) {
+		ginkgo.By("ensuring test prerequisites")
+		Expect(client.Get(ctx, namespace, "", &corev1.Namespace{})).Should(BeNil(), "namespace %s must exist", namespace)
+
+		ginkgo.By("cleaning up existing MFN if present for idempotency")
+		existingMFN := &unstructured.Unstructured{}
+		existingMFN.SetAPIVersion(mfnAPIVersion)
+		existingMFN.SetKind(mfnKind)
+		err := client.Get(ctx, mfnTestName, namespace, existingMFN)
+		if err == nil {
+			ginkgo.By("deleting existing MFN resource")
+			Expect(client.Delete(ctx, existingMFN)).Should(BeNil(), "failed to delete existing MFN")
+			Eventually(func() bool {
+				checkMFN := &unstructured.Unstructured{}
+				checkMFN.SetAPIVersion(mfnAPIVersion)
+				checkMFN.SetKind(mfnKind)
+				err := client.Get(ctx, mfnTestName, namespace, checkMFN)
+				return err != nil
+			}, 30*time.Second, 1*time.Second).Should(BeTrue(), "existing MFN should be deleted")
+		}
+
+		ginkgo.By("creating new ManagedFleetNotification CR")
+		mfn := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": mfnAPIVersion,
+				"kind":       mfnKind,
+				"metadata": map[string]interface{}{
+					"name":      mfnTestName,
+					"namespace": namespace,
+				},
+				"spec": map[string]interface{}{
+					"fleetNotification": map[string]interface{}{
+						"name":                "test-notification-e2e",
+						"summary":             "E2E Test MFN No Controller",
+						"notificationMessage": "Testing MFN has no controller behavior",
+						"severity":            "Info",
+						"resendWait":          1,
+					},
+				},
+			},
+		}
+		Expect(client.Create(ctx, mfn)).Should(BeNil(), "failed to create ManagedFleetNotification")
+
+		ginkgo.DeferCleanup(func() {
+			ginkgo.By("cleaning up MFN test resource")
+			_ = client.Delete(ctx, mfn)
+		})
+
+		ginkgo.By("capturing baseline resource version for no-controller verification")
+		baseline := &unstructured.Unstructured{}
+		baseline.SetAPIVersion(mfnAPIVersion)
+		baseline.SetKind(mfnKind)
+		Expect(client.Get(ctx, mfnTestName, namespace, baseline)).Should(BeNil(), "failed to get created MFN")
+		originalVersion := baseline.GetResourceVersion()
+		originalGeneration := baseline.GetGeneration()
+
+		ginkgo.By("verifying MFN spec matches expected values")
+		spec := baseline.Object["spec"].(map[string]interface{})
+		fleetNotif := spec["fleetNotification"].(map[string]interface{})
+		Expect(fleetNotif["name"]).To(Equal("test-notification-e2e"))
+		Expect(fleetNotif["severity"]).To(Equal("Info"))
+		Expect(fleetNotif["resendWait"]).To(Equal(int64(1)))
+
+		ginkgo.By("monitoring MFN for no controller activity over time")
+		Consistently(func() []interface{} {
+			current := &unstructured.Unstructured{}
+			current.SetAPIVersion(mfnAPIVersion)
+			current.SetKind(mfnKind)
+			if err := client.Get(ctx, mfnTestName, namespace, current); err != nil {
+				ginkgo.Fail(fmt.Sprintf("Failed to get MFN resource during monitoring: %v", err))
+				return nil
+			}
+			return []interface{}{current.GetResourceVersion(), current.GetGeneration()}
+		}, noControllerWait, 1*time.Second).Should(Equal([]interface{}{originalVersion, originalGeneration}))
+
+		ginkgo.By("verifying final state shows no controller modifications")
+		final := &unstructured.Unstructured{}
+		final.SetAPIVersion(mfnAPIVersion)
+		final.SetKind(mfnKind)
+		Expect(client.Get(ctx, mfnTestName, namespace, final)).Should(BeNil())
+		Expect(final.Object["status"]).To(BeNil())
+	})
+
+	ginkgo.It("validates ManagedFleetNotificationRecord deletes stale records and keeps recent ones", func(ctx context.Context) {
+		ginkgo.By("Checking Namespace")
+		Expect(client.Get(ctx, namespace, "", &corev1.Namespace{})).Should(BeNil(), "namespace %s must exist", namespace)
+
+		ginkgo.By("cleaning up existing test MFNR")
+		existingMFNR := &unstructured.Unstructured{}
+		existingMFNR.SetAPIVersion(mfnAPIVersion)
+		existingMFNR.SetKind(mfnrKind)
+		err := client.Get(ctx, mfnrTestName, namespace, existingMFNR)
+		if err == nil {
+			ginkgo.By("deleting existing MFNR resource")
+			Expect(client.Delete(ctx, existingMFNR)).Should(BeNil(), "failed to delete existing MFNR")
+			Eventually(func() bool {
+				checkMFNR := &unstructured.Unstructured{}
+				checkMFNR.SetAPIVersion(mfnAPIVersion)
+				checkMFNR.SetKind(mfnrKind)
+				err := client.Get(ctx, mfnrTestName, namespace, checkMFNR)
+				return err != nil
+			}, 30*time.Second, 1*time.Second).Should(BeTrue(), "existing MFNR should be deleted")
+		}
+
+		ginkgo.By("create test MNFR")
+		mfnr := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": mfnAPIVersion,
+				"kind":       mfnrKind,
+				"metadata": map[string]interface{}{
+					"name":      mfnrTestName,
+					"namespace": namespace,
+				},
+			},
+		}
+		Expect(client.Create(ctx, mfnr)).Should(BeNil(), "failed to create ManagedFleetNotificationRecord")
+
+		ginkgo.By("adding status with old and new notification records")
+
+		// Create a controller-runtime client for status updates
+		// If we tried to add status into the object and call client.Create or client.Update, the API server rejects it
+		// so we use a controller-runtime client to update the status
+		cfg, err := config.GetConfig()
+		Expect(err).Should(BeNil(), "failed to get kubeconfig for controller-runtime client")
+		scheme := runtime.NewScheme()
+		utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+		utilruntime.Must(ocmagentv1alpha1.SchemeBuilder.AddToScheme(scheme))
+		ctrlClient, err := ctrlclient.New(cfg, ctrlclient.Options{Scheme: scheme})
+		Expect(err).Should(BeNil(), "failed to create controller-runtime client")
+
+		// Get the typed resource and update its status
+		typedMFNR := &ocmagentv1alpha1.ManagedFleetNotificationRecord{}
+		Expect(ctrlClient.Get(ctx, ctrlclient.ObjectKey{Name: mfnrTestName, Namespace: namespace}, typedMFNR)).Should(BeNil(), "failed to get MFNR for status update")
+
+		// Update status with stale and recent records
+		typedMFNR.Status = ocmagentv1alpha1.ManagedFleetNotificationRecordStatus{
+			ManagementCluster: "test-mc-id",
+			NotificationRecordByName: []ocmagentv1alpha1.NotificationRecordByName{
+				{
+					NotificationName: "test-notification",
+					ResendWait:       24,
+					NotificationRecordItems: []ocmagentv1alpha1.NotificationRecordItem{
+						{
+							HostedClusterID:               "test-cluster-1",
+							FiringNotificationSentCount:   2,
+							ResolvedNotificationSentCount: 1,
+							LastTransitionTime:            nil,
+						},
+						{
+							HostedClusterID:               "test-cluster-2",
+							FiringNotificationSentCount:   1,
+							ResolvedNotificationSentCount: 0,
+							LastTransitionTime:            &metav1.Time{Time: time.Now()},
+						},
+						{
+							HostedClusterID:               "test-cluster-3",
+							FiringNotificationSentCount:   2,
+							ResolvedNotificationSentCount: 1,
+							LastTransitionTime:            &metav1.Time{Time: time.Now().Add(-30 * 24 * time.Hour)},
+						},
+					},
+				},
+			},
+		}
+
+		Expect(ctrlClient.Status().Update(ctx, typedMFNR)).Should(BeNil(), "failed to update MFNR status")
+
+		ginkgo.By("waiting for controller to reconcile and delete stale record")
+		Eventually(func() bool {
+			current := &unstructured.Unstructured{}
+			current.SetAPIVersion(mfnAPIVersion)
+			current.SetKind(mfnrKind)
+			if err := client.Get(ctx, mfnrTestName, namespace, current); err != nil {
+				return false
+			}
+
+			status, ok := current.Object["status"].(map[string]interface{})
+			if !ok {
+				return false
+			}
+
+			notificationRecords, ok := status["notificationRecordByName"].([]interface{})
+			if !ok || len(notificationRecords) == 0 {
+				return false
+			}
+
+			firstRecord, ok := notificationRecords[0].(map[string]interface{})
+			if !ok {
+				return false
+			}
+
+			items, ok := firstRecord["notificationRecordItems"].([]interface{})
+			if !ok {
+				return false
+			}
+
+			// After reconciliation, only the new record should remain
+			if len(items) != 1 {
+				return false
+			}
+
+			item, ok := items[0].(map[string]interface{})
+			if !ok {
+				return false
+			}
+
+			// Verify it's the new cluster ID
+			clusterID, ok := item["hostedClusterID"].(string)
+			return ok && clusterID == "test-cluster-2"
+		}, 60*time.Second, 2*time.Second).Should(BeTrue(), "stale record should be deleted and only new record should remain")
+
+		ginkgo.By("verifying the old record was deleted and new record is kept")
+		final := &unstructured.Unstructured{}
+		final.SetAPIVersion(mfnAPIVersion)
+		final.SetKind(mfnrKind)
+		Expect(client.Get(ctx, mfnrTestName, namespace, final)).Should(BeNil(), "failed to get MFNR after reconciliation")
+
+		status := final.Object["status"].(map[string]interface{})
+		notificationRecords := status["notificationRecordByName"].([]interface{})
+		Expect(len(notificationRecords)).To(Equal(1), "should have one notification record")
+
+		firstRecord := notificationRecords[0].(map[string]interface{})
+		items := firstRecord["notificationRecordItems"].([]interface{})
+		Expect(len(items)).To(Equal(1), "should have only one notification record item after stale deletion")
+
+		remainingItem := items[0].(map[string]interface{})
+		clusterID := remainingItem["hostedClusterID"].(string)
+		Expect(clusterID).To(Equal("test-cluster-2"), "remaining record should be the newest entry")
+
+		// Verify the stale entries were removed
+		for _, item := range items {
+			itemMap := item.(map[string]interface{})
+			Expect(itemMap["hostedClusterID"]).NotTo(Equal("test-cluster-1"), "nil lastTransitionTime entry should be deleted")
+			Expect(itemMap["hostedClusterID"]).NotTo(Equal("test-cluster-3"), "stale timestamp entry should be deleted")
+		}
+
+		ginkgo.By("cleaning up MFNR test resource")
+		Expect(client.Delete(ctx, mfnr)).Should(BeNil(), "failed to delete MFNR test resource")
 	})
 })
