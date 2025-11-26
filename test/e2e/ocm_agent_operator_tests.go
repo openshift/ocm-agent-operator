@@ -656,6 +656,8 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 			// Cleanup
 			cleanupOcmAgentCRAfterTest(ctx, tc.crName, newOcmAgent, waitTimeout, waitInterval)
 		}
+	})
+	
 	ginkgo.It("validates ManagedFleetNotification has no controller behavior", func(ctx context.Context) {
 		ginkgo.By("ensuring test prerequisites")
 		Expect(client.Get(ctx, namespace, "", &corev1.Namespace{})).Should(BeNil(), "namespace %s must exist", namespace)
@@ -895,4 +897,5 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		ginkgo.By("cleaning up MFNR test resource")
 		Expect(client.Delete(ctx, mfnr)).Should(BeNil(), "failed to delete MFNR test resource")
 	})
+
 })
