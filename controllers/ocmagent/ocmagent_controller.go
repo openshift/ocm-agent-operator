@@ -18,6 +18,7 @@ package ocmagent
 
 import (
 	"context"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -52,6 +53,8 @@ var _ reconcile.Reconciler = &OcmAgentReconciler{}
 //+kubebuilder:rbac:groups=ocmagent.managed.openshift.io,resources=ocmagents,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=ocmagent.managed.openshift.io,resources=ocmagents/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=ocmagent.managed.openshift.io,resources=ocmagents/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
+//+kubebuilder:rbac:groups="",resources=secrets,resourceNames=pull-secret,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -65,7 +68,6 @@ var _ reconcile.Reconciler = &OcmAgentReconciler{}
 func (r *OcmAgentReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling OCMAgent")
 
 	// Fetch the OCMAgent instance
 	instance := ocmagentv1alpha1.OcmAgent{}
@@ -79,38 +81,38 @@ func (r *OcmAgentReconciler) Reconcile(ctx context.Context, request reconcile.Re
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		log.Error(err, "Failed to retrieve OCMAgent. Will retry on next reconcile.")
+		reqLogger.Error(err, "Failed to retrieve OCMAgent. Will retry on next reconcile.")
 		return reconcile.Result{}, err
 	}
 	localmetrics.ResetMetricOcmAgentResourceAbsent()
+
 	oaohandler, err := r.OCMAgentHandlerBuilder.New()
 	if err != nil {
+		reqLogger.Error(err, "Failed to create OCMAgent handler")
 		return reconcile.Result{}, err
 	}
 
 	// Is the OCMAgent being deleted?
 	if !instance.DeletionTimestamp.IsZero() {
-		log.V(2).Info("Entering EnsureOCMAgentResourcesAbsent")
 		err := oaohandler.EnsureOCMAgentResourcesAbsent(instance)
 		if err != nil {
-			log.Error(err, "Failed to remove OCMAgent. Will retry on next reconcile.")
+			reqLogger.Error(err, "Failed to remove OCMAgent. Will retry on next reconcile.")
 			return reconcile.Result{}, err
 		}
 		// The finalizer can now be removed
 		if controllerutil.ContainsFinalizer(&instance, ctrlconst.ReconcileOCMAgentFinalizer) {
 			controllerutil.RemoveFinalizer(&instance, ctrlconst.ReconcileOCMAgentFinalizer)
 			if err := r.Client.Update(ctx, &instance); err != nil {
-				log.Error(err, "Failed to remove finalizer from OCMAgent resource. Will retry on next reconcile.")
+				reqLogger.Error(err, "Failed to remove finalizer from OCMAgent resource. Will retry on next reconcile.")
 				return reconcile.Result{}, err
 			}
 		}
-		log.Info("Successfully removed OCMAgent resources.")
+		return reconcile.Result{}, nil
 	} else {
 		// There needs to be an OCM Agent
-		log.V(2).Info("Entering EnsureOCMAgentResourcesExist")
 		err := oaohandler.EnsureOCMAgentResourcesExist(instance)
 		if err != nil {
-			log.Error(err, "Failed to create OCMAgent. Will retry on next reconcile.")
+			reqLogger.Error(err, "Failed to create OCMAgent. Will retry on next reconcile.")
 			return reconcile.Result{}, err
 		}
 
@@ -118,18 +120,22 @@ func (r *OcmAgentReconciler) Reconcile(ctx context.Context, request reconcile.Re
 		if !controllerutil.ContainsFinalizer(&instance, ctrlconst.ReconcileOCMAgentFinalizer) {
 			controllerutil.AddFinalizer(&instance, ctrlconst.ReconcileOCMAgentFinalizer)
 			if err := r.Client.Update(ctx, &instance); err != nil {
-				log.Error(err, "Failed to apply finalizer to OCMAgent resource. Will retry on next reconcile.")
+				reqLogger.Error(err, "Failed to apply finalizer to OCMAgent resource. Will retry on next reconcile.")
 				return reconcile.Result{}, err
 			}
 		}
-		log.Info("Successfully setup OCMAgent resources.")
 	}
 
-	return reconcile.Result{}, nil
+	// Periodically reconcile to check for pull-secret changes
+	// Since we can't watch openshift-config/pull-secret (due to RBAC/cache issues),
+	// we reconcile every 5 minutes to detect changes
+	return reconcile.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *OcmAgentReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// Note: We use periodic reconciliation instead of watching pull-secret
+	// due to RBAC/cache issues with openshift-config namespace
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ocmagentv1alpha1.OcmAgent{}).
