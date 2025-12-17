@@ -124,8 +124,9 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 								return nil
 							}),
 					)
-					err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
+					updated, err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
 					Expect(err).To(BeNil())
+					Expect(updated).To(BeTrue())
 				})
 			})
 			When("the secret matches what is expected", func() {
@@ -134,8 +135,9 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 						mockClient.EXPECT().Get(gomock.Any(), oahconst.PullSecretNamespacedName, gomock.Any()).Times(1).SetArg(2, testPullSecret),
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Times(1).SetArg(2, testSecret),
 					)
-					err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
+					updated, err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
 					Expect(err).To(BeNil())
+					Expect(updated).To(BeFalse())
 				})
 			})
 			When("the HS secret matches what is expected", func() {
@@ -163,8 +165,9 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 							return nil
 						}),
 				)
-				err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
+				updated, err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
 				Expect(err).To(BeNil())
+				Expect(updated).To(BeTrue())
 			})
 			It("return not found error for HS secret", func() {
 				notFound := k8serrs.NewNotFound(schema.GroupResource{}, testSecret.Name)
@@ -205,8 +208,9 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 				gomock.InOrder(
 					mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).SetArg(2, testSecret),
 				)
-				err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
+				updated, err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
 				Expect(err).NotTo(BeNil())
+				Expect(updated).To(BeFalse())
 				expectedMetric := `
 # HELP ocm_agent_operator_pull_secret_invalid Failed to obtain a valid pull secret
 # TYPE ocm_agent_operator_pull_secret_invalid gauge
@@ -222,8 +226,9 @@ ocm_agent_operator_pull_secret_invalid{ocmagent_name="test-ocm-agent"} 1
 					mockClient.EXPECT().Get(gomock.Any(), oahconst.PullSecretNamespacedName, gomock.Any()).Times(1).SetArg(2, testPullSecret),
 					mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Times(1).SetArg(2, testSecret),
 				)
-				err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
+				updated, err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
 				Expect(err).To(BeNil())
+				Expect(updated).To(BeFalse())
 				expectedMetric := `
 # HELP ocm_agent_operator_pull_secret_invalid Failed to obtain a valid pull secret
 # TYPE ocm_agent_operator_pull_secret_invalid gauge

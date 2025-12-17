@@ -55,18 +55,28 @@ type ocmAgentHandler struct {
 }
 
 func (o *ocmAgentHandler) EnsureOCMAgentResourcesExist(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-
 	var ensureFuncs []ensureResource
-	var ensureSecretFunc ensureResource
-	if ocmAgent.Spec.FleetMode {
-		ensureSecretFunc = o.ensureFleetClientSecret
+	var secretUpdated bool
+	var err error
+
+	// Ensure secret first and check if it was updated
+	if !ocmAgent.Spec.FleetMode {
+		secretUpdated, err = o.ensureAccessTokenSecret(ocmAgent)
+		if err != nil {
+			o.Log.Error(err, "Failed to ensure access token secret")
+			return err
+		}
 	} else {
-		ensureSecretFunc = o.ensureAccessTokenSecret
+		err = o.ensureFleetClientSecret(ocmAgent)
+		if err != nil {
+			o.Log.Error(err, "Failed to ensure fleet client secret")
+			return err
+		}
 	}
+
 	ensureFuncs = []ensureResource{
 		o.ensureDeployment,
 		o.ensureAllConfigMaps,
-		ensureSecretFunc,
 		o.ensureService,
 		o.ensureAllNetworkPolicies,
 		o.ensureServiceMonitor,
@@ -78,6 +88,16 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesExist(ocmAgent ocmagentv1alpha1
 	for _, fn := range ensureFuncs {
 		err := fn(ocmAgent)
 		if err != nil {
+			o.Log.Error(err, "Ensure function failed")
+			return err
+		}
+	}
+
+	// If secret was updated, restart the ocm-agent pods to use the new secret
+	if secretUpdated {
+		o.Log.Info("Restarting ocm-agent pods after secret update", "ocmAgent", ocmAgent.Name)
+		if err := o.restartOCMAgentPods(ocmAgent); err != nil {
+			o.Log.Error(err, "Failed to restart ocm-agent pods after secret update")
 			return err
 		}
 	}
