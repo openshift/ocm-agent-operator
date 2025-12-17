@@ -145,8 +145,6 @@ func main() {
 		Cache: cache.Options{
 			DefaultNamespaces: map[string]cache.Config{
 				operatorNS: {},
-				// Note: openshift-config is NOT added to cache to avoid RBAC issues.
-				// Instead, we use periodic reconciliation to check pull-secret changes.
 			},
 		},
 		Scheme: scheme,
