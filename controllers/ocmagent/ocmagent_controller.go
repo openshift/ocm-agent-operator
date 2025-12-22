@@ -53,7 +53,6 @@ var _ reconcile.Reconciler = &OcmAgentReconciler{}
 //+kubebuilder:rbac:groups=ocmagent.managed.openshift.io,resources=ocmagents,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=ocmagent.managed.openshift.io,resources=ocmagents/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=ocmagent.managed.openshift.io,resources=ocmagents/finalizers,verbs=update
-//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 //+kubebuilder:rbac:groups="",resources=secrets,resourceNames=pull-secret,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
