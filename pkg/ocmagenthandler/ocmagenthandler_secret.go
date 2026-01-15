@@ -89,13 +89,6 @@ func (o *ocmAgentHandler) ensureAccessTokenSecret(ocmAgent ocmagentv1alpha1.OcmA
 	return false, nil // Secret exists and matches expected state, no update needed
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func (o *ocmAgentHandler) ensureFleetClientSecret(ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	namespacedName := oah.BuildNamespacedName(ocmAgent.Spec.TokenSecret)
 	foundResource := &corev1.Secret{}

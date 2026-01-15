@@ -95,9 +95,9 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesExist(ocmAgent ocmagentv1alpha1
 
 	// If secret was updated, restart the ocm-agent pods to use the new secret
 	if secretUpdated {
-		o.Log.Info("Restarting ocm-agent pods after secret update", "ocmAgent", ocmAgent.Name)
+		o.Log.Info("Triggering pod restart after secret update", "ocmAgent", ocmAgent.Name)
 		if err := o.restartOCMAgentPods(ocmAgent); err != nil {
-			o.Log.Error(err, "Failed to restart ocm-agent pods after secret update")
+			o.Log.Error(err, "Unable to trigger pod restart for updated secret")
 			return err
 		}
 	}
