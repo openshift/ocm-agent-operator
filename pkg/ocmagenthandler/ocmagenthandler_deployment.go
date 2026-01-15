@@ -330,11 +330,11 @@ func (o *ocmAgentHandler) restartOCMAgentPods(ocmAgent ocmagentv1alpha1.OcmAgent
 		return fmt.Errorf("failed to get ocm-agent deployment %s: %w", namespacedName.String(), err)
 	}
 
-	if foundDeployment.Spec.Template.ObjectMeta.Annotations == nil {
-		foundDeployment.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
+	if foundDeployment.Spec.Template.Annotations == nil {
+		foundDeployment.Spec.Template.Annotations = make(map[string]string)
 	}
 	restartTime := time.Now().Format(time.RFC3339)
-	foundDeployment.Spec.Template.ObjectMeta.Annotations["ocm-agent-operator/restartedAt"] = restartTime
+	foundDeployment.Spec.Template.Annotations["ocm-agent-operator/restartedAt"] = restartTime
 
 	if err := o.Client.Update(o.Ctx, foundDeployment); err != nil {
 		o.Log.Error(err, "Failed to restart ocm-agent deployment")
