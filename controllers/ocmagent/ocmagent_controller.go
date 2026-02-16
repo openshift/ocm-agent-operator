@@ -18,7 +18,6 @@ package ocmagent
 
 import (
 	"context"
-	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -92,6 +91,7 @@ func (r *OcmAgentReconciler) Reconcile(ctx context.Context, request reconcile.Re
 
 	// Is the OCMAgent being deleted?
 	if !instance.DeletionTimestamp.IsZero() {
+		reqLogger.V(2).Info("Entering EnsureOCMAgentResourcesAbsent")
 		err := oaohandler.EnsureOCMAgentResourcesAbsent(instance)
 		if err != nil {
 			reqLogger.Error(err, "Failed to remove OCMAgent. Will retry on next reconcile.")
@@ -108,6 +108,7 @@ func (r *OcmAgentReconciler) Reconcile(ctx context.Context, request reconcile.Re
 		return reconcile.Result{}, nil
 	} else {
 		// There needs to be an OCM Agent
+		reqLogger.V(2).Info("Entering EnsureOCMAgentResourcesExist")
 		err := oaohandler.EnsureOCMAgentResourcesExist(instance)
 		if err != nil {
 			reqLogger.Error(err, "Failed to create OCMAgent. Will retry on next reconcile.")
@@ -127,7 +128,7 @@ func (r *OcmAgentReconciler) Reconcile(ctx context.Context, request reconcile.Re
 	// Periodically reconcile to check for pull-secret changes
 	// Since we can't watch openshift-config/pull-secret (due to RBAC/cache issues),
 	// we reconcile every 5 minutes to detect changes
-	return reconcile.Result{RequeueAfter: 5 * time.Minute}, nil
+	return reconcile.Result{RequeueAfter: ctrlconst.SyncPeriodDefault}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
