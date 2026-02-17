@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"time"
 
 	"github.com/go-logr/logr"
 
@@ -315,6 +316,31 @@ func (o *ocmAgentHandler) ensureDeploymentDeleted(ocmAgent ocmagentv1alpha1.OcmA
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// restartOCMAgentPods triggers a rolling restart of the ocm-agent deployment
+// by updating a timestamp annotation in the deployment's pod template.
+// This causes Kubernetes to restart the pods to pick up the updated secret.
+func (o *ocmAgentHandler) restartOCMAgentPods(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+	namespacedName := oah.BuildNamespacedName(ocmAgent.Name)
+	foundDeployment := &appsv1.Deployment{}
+	if err := o.Client.Get(o.Ctx, namespacedName, foundDeployment); err != nil {
+		o.Log.Error(err, "Failed to get ocm-agent deployment")
+		return fmt.Errorf("failed to get ocm-agent deployment %s: %w", namespacedName.String(), err)
+	}
+
+	if foundDeployment.Spec.Template.Annotations == nil {
+		foundDeployment.Spec.Template.Annotations = make(map[string]string)
+	}
+	restartTime := time.Now().Format(time.RFC3339)
+	foundDeployment.Spec.Template.Annotations["ocm-agent-operator/restartedAt"] = restartTime
+
+	if err := o.Client.Update(o.Ctx, foundDeployment); err != nil {
+		o.Log.Error(err, "Failed to restart ocm-agent deployment")
+		return fmt.Errorf("failed to restart ocm-agent deployment %s: %w", namespacedName.String(), err)
+	}
+	o.Log.Info("Restarted ocm-agent pods", "deployment", namespacedName.String(), "restartedAt", restartTime)
 	return nil
 }
 
