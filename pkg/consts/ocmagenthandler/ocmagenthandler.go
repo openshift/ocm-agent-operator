@@ -72,7 +72,7 @@ const (
 	TrustedCaBundleConfigMapName = "trusted-ca-bundle"
 	// ResourceLimitsCPU and ResourceLimitsMemory defines the cpu and memory limits for OA deployment
 	ResourceLimitsCPU    = "50m"
-	ResourceLimitsMemory = "64Mi"
+	ResourceLimitsMemory = "128Mi"
 	// ResourceRequestsCPU and ResourceRequestsMemory defines the cpu and memory requests for OA deployment
 	ResourceRequestsCPU    = "1m"
 	ResourceRequestsMemory = "30Mi"
