@@ -1,0 +1,13 @@
+FROM scratch
+
+LABEL com.redhat.component="openshift-ocm-agent-operator" \
+      io.k8s.description="ocm-agent-operator Operator for OpenShift Dedicated" \
+      description="ocm-agent-operator Operator for OpenShift Dedicated" \
+      distribution-scope="public" \
+      name="openshift/ocm-agent-operator" \
+      url="https://github.com/openshift/ocm-agent-operator" \
+      vendor="Red Hat, Inc." \
+      release="v0.0.0" \
+      version="v0.0.0"
+
+COPY * /package/
