@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ocm-agent-operator
+  namespace: openshift-ocm-agent-operator
+  annotations:
+    package-operator.run/phase: deploy
+    package-operator.run/collision-protection: IfNoController
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ocm-agent-operator
+  template:
+    metadata:
+      labels:
+        name: ocm-agent-operator
+        app: ocm-agent-operator
+    spec:
+      serviceAccountName: ocm-agent-operator
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: node-role.kubernetes.io/infra
+                operator: Exists
+            weight: 1
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/infra
+      containers:
+      - name: ocm-agent-operator
+        image: '{{ .config.image }}'
+        resources:
+          requests:
+            memory: 40Mi
+            cpu: 1m
+          limits:
+            memory: 64Mi
+            cpu: 10m
+        command:
+        - ocm-agent-operator
+        imagePullPolicy: Always
+        env:
+        - name: WATCH_NAMESPACE
+          value: openshift-ocm-agent-operator
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: OPERATOR_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: OPERATOR_NAME
+          value: ocm-agent-operator
