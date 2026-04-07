@@ -1,13 +1,11 @@
 reviewers:
 - bmeng
-- a7vicky
 - xiaoyu74
 - typeid
 - hectorakemp
 - srep-functional-team-hulk
 
 approvers:
-- a7vicky
 - tkong-redhat
 - rbhilare
 - srep-team-leads
