@@ -70,13 +70,18 @@ func buildNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent, namespace string) ne
 	return np
 }
 
-func (o *ocmAgentHandler) ensureAllNetworkPolicies(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+func getNetworkPolicyNamespaces(ocmAgent ocmagentv1alpha1.OcmAgent) []string {
 	var namespaces []string
 	if ocmAgent.Spec.FleetMode {
 		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceRHOBS, oah.NamespaceOBO)
 	} else {
 		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceMUO)
 	}
+	return namespaces
+}
+
+func (o *ocmAgentHandler) ensureAllNetworkPolicies(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+	namespaces := getNetworkPolicyNamespaces(ocmAgent)
 	for _, ns := range namespaces {
 		err := o.ensureNetworkPolicy(ocmAgent, ns)
 		if err != nil {
@@ -134,12 +139,7 @@ func (o *ocmAgentHandler) ensureNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent
 }
 
 func (o *ocmAgentHandler) ensureAllNetworkPoliciesDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
-	var namespaces []string
-	if ocmAgent.Spec.FleetMode {
-		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceRHOBS, oah.NamespaceOBO)
-	} else {
-		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceMUO)
-	}
+	namespaces := getNetworkPolicyNamespaces(ocmAgent)
 	for _, ns := range namespaces {
 		err := o.ensureNetworkPolicyDeleted(ocmAgent, ns)
 		if err != nil {
