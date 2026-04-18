@@ -31,7 +31,7 @@ spec:
         key: node-role.kubernetes.io/infra
       containers:
       - name: ocm-agent-operator
-        image: '{{ .config.image }}'
+        image: 'quay.io/repository/redhat-user-prod/openshift/ocm-agent-operator:latest'
         resources:
           requests:
             memory: 40Mi
@@ -55,19 +55,9 @@ spec:
               fieldPath: metadata.namespace
         - name: OPERATOR_NAME
           value: ocm-agent-operator
-{{- if hasKey . "environment" }}
-{{- if hasKey .environment "proxy" }}
-{{- if hasKey .environment.proxy "httpProxy" }}
         - name: HTTP_PROXY
-          value: {{ .environment.proxy.httpProxy | quote }}
-{{- end}}
-{{- if hasKey .environment.proxy "httpsProxy" }}
+          value: "http"
         - name: HTTPS_PROXY
-          value: {{ .environment.proxy.httpsProxy | quote }}
-{{- end}}
-{{- if hasKey .environment.proxy "noProxy" }}
+          value: "https"
         - name: NO_PROXY
-          value: {{ .environment.proxy.noProxy | quote }}
-{{- end}}
-{{- end}}
-{{- end}}
+          value: "no..."
