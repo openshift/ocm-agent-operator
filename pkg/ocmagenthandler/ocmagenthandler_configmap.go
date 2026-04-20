@@ -81,22 +81,21 @@ func buildCAMOConfigMap(ocmAgent ocmagentv1alpha1.OcmAgent) (*corev1.ConfigMap, 
 func (o *ocmAgentHandler) ensureAllConfigMaps(ocmAgent ocmagentv1alpha1.OcmAgent) error {
 
 	// Ensure the OCM Agent ConfigMap
-	// Determine the cluster ID, used as a configmap value
-	cv, err := o.fetchClusterVersion()
-	if err != nil {
-		o.Log.Error(err, "unable to fetch cluster ID for creating configmap")
-		return err
-	}
-	clusterID := string(cv.Spec.ClusterID)
-
 	var oaCM *corev1.ConfigMap
+	// Only fetch cluster version for non-FleetMode to avoid unnecessary API calls
 	if ocmAgent.Spec.FleetMode {
 		oaCM = buildOCMAgentConfigMap(ocmAgent, "")
 	} else {
+		cv, err := o.fetchClusterVersion()
+		if err != nil {
+			o.Log.Error(err, "unable to fetch cluster ID for creating configmap")
+			return err
+		}
+		clusterID := string(cv.Spec.ClusterID)
 		oaCM = buildOCMAgentConfigMap(ocmAgent, clusterID)
 	}
 
-	err = o.ensureConfigMap(ocmAgent, oaCM, true)
+	err := o.ensureConfigMap(ocmAgent, oaCM, true)
 	if err != nil {
 		return err
 	}

@@ -274,20 +274,16 @@ var _ = Describe("OCM Agent ConfigMap Handler", func() {
 		})
 
 		It("ensureAllConfigMaps handles fleet mode and errors", func() {
-			testClusterVersion := &configv1.ClusterVersion{
-				ObjectMeta: metav1.ObjectMeta{Name: "version"},
-				Spec:       configv1.ClusterVersionSpec{ClusterID: "test-cluster-id"},
-			}
-
-			// Test fleet mode (no CAMO, no cluster ID)
+			// Test fleet mode (no cluster version fetch, no CAMO, no cluster ID)
 			testOcmAgent.Spec.FleetMode = true
-			mockClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).SetArg(2, *testClusterVersion)
+			// FleetMode creates: OCM Agent ConfigMap + Trusted CA ConfigMap (not CAMO)
 			mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(k8serrs.NewNotFound(schema.GroupResource{}, "")).Times(2)
 			mockClient.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil).Times(2)
 			err := testOcmAgentHandler.ensureAllConfigMaps(testOcmAgent)
 			Expect(err).ToNot(HaveOccurred())
 
-			// Test cluster version fetch error
+			// Test non-fleet mode cluster version fetch error
+			testOcmAgent.Spec.FleetMode = false
 			fetchError := errors.New("fetch failed")
 			mockClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).Return(fetchError)
 			err = testOcmAgentHandler.ensureAllConfigMaps(testOcmAgent)

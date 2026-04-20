@@ -238,8 +238,7 @@ func buildOCMAgentArgs(ocmAgent ocmagentv1alpha1.OcmAgent) []string {
 	}
 	if !ocmAgent.Spec.FleetMode {
 		command = append(command, fmt.Sprintf("--cluster-id=@%s", clusterIDPath), fmt.Sprintf("--access-token=@%s", accessTokenPath))
-	}
-	if ocmAgent.Spec.FleetMode {
+	} else {
 		command = append(command, "--fleet-mode")
 	}
 
