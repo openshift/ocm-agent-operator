@@ -159,13 +159,25 @@ func (o *ocmAgentHandler) fetchAccessTokenPullSecret() ([]byte, error) {
 		return nil, fmt.Errorf("unable to find auths section in pull secret")
 	}
 
-	apiConfig, ok := authConfig.(map[string]interface{})[oah.PullSecretAuthTokenKey]
+	authConfigMap, ok := authConfig.(map[string]interface{})
+	if !ok {
+		o.Log.Error(nil, "Unable to type assert auths section to map")
+		return nil, fmt.Errorf("unable to type assert auths section to map[string]interface{}")
+	}
+
+	apiConfig, ok := authConfigMap[oah.PullSecretAuthTokenKey]
 	if !ok {
 		o.Log.Error(nil, "Unable to find pull secret auth key", "key", oah.PullSecretAuthTokenKey)
 		return nil, fmt.Errorf("unable to find pull secret auth key '%s' in pull secret", oah.PullSecretAuthTokenKey)
 	}
 
-	accessToken, ok := apiConfig.(map[string]interface{})["auth"]
+	apiConfigMap, ok := apiConfig.(map[string]interface{})
+	if !ok {
+		o.Log.Error(nil, "Unable to type assert API config to map")
+		return nil, fmt.Errorf("unable to type assert API config to map[string]interface{}")
+	}
+
+	accessToken, ok := apiConfigMap["auth"]
 	if !ok {
 		o.Log.Error(nil, "Unable to find access auth token in pull secret")
 		return nil, fmt.Errorf("unable to find access auth token in pull secret")

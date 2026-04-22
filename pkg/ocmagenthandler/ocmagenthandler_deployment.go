@@ -126,7 +126,7 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 	// Construct the command arguments of the agent
 	ocmAgentCommand := buildOCMAgentArgs(ocmAgent)
 
-	replicas := int32(ocmAgent.Spec.Replicas)
+	replicas := ocmAgent.Spec.Replicas
 	dep := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      namespacedName.Name,
@@ -441,7 +441,7 @@ func deploymentConfigChanged(current, expected *appsv1.Deployment, ocmAgent ocma
 
 // buildEnvVars build the slice of environments to set to the OCM Agent deployment
 func (o *ocmAgentHandler) buildEnvVars(ocmAgent ocmagentv1alpha1.OcmAgent) ([]corev1.EnvVar, error) {
-	envVars := []corev1.EnvVar{}
+	envVars := make([]corev1.EnvVar, 0, 5)
 	proxy := oconfigv1.Proxy{}
 	err := o.Client.Get(o.Ctx, oah.ProxyNamespacedName, &proxy)
 	if err != nil {
