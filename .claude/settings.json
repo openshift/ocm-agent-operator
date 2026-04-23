@@ -1,0 +1,38 @@
+{
+  "name": "OCM Agent Operator - Claude Code Configuration",
+  "description": "Claude Code configuration for OpenShift OSD operator development",
+  "permissions": {
+    "allow": [
+      "Read:*",
+      "Glob:*",
+      "Grep:*",
+      "Bash:ls*",
+      "Bash:find*",
+      "Bash:git status",
+      "Bash:git diff*",
+      "Bash:git log*",
+      "Bash:git branch*",
+      "Bash:git show*",
+      "Bash:make*",
+      "Bash:go test*",
+      "Bash:go build*",
+      "Bash:go mod*",
+      "Bash:go list*",
+      "Bash:go run*",
+      "Bash:ginkgo*",
+      "Bash:golangci-lint*",
+      "Bash:kubectl get*",
+      "Bash:kubectl describe*",
+      "Bash:kubectl explain*",
+      "Bash:gh*",
+      "Bash:tree*",
+      "Bash:pwd",
+      "Bash:which*",
+      "Bash:echo*"
+    ]
+  },
+  "env": {
+    "GOLANGCI_LINT_CONFIG": "boilerplate/openshift/golang-osd-operator/golangci.yml",
+    "GINKGO_EDITOR_INTEGRATION": "true"
+  }
+}

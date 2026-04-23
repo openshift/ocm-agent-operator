@@ -1,0 +1,40 @@
+#!/bin/bash
+# Claude Code hook: executed before creating a git commit
+# This runs ALONGSIDE git pre-commit hooks, not instead of them
+#
+# Flow:
+# 1. Claude Code before-commit hook (this file) - AI-specific validation
+# 2. Git pre-commit hook (.pre-commit-config.yaml) - Standard validation
+# 3. Git commit created
+
+set -e
+
+# Run linting on changed files
+if ! make lint 2>&1 | head -20; then
+    cat <<'EOF'
+[
+  {
+    "role": "user",
+    "content": "❌ Linting failed. Please fix issues before committing."
+  }
+]
+EOF
+    exit 1
+fi
+
+# Run tests
+if ! make go-test 2>&1 | tail -20; then
+    cat <<'EOF'
+[
+  {
+    "role": "user",
+    "content": "❌ Tests failed. Please fix tests before committing."
+  }
+]
+EOF
+    exit 1
+fi
+
+# Success - return empty array (no messages to inject)
+echo "[]"
+exit 0
