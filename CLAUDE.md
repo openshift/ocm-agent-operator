@@ -83,32 +83,33 @@ Always run `make` after modifying API types to regenerate required code.
 
 ## Claude Code Integration
 
-This repository is configured with Claude Code for AI-assisted development:
+This repository is configured with Claude Code for AI-assisted development.
 
-### Quick Start
-- **Full code review**: `/full-review` - Runs security, linting, test, and error handling reviews in parallel
-- **Run tests**: `/run-tests` - Lint, test, and race detection
-- **Update CRDs**: `/update-crds` - Regenerate manifests after API changes
+### Quick Start Skills
 
-### Available Review Agents
-- `@security-reviewer` - OWASP Top 10, RBAC, secrets management
-- `@lint-reviewer` - Code quality using golangci-lint from boilerplate
-- `@test-reviewer` - Coverage gaps, test quality, Ginkgo/Gomega patterns  
-- `@error-handling-reviewer` - Error wrapping, logging, reconciliation errors
+Skills are invoked with the `/` prefix:
 
-### Manual Checks
-- **Race detection**: `go test -race ./...` - Check for concurrency issues
+- **`/full-review`** - Launches all review agents in parallel for comprehensive code quality analysis
+- **`/run-tests`** - Runs linting, unit tests, and race detection
+- **`/update-crds`** - Regenerates CRD manifests and deepcopy code after API changes
 
-### Comprehensive Guide
-See [docs/CLAUDE_CODE_GUIDE.md](docs/CLAUDE_CODE_GUIDE.md) for:
-- Detailed skill documentation
-- Common workflows and examples
-- Best practices
-- Troubleshooting tips
+### Review Agents
+
+Agents can be invoked individually with `@agent-name`:
+
+- **`@security-reviewer`** - OWASP Top 10, RBAC, secrets management, input validation
+- **`@lint-reviewer`** - Code quality, style, golangci-lint findings
+- **`@test-reviewer`** - Test coverage gaps, test quality, Ginkgo/Gomega patterns
+- **`@error-handling-reviewer`** - Error wrapping, logging, failure modes
 
 ### Automated Hooks
-- **user-prompt-submit**: Reminds to run tests after code changes
-- **before-commit**: Automatically runs `make lint` and `make test` before commits
+
+- **user-prompt-submit** - Reminds to run tests after code changes
+- **before-commit** - Automatically runs `make lint` and `make test` before commits
+
+### Comprehensive Guide
+
+See [docs/CLAUDE_CODE_GUIDE.md](docs/CLAUDE_CODE_GUIDE.md) for detailed documentation on skills, agents, workflows, and best practices.
 
 ## Resources
 

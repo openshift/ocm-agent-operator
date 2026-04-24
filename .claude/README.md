@@ -14,16 +14,18 @@ This directory contains Claude Code configuration, skills, agents, and hooks for
 │   └── before-commit                 # Runs before Claude creates a git commit
 │
 ├── skills/                            # Custom slash commands
-│   ├── full-review.md                # /full-review - Run all review agents
-│   ├── run-tests.md                  # /run-tests - Execute test suite
-│   └── update-crds.md                # /update-crds - Regenerate CRDs/manifests
+│   ├── full-review/
+│   │   └── SKILL.md                  # /full-review - Run all review agents
+│   ├── run-tests/
+│   │   └── SKILL.md                  # /run-tests - Execute test suite
+│   └── update-crds/
+│       └── SKILL.md                  # /update-crds - Regenerate CRDs/manifests
 │
 └── agents/                            # Specialized review agents
     ├── security-reviewer.md          # @security-reviewer - Security analysis
     ├── test-reviewer.md              # @test-reviewer - Test quality review
     ├── error-handling-reviewer.md    # @error-handling-reviewer - Error handling patterns
-    ├── concurrency-reviewer.md       # @concurrency-reviewer - Race conditions, goroutines
-    └── performance-reviewer.md       # @performance-reviewer - Performance analysis
+    └── lint-reviewer.md              # @lint-reviewer - Code quality, style
 ```
 
 ## Quick Reference
@@ -41,10 +43,9 @@ This directory contains Claude Code configuration, skills, agents, and hooks for
 | Agent | Focus | Model | Usage |
 |-------|-------|-------|-------|
 | `@security-reviewer` | OWASP Top 10, RBAC, secrets | Opus | `@security-reviewer` |
+| `@lint-reviewer` | Code quality, style | Sonnet | `@lint-reviewer` |
 | `@test-reviewer` | Coverage, test quality | Sonnet | `@test-reviewer` |
 | `@error-handling-reviewer` | Error patterns, logging | Sonnet | `@error-handling-reviewer` |
-| `@concurrency-reviewer` | Races, goroutines, deadlocks | Opus | `@concurrency-reviewer` |
-| `@performance-reviewer` | Allocations, API efficiency | Sonnet | `@performance-reviewer` |
 
 ### Hooks
 
@@ -83,7 +84,11 @@ chmod +x .claude/hooks/*
 
 ## Creating Custom Skills
 
-1. Create a markdown file in `.claude/skills/`:
+1. Create a directory and `SKILL.md` file in `.claude/skills/`:
+
+```bash
+mkdir -p .claude/skills/my-skill
+```
 
 ```markdown
 ---
@@ -91,16 +96,22 @@ name: my-skill
 description: Short description
 ---
 
-# My Skill
-
 Instructions for Claude on what to do when this skill is invoked.
 
-## Steps
+## Process
+
 1. Do this
 2. Then this
+
+## Rules
+
+- Important constraints
+- Expected behavior
+
+Additional context: $ARGUMENTS
 ```
 
-2. Use it: `/my-skill`
+2. Use it: `/my-skill` or `/my-skill additional args`
 
 ## Creating Custom Agents
 

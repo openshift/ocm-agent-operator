@@ -71,7 +71,7 @@ Issues in unchanged files should be ignored.
 
 ### Security
 - **gosec**: Security vulnerability scanner
-- **bodyclose`: Resource leak detection
+- **bodyclose**: Resource leak detection
 
 ### Code Quality
 - **unused**: Dead code detection

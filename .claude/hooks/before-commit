@@ -7,33 +7,39 @@
 # 2. Git pre-commit hook (.pre-commit-config.yaml) - Standard validation
 # 3. Git commit created
 
-set -e
+set -euo pipefail
 
 # Run linting on changed files
-if ! make lint 2>&1 | head -20; then
-    cat <<'EOF'
+LINT_OUTPUT=$(make lint 2>&1) || {
+    LINT_EXIT=$?
+    # Show last 50 lines which typically contain the most relevant errors
+    ERROR_SUMMARY=$(echo "$LINT_OUTPUT" | tail -50 | sed 's/\\/\\\\/g; s/"/\\"/g')
+    cat <<EOF
 [
   {
     "role": "user",
-    "content": "❌ Linting failed. Please fix issues before committing."
+    "content": "❌ Linting failed. Recent errors:\n\`\`\`\n${ERROR_SUMMARY}\n\`\`\`\n\nRun 'make lint' to see full output."
   }
 ]
 EOF
     exit 1
-fi
+}
 
 # Run tests
-if ! make go-test 2>&1 | tail -20; then
-    cat <<'EOF'
+TEST_OUTPUT=$(make go-test 2>&1) || {
+    TEST_EXIT=$?
+    # Show last 100 lines to capture multiple failures and stack traces
+    ERROR_SUMMARY=$(echo "$TEST_OUTPUT" | tail -100 | sed 's/\\/\\\\/g; s/"/\\"/g')
+    cat <<EOF
 [
   {
     "role": "user",
-    "content": "❌ Tests failed. Please fix tests before committing."
+    "content": "❌ Tests failed. Recent output:\n\`\`\`\n${ERROR_SUMMARY}\n\`\`\`\n\nRun 'make go-test' to see full output."
   }
 ]
 EOF
     exit 1
-fi
+}
 
 # Success - return empty array (no messages to inject)
 echo "[]"

@@ -2,7 +2,8 @@
 # Claude Code hook: executed when user submits a prompt
 # This is DIFFERENT from git pre-commit hooks - it runs during Claude's workflow
 
-set -e
+# Note: Not using 'set -e' because we want to handle failures gracefully
+# and always return valid JSON
 
 # Check if there are code changes and remind about tests
 if git diff --name-only 2>/dev/null | grep -qE '\.(go|yaml|yml)$'; then
