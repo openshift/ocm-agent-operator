@@ -1,0 +1,22 @@
+#!/bin/bash
+# Claude Code hook: executed when user submits a prompt
+# This is DIFFERENT from git pre-commit hooks - it runs during Claude's workflow
+
+# Note: Not using 'set -e' because we want to handle failures gracefully
+# and always return valid JSON
+
+# Check if there are code changes and remind about tests
+if git diff --name-only 2>/dev/null | grep -qE '\.(go|yaml|yml)$'; then
+    cat <<'EOF'
+[
+  {
+    "role": "user",
+    "content": "📝 Code changes detected. After changes, remember to:\n   • make lint  - Run golangci-lint\n   • make go-test  - Run unit tests\n   • Or use: /run-tests"
+  }
+]
+EOF
+else
+    echo "[]"
+fi
+
+exit 0
