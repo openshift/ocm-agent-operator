@@ -74,7 +74,7 @@ When escalating, report:
 
 Always end with a structured summary:
 
-```
+```text
 PRE-COMMIT SUMMARY
 ==================
 Passed:     <list of hook IDs>
