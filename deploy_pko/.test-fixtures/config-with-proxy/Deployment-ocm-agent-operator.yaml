@@ -42,6 +42,7 @@ spec:
         command:
         - ocm-agent-operator
         imagePullPolicy: Always
+        terminationMessagePolicy: FallbackToLogsOnError
         env:
         - name: WATCH_NAMESPACE
           value: openshift-ocm-agent-operator
