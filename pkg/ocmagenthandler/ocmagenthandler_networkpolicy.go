@@ -70,7 +70,7 @@ func buildNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent, namespace string) ne
 	return np
 }
 
-func (o *ocmAgentHandler) ensureAllNetworkPolicies(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+func (o *ocmAgentHandler) ensureAllNetworkPolicies(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	var namespaces []string
 	if ocmAgent.Spec.FleetMode {
 		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceRHOBS, oah.NamespaceOBO)
@@ -78,7 +78,7 @@ func (o *ocmAgentHandler) ensureAllNetworkPolicies(ocmAgent ocmagentv1alpha1.Ocm
 		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceMUO)
 	}
 	for _, ns := range namespaces {
-		err := o.ensureNetworkPolicy(ocmAgent, ns)
+		err := o.ensureNetworkPolicy(ctx, ocmAgent, ns)
 		if err != nil {
 			return err
 		}
@@ -89,7 +89,7 @@ func (o *ocmAgentHandler) ensureAllNetworkPolicies(ocmAgent ocmagentv1alpha1.Ocm
 
 // ensureNetworkPolicy ensures that an OCMAgent NetworkPolicy exists on the cluster
 // and that its configuration matches what is expected.
-func (o *ocmAgentHandler) ensureNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent, namespace string) error {
+func (o *ocmAgentHandler) ensureNetworkPolicy(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent, namespace string) error {
 
 	namespacedName := buildNetworkPolicyName(ocmAgent, namespace)
 
@@ -99,7 +99,7 @@ func (o *ocmAgentHandler) ensureNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent
 	}
 	// Does the resource already exist?
 	o.Log.Info("ensuring networkpolicy exists", "resource", namespacedName.String())
-	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
+	if err := o.Client.Get(ctx, namespacedName, foundResource); err != nil {
 		if k8serrors.IsNotFound(err) {
 			// It does not exist, so must be created.
 			o.Log.Info("An OCMAgent NetworkPolicy does not exist; will be created.")
@@ -110,7 +110,7 @@ func (o *ocmAgentHandler) ensureNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent
 				return err
 			}
 			// and create it
-			err = o.Client.Create(o.Ctx, &resource)
+			err = o.Client.Create(ctx, &resource)
 			if err != nil {
 				return err
 			}
@@ -125,7 +125,7 @@ func (o *ocmAgentHandler) ensureNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent
 			// Specs aren't equal, update and fix.
 			o.Log.Info("An OCMAgent network policy exists but contains unexpected configuration. Restoring.")
 			foundResource.Spec = *resource.Spec.DeepCopy()
-			if err = o.Client.Update(context.TODO(), foundResource); err != nil {
+			if err = o.Client.Update(ctx, foundResource); err != nil {
 				return err
 			}
 		}
@@ -133,7 +133,7 @@ func (o *ocmAgentHandler) ensureNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent
 	return nil
 }
 
-func (o *ocmAgentHandler) ensureAllNetworkPoliciesDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+func (o *ocmAgentHandler) ensureAllNetworkPoliciesDeleted(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	var namespaces []string
 	if ocmAgent.Spec.FleetMode {
 		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceRHOBS, oah.NamespaceOBO)
@@ -141,7 +141,7 @@ func (o *ocmAgentHandler) ensureAllNetworkPoliciesDeleted(ocmAgent ocmagentv1alp
 		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceMUO)
 	}
 	for _, ns := range namespaces {
-		err := o.ensureNetworkPolicyDeleted(ocmAgent, ns)
+		err := o.ensureNetworkPolicyDeleted(ctx, ocmAgent, ns)
 		if err != nil {
 			return err
 		}
@@ -149,14 +149,14 @@ func (o *ocmAgentHandler) ensureAllNetworkPoliciesDeleted(ocmAgent ocmagentv1alp
 	return nil
 }
 
-func (o *ocmAgentHandler) ensureNetworkPolicyDeleted(ocmAgent ocmagentv1alpha1.OcmAgent, namespace string) error {
+func (o *ocmAgentHandler) ensureNetworkPolicyDeleted(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent, namespace string) error {
 
 	namespacedName := buildNetworkPolicyName(ocmAgent, namespace)
 
 	foundResource := &netv1.NetworkPolicy{}
 	// Does the resource already exist?
 	o.Log.Info("ensuring networkpolicy removed", "resource", namespacedName.String())
-	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
+	if err := o.Client.Get(ctx, namespacedName, foundResource); err != nil {
 		if !k8serrors.IsNotFound(err) {
 			// Return unexpected error
 			return err
@@ -165,7 +165,7 @@ func (o *ocmAgentHandler) ensureNetworkPolicyDeleted(ocmAgent ocmagentv1alpha1.O
 			return nil
 		}
 	}
-	err := o.Client.Delete(o.Ctx, foundResource)
+	err := o.Client.Delete(ctx, foundResource)
 	if err != nil {
 		return err
 	}

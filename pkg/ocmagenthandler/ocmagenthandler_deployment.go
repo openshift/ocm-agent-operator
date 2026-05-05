@@ -1,6 +1,7 @@
 package ocmagenthandler
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"reflect"
@@ -126,7 +127,7 @@ func buildOCMAgentDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) appsv1.Deployme
 	// Construct the command arguments of the agent
 	ocmAgentCommand := buildOCMAgentArgs(ocmAgent)
 
-	replicas := int32(ocmAgent.Spec.Replicas)
+	replicas := ocmAgent.Spec.Replicas
 	dep := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      namespacedName.Name,
@@ -248,14 +249,14 @@ func buildOCMAgentArgs(ocmAgent ocmagentv1alpha1.OcmAgent) []string {
 
 // ensureDeployment ensures that an OCMAgent Deployment exists on the cluster
 // and that its configuration matches what is expected.
-func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+func (o *ocmAgentHandler) ensureDeployment(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	namespacedName := oah.BuildNamespacedName(ocmAgent.Name)
 	foundResource := &appsv1.Deployment{}
 	populationFunc := func() appsv1.Deployment {
 		return buildOCMAgentDeployment(ocmAgent)
 	}
 
-	envVars, err := o.buildEnvVars(ocmAgent)
+	envVars, err := o.buildEnvVars(ctx, ocmAgent)
 	if err != nil {
 		return err
 	}
@@ -266,7 +267,7 @@ func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) e
 
 	// Does the resource already exist?
 	o.Log.Info("ensuring deployment exists", "resource", namespacedName.String())
-	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
+	if err := o.Client.Get(ctx, namespacedName, foundResource); err != nil {
 		if k8serrors.IsNotFound(err) {
 			// It does not exist, so must be created.
 			o.Log.Info("An OCMAgent deployment does not exist; will be created.")
@@ -275,7 +276,7 @@ func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) e
 				return err
 			}
 			// and create it
-			err = o.Client.Create(o.Ctx, &resource)
+			err = o.Client.Create(ctx, &resource)
 			if err != nil {
 				return err
 			}
@@ -289,7 +290,7 @@ func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) e
 			// Specs aren't equal, update and fix.
 			o.Log.Info("An OCMAgent deployment exists but contains unexpected configuration. Restoring.")
 			foundResource.Spec = *resource.Spec.DeepCopy()
-			if err = o.Client.Update(o.Ctx, foundResource); err != nil {
+			if err = o.Client.Update(ctx, foundResource); err != nil {
 				return err
 			}
 		}
@@ -298,12 +299,12 @@ func (o *ocmAgentHandler) ensureDeployment(ocmAgent ocmagentv1alpha1.OcmAgent) e
 }
 
 // ensureDeploymentDeleted removes the deployment from the cluster
-func (o *ocmAgentHandler) ensureDeploymentDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+func (o *ocmAgentHandler) ensureDeploymentDeleted(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	namespacedName := oah.BuildNamespacedName(ocmAgent.Name)
 	foundResource := &appsv1.Deployment{}
 	// Does the resource already exist?
 	o.Log.Info("ensuring deployment removed", "resource", namespacedName.String())
-	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
+	if err := o.Client.Get(ctx, namespacedName, foundResource); err != nil {
 		if !k8serrors.IsNotFound(err) {
 			// Return unexpected error
 			return err
@@ -312,7 +313,7 @@ func (o *ocmAgentHandler) ensureDeploymentDeleted(ocmAgent ocmagentv1alpha1.OcmA
 			return nil
 		}
 	}
-	err := o.Client.Delete(o.Ctx, foundResource)
+	err := o.Client.Delete(ctx, foundResource)
 	if err != nil {
 		return err
 	}
@@ -322,10 +323,10 @@ func (o *ocmAgentHandler) ensureDeploymentDeleted(ocmAgent ocmagentv1alpha1.OcmA
 // restartOCMAgentPods triggers a rolling restart of the ocm-agent deployment
 // by updating a timestamp annotation in the deployment's pod template.
 // This causes Kubernetes to restart the pods to pick up the updated secret.
-func (o *ocmAgentHandler) restartOCMAgentPods(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+func (o *ocmAgentHandler) restartOCMAgentPods(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	namespacedName := oah.BuildNamespacedName(ocmAgent.Name)
 	foundDeployment := &appsv1.Deployment{}
-	if err := o.Client.Get(o.Ctx, namespacedName, foundDeployment); err != nil {
+	if err := o.Client.Get(ctx, namespacedName, foundDeployment); err != nil {
 		o.Log.Error(err, "Failed to get ocm-agent deployment")
 		return fmt.Errorf("failed to get ocm-agent deployment %s: %w", namespacedName.String(), err)
 	}
@@ -336,7 +337,7 @@ func (o *ocmAgentHandler) restartOCMAgentPods(ocmAgent ocmagentv1alpha1.OcmAgent
 	restartTime := time.Now().Format(time.RFC3339)
 	foundDeployment.Spec.Template.Annotations["ocm-agent-operator/restartedAt"] = restartTime
 
-	if err := o.Client.Update(o.Ctx, foundDeployment); err != nil {
+	if err := o.Client.Update(ctx, foundDeployment); err != nil {
 		o.Log.Error(err, "Failed to restart ocm-agent deployment")
 		return fmt.Errorf("failed to restart ocm-agent deployment %s: %w", namespacedName.String(), err)
 	}
@@ -344,11 +345,52 @@ func (o *ocmAgentHandler) restartOCMAgentPods(ocmAgent ocmagentv1alpha1.OcmAgent
 	return nil
 }
 
+// compareContainers compares container specs between current and expected deployments
+func compareContainers(current, expected *appsv1.Deployment, containerName string, log logr.Logger) bool {
+	var curImage, expImage string
+	var curReadinessProbeHTTPGet, curLivenessProbeHTTPGet, expReadinessProbeHTTPGet, expLivenessProbeHTTPGet *corev1.HTTPGetAction
+	var curEnvs, expEnvs []corev1.EnvVar
+
+	// Find current container spec
+	for i, c := range current.Spec.Template.Spec.Containers {
+		if containerName == c.Name {
+			curImage = current.Spec.Template.Spec.Containers[i].Image
+			if current.Spec.Template.Spec.Containers[i].ReadinessProbe != nil {
+				curReadinessProbeHTTPGet = current.Spec.Template.Spec.Containers[i].ReadinessProbe.HTTPGet
+			}
+			if current.Spec.Template.Spec.Containers[i].LivenessProbe != nil {
+				curLivenessProbeHTTPGet = current.Spec.Template.Spec.Containers[i].LivenessProbe.HTTPGet
+			}
+			curEnvs = current.Spec.Template.Spec.Containers[i].Env
+			break
+		}
+	}
+
+	// Find expected container spec
+	for i, c := range expected.Spec.Template.Spec.Containers {
+		if containerName == c.Name {
+			expImage = expected.Spec.Template.Spec.Containers[i].Image
+			expReadinessProbeHTTPGet = expected.Spec.Template.Spec.Containers[i].ReadinessProbe.HTTPGet
+			expLivenessProbeHTTPGet = expected.Spec.Template.Spec.Containers[i].LivenessProbe.HTTPGet
+			expEnvs = expected.Spec.Template.Spec.Containers[i].Env
+			break
+		}
+	}
+
+	if len(curImage) == 0 {
+		log.V(2).Info(fmt.Sprintf("current deployment %s/%s did not contain expected %s container", current.Namespace, current.Name, containerName))
+		return true
+	}
+
+	return curImage != expImage ||
+		!reflect.DeepEqual(curReadinessProbeHTTPGet, expReadinessProbeHTTPGet) ||
+		!reflect.DeepEqual(curLivenessProbeHTTPGet, expLivenessProbeHTTPGet) ||
+		!reflect.DeepEqual(curEnvs, expEnvs)
+}
+
 // deploymentConfigChanged flags if the two supplied deployments differ in configuration
 // that the OCM Agent Operator manages
 func deploymentConfigChanged(current, expected *appsv1.Deployment, ocmAgent ocmagentv1alpha1.OcmAgent, log logr.Logger) bool {
-	changed := false
-
 	// Compare labels
 	if !reflect.DeepEqual(current.Labels, expected.Labels) {
 		return true
@@ -357,93 +399,39 @@ func deploymentConfigChanged(current, expected *appsv1.Deployment, ocmAgent ocma
 		return true
 	}
 
-	// There may be multiple containers eventually, so let's do a loop
+	// Compare containers
 	for _, name := range []string{ocmAgent.Name} {
-		var curImage, expImage string
-		var curReadinessProbeHTTPGet, curLivenessProbeHTTPGet, expReadinessProbeHTTPGet, expLivenessProbeHTTPGet *corev1.HTTPGetAction
-		var curEnvs, expEnvs []corev1.EnvVar
-		// Assign current container spec
-		for i, c := range current.Spec.Template.Spec.Containers {
-			if name == c.Name {
-				curImage = current.Spec.Template.Spec.Containers[i].Image
-				// get current readiness probe HTTPGetter only if ReadinessProbe is set
-				if current.Spec.Template.Spec.Containers[i].ReadinessProbe != nil {
-					curReadinessProbeHTTPGet = current.Spec.Template.Spec.Containers[i].ReadinessProbe.HTTPGet
-				}
-				// get current liveness probe HTTPGetter only if LivenessProbe is set
-				if current.Spec.Template.Spec.Containers[i].LivenessProbe != nil {
-					curLivenessProbeHTTPGet = current.Spec.Template.Spec.Containers[i].LivenessProbe.HTTPGet
-				}
-				curEnvs = current.Spec.Template.Spec.Containers[i].Env
-				break
-			}
+		if compareContainers(current, expected, name, log) {
+			return true
 		}
-		// Assign expected container spec
-		for i, c := range expected.Spec.Template.Spec.Containers {
-			if name == c.Name {
-				expImage = expected.Spec.Template.Spec.Containers[i].Image
-				expReadinessProbeHTTPGet = expected.Spec.Template.Spec.Containers[i].ReadinessProbe.HTTPGet
-				expLivenessProbeHTTPGet = expected.Spec.Template.Spec.Containers[i].LivenessProbe.HTTPGet
-				expEnvs = expected.Spec.Template.Spec.Containers[i].Env
-				break
-			}
-		}
-
-		if len(curImage) == 0 {
-			log.V(2).Info(fmt.Sprintf("current deployment %s/%s did not contain expected %s container", current.Namespace, current.Name, name))
-			changed = true
-			break
-		} else if curImage != expImage {
-			changed = true
-		}
-
-		// Compare readiness probe change
-		if !reflect.DeepEqual(curReadinessProbeHTTPGet, expReadinessProbeHTTPGet) {
-			log.V(2).Info(fmt.Sprintf("current readiness probe http getter %s/%s did not match expected readiness http getter", curReadinessProbeHTTPGet, expReadinessProbeHTTPGet))
-			changed = true
-		}
-
-		// Compare readiness probe change
-		if !reflect.DeepEqual(curLivenessProbeHTTPGet, expLivenessProbeHTTPGet) {
-			log.V(2).Info(fmt.Sprintf("current liveness probe http getter %s/%s did not match expected liveness probe http getter", curLivenessProbeHTTPGet, expLivenessProbeHTTPGet))
-			changed = true
-		}
-
-		if !reflect.DeepEqual(curEnvs, expEnvs) {
-			log.V(2).Info(fmt.Sprintf("current env vars %s/%s did not match expected env vars", curEnvs, expEnvs))
-			changed = true
-		}
-
 	}
 
 	// Compare replicas
 	if *(current.Spec.Replicas) != *(expected.Spec.Replicas) {
 		log.V(2).Info(fmt.Sprintf("current deployment %s/%s did not contain expected replicas: %v", current.Namespace, current.Name, *(expected.Spec.Replicas)))
-		changed = true
+		return true
 	}
 
 	// Compare affinity
 	if !reflect.DeepEqual(current.Spec.Template.Spec.Affinity, expected.Spec.Template.Spec.Affinity) {
 		log.V(2).Info(fmt.Sprintf("current deployment %s/%s did not contain expected affinity", current.Namespace, current.Name))
-		changed = true
+		return true
 	}
 
 	// Compare tolerations
 	if !reflect.DeepEqual(current.Spec.Template.Spec.Tolerations, expected.Spec.Template.Spec.Tolerations) {
 		log.V(2).Info(fmt.Sprintf("current deployment %s/%s did not contain expected tolerations", current.Namespace, current.Name))
-		changed = true
+		return true
 	}
 
-	// TODO compare more things if needed
-
-	return changed
+	return false
 }
 
 // buildEnvVars build the slice of environments to set to the OCM Agent deployment
-func (o *ocmAgentHandler) buildEnvVars(ocmAgent ocmagentv1alpha1.OcmAgent) ([]corev1.EnvVar, error) {
-	envVars := []corev1.EnvVar{}
+func (o *ocmAgentHandler) buildEnvVars(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) ([]corev1.EnvVar, error) {
+	envVars := make([]corev1.EnvVar, 0, 5)
 	proxy := oconfigv1.Proxy{}
-	err := o.Client.Get(o.Ctx, oah.ProxyNamespacedName, &proxy)
+	err := o.Client.Get(ctx, oah.ProxyNamespacedName, &proxy)
 	if err != nil {
 		return nil, err
 	}

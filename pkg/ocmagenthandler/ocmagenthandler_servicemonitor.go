@@ -1,6 +1,7 @@
 package ocmagenthandler
 
 import (
+	"context"
 	"reflect"
 
 	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -37,7 +38,7 @@ func buildOCMAgentServiceMonitor(ocmAgent ocmagentv1alpha1.OcmAgent) monitorv1.S
 
 // ensureServiceMonitor ensures that an OCMAgent serviceMonitor exists on the cluster
 // and that its configuration matches what is expected.
-func (o *ocmAgentHandler) ensureServiceMonitor(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+func (o *ocmAgentHandler) ensureServiceMonitor(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	namespacedName := oah.BuildNamespacedName(ocmAgent.Name + "-metrics")
 	foundResource := &monitorv1.ServiceMonitor{}
 
@@ -47,7 +48,7 @@ func (o *ocmAgentHandler) ensureServiceMonitor(ocmAgent ocmagentv1alpha1.OcmAgen
 
 	// Does the resource already exist?
 	o.Log.Info("ensuring serviceMonitor exists", "resource", namespacedName.String())
-	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
+	if err := o.Client.Get(ctx, namespacedName, foundResource); err != nil {
 		if k8serrors.IsNotFound(err) {
 			// It does not exist, so must be created.
 			o.Log.Info("An OCMAgent serviceMonitor does not exist; will be created.")
@@ -58,7 +59,7 @@ func (o *ocmAgentHandler) ensureServiceMonitor(ocmAgent ocmagentv1alpha1.OcmAgen
 				return err
 			}
 			// and create it
-			err = o.Client.Create(o.Ctx, &resource)
+			err = o.Client.Create(ctx, &resource)
 			if err != nil {
 				return err
 			}
@@ -70,10 +71,11 @@ func (o *ocmAgentHandler) ensureServiceMonitor(ocmAgent ocmagentv1alpha1.OcmAgen
 		// It does exist, check if it is what we expected
 		resource := populationFunc()
 		if !reflect.DeepEqual(foundResource.Spec, resource.Spec) {
-			// Specs aren't equal, update and fix.
+			// Update only the Spec field to preserve server-managed metadata
 			o.Log.Info("An OCMAgent serviceMonitor exists but contains unexpected configuration. Restoring.")
-			foundResource = resource.DeepCopy()
-			if err = o.Client.Update(o.Ctx, foundResource); err != nil {
+			foundResource.Spec = resource.Spec
+			if err = o.Client.Update(ctx, foundResource); err != nil {
+				o.Log.Error(err, "Failed to update ServiceMonitor")
 				return err
 			}
 		}
@@ -81,12 +83,12 @@ func (o *ocmAgentHandler) ensureServiceMonitor(ocmAgent ocmagentv1alpha1.OcmAgen
 	return nil
 }
 
-func (o *ocmAgentHandler) ensureServiceMonitorDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+func (o *ocmAgentHandler) ensureServiceMonitorDeleted(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	namespacedName := oah.BuildNamespacedName(ocmAgent.Name + "-metrics")
 	foundResource := &monitorv1.ServiceMonitor{}
 	// Does the resource already exist?
 	o.Log.Info("ensuring serviceMonitor removed", "resource", namespacedName.String())
-	if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
+	if err := o.Client.Get(ctx, namespacedName, foundResource); err != nil {
 		if !k8serrors.IsNotFound(err) {
 			// Return unexpected error
 			return err
@@ -95,7 +97,7 @@ func (o *ocmAgentHandler) ensureServiceMonitorDeleted(ocmAgent ocmagentv1alpha1.
 			return nil
 		}
 	}
-	err := o.Client.Delete(o.Ctx, foundResource)
+	err := o.Client.Delete(ctx, foundResource)
 	if err != nil {
 		return err
 	}

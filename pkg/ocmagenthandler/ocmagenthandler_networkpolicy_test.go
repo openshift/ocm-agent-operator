@@ -41,7 +41,6 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 		testOcmAgentHandler = ocmAgentHandler{
 			Client: mockClient,
 			Log:    testconst.Logger,
-			Ctx:    testconst.Context,
 			Scheme: testconst.Scheme,
 		}
 	})
@@ -94,7 +93,7 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 								return nil
 							}),
 					)
-					err := testOcmAgentHandler.ensureNetworkPolicy(testOcmAgent, testNamespace)
+					err := testOcmAgentHandler.ensureNetworkPolicy(testconst.Context, testOcmAgent, testNamespace)
 					Expect(err).To(BeNil())
 				})
 			})
@@ -103,7 +102,7 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 					gomock.InOrder(
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, networkPolicy),
 					)
-					err := testOcmAgentHandler.ensureNetworkPolicy(testOcmAgent, testNamespace)
+					err := testOcmAgentHandler.ensureNetworkPolicy(testconst.Context, testOcmAgent, testNamespace)
 					Expect(err).To(BeNil())
 				})
 			})
@@ -123,7 +122,7 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 							return nil
 						}),
 				)
-				err := testOcmAgentHandler.ensureNetworkPolicy(testOcmAgent, testNamespace)
+				err := testOcmAgentHandler.ensureNetworkPolicy(testconst.Context, testOcmAgent, testNamespace)
 				Expect(err).To(BeNil())
 			})
 		})
@@ -140,7 +139,7 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 				networkPolicy = buildNetworkPolicy(testOcmAgent, testNamespace)
 				mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, networkPolicy)
 				mockClient.EXPECT().Delete(gomock.Any(), gomock.Any())
-				err := testOcmAgentHandler.ensureNetworkPolicyDeleted(testOcmAgent, testNamespace)
+				err := testOcmAgentHandler.ensureNetworkPolicyDeleted(testconst.Context, testOcmAgent, testNamespace)
 				Expect(err).To(BeNil())
 			})
 		})
@@ -148,7 +147,7 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 			It("should skip the deletion", func() {
 				notFound := k8serrs.NewNotFound(schema.GroupResource{}, networkPolicy.Name)
 				mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Return(notFound)
-				err := testOcmAgentHandler.ensureNetworkPolicyDeleted(testOcmAgent, testNamespace)
+				err := testOcmAgentHandler.ensureNetworkPolicyDeleted(testconst.Context, testOcmAgent, testNamespace)
 				Expect(err).To(BeNil())
 			})
 		})
@@ -159,7 +158,7 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 			It("should have the 2 networkpolicies created", func() {
 				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(2)
 				mockClient.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).MinTimes(2)
-				err := testOcmAgentHandler.ensureAllNetworkPolicies(testOcmAgent)
+				err := testOcmAgentHandler.ensureAllNetworkPolicies(testconst.Context, testOcmAgent)
 				Expect(err).To(BeNil())
 			})
 		})
@@ -167,7 +166,7 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 			It("should have the 3 networkpolicies created", func() {
 				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(3)
 				mockClient.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Times(3)
-				err := testOcmAgentHandler.ensureAllNetworkPolicies(testFleetOcmAgent)
+				err := testOcmAgentHandler.ensureAllNetworkPolicies(testconst.Context, testFleetOcmAgent)
 				Expect(err).To(BeNil())
 			})
 		})

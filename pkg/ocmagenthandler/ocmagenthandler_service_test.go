@@ -37,7 +37,6 @@ var _ = Describe("OCM Agent Service Handler", func() {
 		testOcmAgentHandler = ocmAgentHandler{
 			Client: mockClient,
 			Log:    testconst.Logger,
-			Ctx:    testconst.Context,
 			Scheme: testconst.Scheme,
 		}
 	})
@@ -76,7 +75,7 @@ var _ = Describe("OCM Agent Service Handler", func() {
 							}),
 						mockClient.EXPECT().Get(gomock.Any(), testMetricsNamespacedName, gomock.Any()).Times(1).SetArg(2, testMetricsService),
 					)
-					err := testOcmAgentHandler.ensureService(testOcmAgent)
+					err := testOcmAgentHandler.ensureService(testconst.Context, testOcmAgent)
 					Expect(err).To(BeNil())
 				})
 			})
@@ -86,7 +85,7 @@ var _ = Describe("OCM Agent Service Handler", func() {
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Times(1).SetArg(2, testService),
 						mockClient.EXPECT().Get(gomock.Any(), testMetricsNamespacedName, gomock.Any()).Times(1).SetArg(2, testMetricsService),
 					)
-					err := testOcmAgentHandler.ensureService(testOcmAgent)
+					err := testOcmAgentHandler.ensureService(testconst.Context, testOcmAgent)
 					Expect(err).To(BeNil())
 				})
 			})
@@ -106,7 +105,7 @@ var _ = Describe("OCM Agent Service Handler", func() {
 						}),
 					mockClient.EXPECT().Get(gomock.Any(), testMetricsNamespacedName, gomock.Any()).Times(1).SetArg(2, testMetricsService),
 				)
-				err := testOcmAgentHandler.ensureService(testOcmAgent)
+				err := testOcmAgentHandler.ensureService(testconst.Context, testOcmAgent)
 				Expect(err).To(BeNil())
 			})
 		})
@@ -117,7 +116,7 @@ var _ = Describe("OCM Agent Service Handler", func() {
 					gomock.InOrder(
 						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(notFound),
 					)
-					err := testOcmAgentHandler.ensureServiceDeleted(testOcmAgent)
+					err := testOcmAgentHandler.ensureServiceDeleted(testconst.Context, testOcmAgent)
 					Expect(err).To(BeNil())
 				})
 			})
@@ -129,7 +128,7 @@ var _ = Describe("OCM Agent Service Handler", func() {
 						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).SetArg(2, testMetricsService),
 						mockClient.EXPECT().Delete(gomock.Any(), &testMetricsService),
 					)
-					err := testOcmAgentHandler.ensureServiceDeleted(testOcmAgent)
+					err := testOcmAgentHandler.ensureServiceDeleted(testconst.Context, testOcmAgent)
 					Expect(err).To(BeNil())
 				})
 			})

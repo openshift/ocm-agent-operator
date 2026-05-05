@@ -38,12 +38,12 @@ func buildOCMAgentPodDisruptionBudget(ocmAgent ocmagentv1alpha1.OcmAgent) *v1.Po
 
 // ensurePodDisruptionBudget ensures that an OCMAgent PDB exists on the cluster
 // and that its configuration matches what is expected.
-func (o *ocmAgentHandler) ensurePodDisruptionBudget(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+func (o *ocmAgentHandler) ensurePodDisruptionBudget(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	pdb := buildOCMAgentPodDisruptionBudget(ocmAgent)
 	foundPDB := &v1.PodDisruptionBudget{}
 
 	// Check if the PDB already exists
-	if err := o.Client.Get(context.TODO(), types.NamespacedName{
+	if err := o.Client.Get(ctx, types.NamespacedName{
 		Name: pdb.Name, Namespace: pdb.Namespace}, foundPDB); err != nil {
 
 		if k8serrors.IsNotFound(err) {
@@ -53,14 +53,14 @@ func (o *ocmAgentHandler) ensurePodDisruptionBudget(ocmAgent ocmagentv1alpha1.Oc
 				return err
 			}
 			// Create it now
-			return o.Client.Create(context.TODO(), pdb)
+			return o.Client.Create(ctx, pdb)
 		}
 		return err
 	} else {
 		if !reflect.DeepEqual(foundPDB.Spec, pdb.Spec) {
 			foundPDB.Spec = *pdb.Spec.DeepCopy()
 			o.Log.Info("Updating Pod Disruption Budget", "PDB.Namespace", foundPDB.Namespace, "PDB.Name", foundPDB.Name)
-			err = o.Client.Update(context.TODO(), foundPDB)
+			err = o.Client.Update(ctx, foundPDB)
 			if err != nil {
 				return err
 			}
@@ -70,11 +70,11 @@ func (o *ocmAgentHandler) ensurePodDisruptionBudget(ocmAgent ocmagentv1alpha1.Oc
 }
 
 // ensurePodDisruptionBudgetDeleted removes the PDB from the cluster
-func (o *ocmAgentHandler) ensurePodDisruptionBudgetDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+func (o *ocmAgentHandler) ensurePodDisruptionBudgetDeleted(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	pdb := buildOCMAgentPodDisruptionBudget(ocmAgent)
 	foundPDB := &v1.PodDisruptionBudget{}
 
-	if err := o.Client.Get(context.TODO(), types.NamespacedName{
+	if err := o.Client.Get(ctx, types.NamespacedName{
 		Name: pdb.Name, Namespace: pdb.Namespace}, foundPDB); err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil
@@ -83,5 +83,5 @@ func (o *ocmAgentHandler) ensurePodDisruptionBudgetDeleted(ocmAgent ocmagentv1al
 	}
 
 	o.Log.Info("Ensuring Pod Disruption Budget is removed", "PDB.Namespace", foundPDB.Namespace, "PDB.Name", foundPDB.Name)
-	return o.Client.Delete(context.TODO(), foundPDB)
+	return o.Client.Delete(ctx, foundPDB)
 }
