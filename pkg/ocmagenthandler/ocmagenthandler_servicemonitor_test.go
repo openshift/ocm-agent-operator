@@ -44,7 +44,6 @@ var _ = Describe("OCM Agent ServiceMonitor Handler", func() {
 		testOcmAgentHandler = ocmAgentHandler{
 			Client: mockClient,
 			Log:    testconst.Logger,
-			Ctx:    testconst.Context,
 			Scheme: testconst.Scheme,
 		}
 	})
@@ -78,7 +77,7 @@ var _ = Describe("OCM Agent ServiceMonitor Handler", func() {
 								return nil
 							}),
 					)
-					err := testOcmAgentHandler.ensureServiceMonitor(testOcmAgent)
+					err := testOcmAgentHandler.ensureServiceMonitor(testconst.Context, testOcmAgent)
 					Expect(err).To(BeNil())
 				})
 			})
@@ -87,7 +86,7 @@ var _ = Describe("OCM Agent ServiceMonitor Handler", func() {
 					gomock.InOrder(
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Times(1).SetArg(2, testServiceMonitor),
 					)
-					err := testOcmAgentHandler.ensureServiceMonitor(testOcmAgent)
+					err := testOcmAgentHandler.ensureServiceMonitor(testconst.Context, testOcmAgent)
 					Expect(err).To(BeNil())
 				})
 			})
@@ -106,7 +105,7 @@ var _ = Describe("OCM Agent ServiceMonitor Handler", func() {
 							return nil
 						}),
 				)
-				err := testOcmAgentHandler.ensureServiceMonitor(testOcmAgent)
+				err := testOcmAgentHandler.ensureServiceMonitor(testconst.Context, testOcmAgent)
 				Expect(err).To(BeNil())
 			})
 		})
@@ -117,7 +116,7 @@ var _ = Describe("OCM Agent ServiceMonitor Handler", func() {
 					gomock.InOrder(
 						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(notFound),
 					)
-					err := testOcmAgentHandler.ensureServiceMonitorDeleted(testOcmAgent)
+					err := testOcmAgentHandler.ensureServiceMonitorDeleted(testconst.Context, testOcmAgent)
 					Expect(err).To(BeNil())
 				})
 			})
@@ -127,7 +126,7 @@ var _ = Describe("OCM Agent ServiceMonitor Handler", func() {
 						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).SetArg(2, testServiceMonitor),
 						mockClient.EXPECT().Delete(gomock.Any(), &testServiceMonitor),
 					)
-					err := testOcmAgentHandler.ensureServiceMonitorDeleted(testOcmAgent)
+					err := testOcmAgentHandler.ensureServiceMonitorDeleted(testconst.Context, testOcmAgent)
 					Expect(err).To(BeNil())
 				})
 			})

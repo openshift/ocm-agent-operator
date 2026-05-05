@@ -28,11 +28,9 @@ func NewBuilder(c client.Client) OcmAgentHandlerBuilder {
 
 func (oab *ocmAgentHandlerBuilder) New() (OCMAgentHandler, error) {
 	log := ctrl.Log.WithName("handler").WithName("OCMAgent")
-	ctx := context.Background()
 	oaohandler := &ocmAgentHandler{
 		Client: oab.Client,
 		Log:    log,
-		Ctx:    ctx,
 		Scheme: oab.Client.Scheme(),
 	}
 	return oaohandler, nil
@@ -40,34 +38,33 @@ func (oab *ocmAgentHandlerBuilder) New() (OCMAgentHandler, error) {
 
 type OCMAgentHandler interface {
 	// EnsureOCMAgentResourcesExist ensures that an OCM Agent is deployed on the cluster.
-	EnsureOCMAgentResourcesExist(ocmagentv1alpha1.OcmAgent) error
+	EnsureOCMAgentResourcesExist(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error
 	// EnsureOCMAgentResourcesAbsent ensures that all OCM Agent resources are removed on the cluster.
-	EnsureOCMAgentResourcesAbsent(ocmagentv1alpha1.OcmAgent) error
+	EnsureOCMAgentResourcesAbsent(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error
 }
 
-type ensureResource func(agent ocmagentv1alpha1.OcmAgent) error
+type ensureResource func(ctx context.Context, agent ocmagentv1alpha1.OcmAgent) error
 
 type ocmAgentHandler struct {
 	Client client.Client
 	Log    logr.Logger
-	Ctx    context.Context
 	Scheme *runtime.Scheme
 }
 
-func (o *ocmAgentHandler) EnsureOCMAgentResourcesExist(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+func (o *ocmAgentHandler) EnsureOCMAgentResourcesExist(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	var ensureFuncs []ensureResource
 	var secretUpdated bool
 	var err error
 
 	// Ensure secret first and check if it was updated
 	if !ocmAgent.Spec.FleetMode {
-		secretUpdated, err = o.ensureAccessTokenSecret(ocmAgent)
+		secretUpdated, err = o.ensureAccessTokenSecret(ctx, ocmAgent)
 		if err != nil {
 			o.Log.Error(err, "Failed to ensure access token secret")
 			return err
 		}
 	} else {
-		err = o.ensureFleetClientSecret(ocmAgent)
+		err = o.ensureFleetClientSecret(ctx, ocmAgent)
 		if err != nil {
 			o.Log.Error(err, "Failed to ensure fleet client secret")
 			return err
@@ -86,7 +83,7 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesExist(ocmAgent ocmagentv1alpha1
 	}
 
 	for _, fn := range ensureFuncs {
-		err := fn(ocmAgent)
+		err := fn(ctx, ocmAgent)
 		if err != nil {
 			o.Log.Error(err, "Ensure function failed")
 			return err
@@ -96,7 +93,7 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesExist(ocmAgent ocmagentv1alpha1
 	// If secret was updated, restart the ocm-agent pods to use the new secret
 	if secretUpdated {
 		o.Log.Info("Triggering pod restart after secret update", "ocmAgent", ocmAgent.Name)
-		if err := o.restartOCMAgentPods(ocmAgent); err != nil {
+		if err := o.restartOCMAgentPods(ctx, ocmAgent); err != nil {
 			o.Log.Error(err, "Unable to trigger pod restart for updated secret")
 			return err
 		}
@@ -105,7 +102,7 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesExist(ocmAgent ocmagentv1alpha1
 	return nil
 }
 
-func (o *ocmAgentHandler) EnsureOCMAgentResourcesAbsent(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+func (o *ocmAgentHandler) EnsureOCMAgentResourcesAbsent(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error {
 
 	ensureFuncs := []ensureResource{
 		o.ensureDeploymentDeleted,
@@ -121,7 +118,7 @@ func (o *ocmAgentHandler) EnsureOCMAgentResourcesAbsent(ocmAgent ocmagentv1alpha
 	}
 
 	for _, fn := range ensureFuncs {
-		err := fn(ocmAgent)
+		err := fn(ctx, ocmAgent)
 		if err != nil {
 			return err
 		}

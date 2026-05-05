@@ -36,7 +36,6 @@ var _ = Describe("OCM Agent Pod Disruption Budget Handler", func() {
 		testOcmAgentHandler = ocmAgentHandler{
 			Client: mockClient,
 			Log:    testconst.Logger,
-			Ctx:    testconst.Context,
 			Scheme: testconst.Scheme,
 		}
 	})
@@ -61,7 +60,7 @@ var _ = Describe("OCM Agent Pod Disruption Budget Handler", func() {
 					return nil
 				},
 			)
-			err := testOcmAgentHandler.ensurePodDisruptionBudget(testOcmAgent)
+			err := testOcmAgentHandler.ensurePodDisruptionBudget(testconst.Context, testOcmAgent)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -80,7 +79,7 @@ var _ = Describe("OCM Agent Pod Disruption Budget Handler", func() {
 					return nil
 				},
 			)
-			err := testOcmAgentHandler.ensurePodDisruptionBudget(testOcmAgent)
+			err := testOcmAgentHandler.ensurePodDisruptionBudget(testconst.Context, testOcmAgent)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -101,7 +100,7 @@ var _ = Describe("OCM Agent Pod Disruption Budget Handler", func() {
 					return nil
 				},
 			)
-			err := testOcmAgentHandler.ensurePodDisruptionBudget(testOcmAgent)
+			err := testOcmAgentHandler.ensurePodDisruptionBudget(testconst.Context, testOcmAgent)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -120,21 +119,21 @@ var _ = Describe("OCM Agent Pod Disruption Budget Handler", func() {
 					return nil
 				},
 			)
-			err := testOcmAgentHandler.ensurePodDisruptionBudget(testOcmAgent)
+			err := testOcmAgentHandler.ensurePodDisruptionBudget(testconst.Context, testOcmAgent)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("deletes the PDB if it exists", func() {
 			mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, testPDB)
 			mockClient.EXPECT().Delete(gomock.Any(), &testPDB).Return(nil)
-			err := testOcmAgentHandler.ensurePodDisruptionBudgetDeleted(testOcmAgent)
+			err := testOcmAgentHandler.ensurePodDisruptionBudgetDeleted(testconst.Context, testOcmAgent)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("does nothing if the PDB is already removed", func() {
 			notFound := k8serrs.NewNotFound(schema.GroupResource{}, testPDB.Name)
 			mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Return(notFound)
-			err := testOcmAgentHandler.ensurePodDisruptionBudgetDeleted(testOcmAgent)
+			err := testOcmAgentHandler.ensurePodDisruptionBudgetDeleted(testconst.Context, testOcmAgent)
 			Expect(err).To(BeNil())
 		})
 	})

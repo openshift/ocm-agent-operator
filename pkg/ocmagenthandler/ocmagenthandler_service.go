@@ -1,6 +1,7 @@
 package ocmagenthandler
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -66,7 +67,7 @@ func buildOCMAgentMetricsService(ocmAgent ocmagentv1alpha1.OcmAgent) corev1.Serv
 
 // ensureConfigMap ensures that an OCMAgent ConfigMap exists on the cluster
 // and that its configuration matches what is expected.
-func (o *ocmAgentHandler) ensureService(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+func (o *ocmAgentHandler) ensureService(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	foundResource := &corev1.Service{}
 	buildOCMAgentSvcFunc := func() corev1.Service {
 		return buildOCMAgentService(ocmAgent)
@@ -82,7 +83,7 @@ func (o *ocmAgentHandler) ensureService(ocmAgent ocmagentv1alpha1.OcmAgent) erro
 		svc := svc //prevent implicit memory aliasing
 		namespacedName := oah.BuildNamespacedName(svc.Name)
 		o.Log.Info("ensuring service exists", "resource", svc.Name)
-		if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
+		if err := o.Client.Get(ctx, namespacedName, foundResource); err != nil {
 			if k8serrors.IsNotFound(err) {
 				// It does not exist, so must be created.
 				o.Log.Info("An OCMAgent service does not exist; will be created.")
@@ -91,7 +92,7 @@ func (o *ocmAgentHandler) ensureService(ocmAgent ocmagentv1alpha1.OcmAgent) erro
 				if err := controllerutil.SetControllerReference(&ocmAgent, &svc, o.Scheme); err != nil {
 					return err
 				}
-				err = o.Client.Create(o.Ctx, &svc)
+				err = o.Client.Create(ctx, &svc)
 				if err != nil {
 					return err
 				}
@@ -105,7 +106,7 @@ func (o *ocmAgentHandler) ensureService(ocmAgent ocmagentv1alpha1.OcmAgent) erro
 				// Specs aren't equal, update and fix.
 				o.Log.Info("An OCMAgent service exists but contains unexpected configuration. Restoring.")
 				foundResource.Spec = *svc.Spec.DeepCopy()
-				if err = o.Client.Update(o.Ctx, foundResource); err != nil {
+				if err = o.Client.Update(ctx, foundResource); err != nil {
 					return err
 				}
 			}
@@ -114,7 +115,7 @@ func (o *ocmAgentHandler) ensureService(ocmAgent ocmagentv1alpha1.OcmAgent) erro
 	return nil
 }
 
-func (o *ocmAgentHandler) ensureServiceDeleted(ocmAgent ocmagentv1alpha1.OcmAgent) error {
+func (o *ocmAgentHandler) ensureServiceDeleted(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	OASvcName := ocmAgent.Name
 	OAMetricsSvcName := ocmAgent.Name + "-metrics"
 	for _, svcName := range []string{OASvcName, OAMetricsSvcName} {
@@ -122,7 +123,7 @@ func (o *ocmAgentHandler) ensureServiceDeleted(ocmAgent ocmagentv1alpha1.OcmAgen
 		foundResource := &corev1.Service{}
 		// Does the resource already exist?
 		o.Log.Info("ensuring service removed", "resource", namespacedName.String())
-		if err := o.Client.Get(o.Ctx, namespacedName, foundResource); err != nil {
+		if err := o.Client.Get(ctx, namespacedName, foundResource); err != nil {
 			if !k8serrors.IsNotFound(err) {
 				// Return unexpected error
 				return err
@@ -131,7 +132,7 @@ func (o *ocmAgentHandler) ensureServiceDeleted(ocmAgent ocmagentv1alpha1.OcmAgen
 				return nil
 			}
 		}
-		err := o.Client.Delete(o.Ctx, foundResource)
+		err := o.Client.Delete(ctx, foundResource)
 		if err != nil {
 			return err
 		}

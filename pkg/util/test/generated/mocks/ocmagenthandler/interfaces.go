@@ -10,6 +10,7 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	v1alpha1 "github.com/openshift/ocm-agent-operator/api/v1alpha1"
@@ -79,29 +80,29 @@ func (m *MockOCMAgentHandler) EXPECT() *MockOCMAgentHandlerMockRecorder {
 }
 
 // EnsureOCMAgentResourcesAbsent mocks base method.
-func (m *MockOCMAgentHandler) EnsureOCMAgentResourcesAbsent(arg0 v1alpha1.OcmAgent) error {
+func (m *MockOCMAgentHandler) EnsureOCMAgentResourcesAbsent(ctx context.Context, ocmAgent v1alpha1.OcmAgent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureOCMAgentResourcesAbsent", arg0)
+	ret := m.ctrl.Call(m, "EnsureOCMAgentResourcesAbsent", ctx, ocmAgent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureOCMAgentResourcesAbsent indicates an expected call of EnsureOCMAgentResourcesAbsent.
-func (mr *MockOCMAgentHandlerMockRecorder) EnsureOCMAgentResourcesAbsent(arg0 any) *gomock.Call {
+func (mr *MockOCMAgentHandlerMockRecorder) EnsureOCMAgentResourcesAbsent(ctx, ocmAgent any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureOCMAgentResourcesAbsent", reflect.TypeOf((*MockOCMAgentHandler)(nil).EnsureOCMAgentResourcesAbsent), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureOCMAgentResourcesAbsent", reflect.TypeOf((*MockOCMAgentHandler)(nil).EnsureOCMAgentResourcesAbsent), ctx, ocmAgent)
 }
 
 // EnsureOCMAgentResourcesExist mocks base method.
-func (m *MockOCMAgentHandler) EnsureOCMAgentResourcesExist(arg0 v1alpha1.OcmAgent) error {
+func (m *MockOCMAgentHandler) EnsureOCMAgentResourcesExist(ctx context.Context, ocmAgent v1alpha1.OcmAgent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureOCMAgentResourcesExist", arg0)
+	ret := m.ctrl.Call(m, "EnsureOCMAgentResourcesExist", ctx, ocmAgent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureOCMAgentResourcesExist indicates an expected call of EnsureOCMAgentResourcesExist.
-func (mr *MockOCMAgentHandlerMockRecorder) EnsureOCMAgentResourcesExist(arg0 any) *gomock.Call {
+func (mr *MockOCMAgentHandlerMockRecorder) EnsureOCMAgentResourcesExist(ctx, ocmAgent any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureOCMAgentResourcesExist", reflect.TypeOf((*MockOCMAgentHandler)(nil).EnsureOCMAgentResourcesExist), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureOCMAgentResourcesExist", reflect.TypeOf((*MockOCMAgentHandler)(nil).EnsureOCMAgentResourcesExist), ctx, ocmAgent)
 }

@@ -55,7 +55,6 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 		testOcmAgentHandler = ocmAgentHandler{
 			Client: mockClient,
 			Log:    testconst.Logger,
-			Ctx:    testconst.Context,
 			Scheme: testconst.Scheme,
 		}
 		testClusterPullSecretValue = []byte(fmt.Sprintf(`{
@@ -124,7 +123,7 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 								return nil
 							}),
 					)
-					updated, err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
+					updated, err := testOcmAgentHandler.ensureAccessTokenSecret(testconst.Context, testOcmAgent)
 					Expect(err).To(BeNil())
 					Expect(updated).To(BeTrue())
 				})
@@ -135,7 +134,7 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 						mockClient.EXPECT().Get(gomock.Any(), oahconst.PullSecretNamespacedName, gomock.Any()).Times(1).SetArg(2, testPullSecret),
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Times(1).SetArg(2, testSecret),
 					)
-					updated, err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
+					updated, err := testOcmAgentHandler.ensureAccessTokenSecret(testconst.Context, testOcmAgent)
 					Expect(err).To(BeNil())
 					Expect(updated).To(BeFalse())
 				})
@@ -145,7 +144,7 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 					gomock.InOrder(
 						mockClient.EXPECT().Get(gomock.Any(), testHSNamespacedName, gomock.Any()).Times(1).SetArg(2, testHSSecret),
 					)
-					err := testOcmAgentHandler.ensureFleetClientSecret(testHSOcmAgent)
+					err := testOcmAgentHandler.ensureFleetClientSecret(testconst.Context, testHSOcmAgent)
 					Expect(err).To(BeNil())
 				})
 			})
@@ -165,7 +164,7 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 							return nil
 						}),
 				)
-				updated, err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
+				updated, err := testOcmAgentHandler.ensureAccessTokenSecret(testconst.Context, testOcmAgent)
 				Expect(err).To(BeNil())
 				Expect(updated).To(BeTrue())
 			})
@@ -174,7 +173,7 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 				gomock.InOrder(
 					mockClient.EXPECT().Get(gomock.Any(), testHSNamespacedName, gomock.Any()).Times(1).Return(notFound),
 				)
-				err := testOcmAgentHandler.ensureFleetClientSecret(testHSOcmAgent)
+				err := testOcmAgentHandler.ensureFleetClientSecret(testconst.Context, testHSOcmAgent)
 				Expect(err).To(HaveOccurred())
 			})
 		})
@@ -185,7 +184,7 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 					gomock.InOrder(
 						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(notFound),
 					)
-					err := testOcmAgentHandler.ensureAccessTokenSecretDeleted(testOcmAgent)
+					err := testOcmAgentHandler.ensureAccessTokenSecretDeleted(testconst.Context, testOcmAgent)
 					Expect(err).To(BeNil())
 				})
 			})
@@ -195,7 +194,7 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 						mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).SetArg(2, testSecret),
 						mockClient.EXPECT().Delete(gomock.Any(), &testSecret),
 					)
-					err := testOcmAgentHandler.ensureAccessTokenSecretDeleted(testOcmAgent)
+					err := testOcmAgentHandler.ensureAccessTokenSecretDeleted(testconst.Context, testOcmAgent)
 					Expect(err).To(BeNil())
 				})
 			})
@@ -208,7 +207,7 @@ var _ = Describe("OCM Agent Access Token Secret Handler", func() {
 				gomock.InOrder(
 					mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).SetArg(2, testSecret),
 				)
-				updated, err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
+				updated, err := testOcmAgentHandler.ensureAccessTokenSecret(testconst.Context, testOcmAgent)
 				Expect(err).NotTo(BeNil())
 				Expect(updated).To(BeFalse())
 				expectedMetric := `
@@ -226,7 +225,7 @@ ocm_agent_operator_pull_secret_invalid{ocmagent_name="test-ocm-agent"} 1
 					mockClient.EXPECT().Get(gomock.Any(), oahconst.PullSecretNamespacedName, gomock.Any()).Times(1).SetArg(2, testPullSecret),
 					mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).Times(1).SetArg(2, testSecret),
 				)
-				updated, err := testOcmAgentHandler.ensureAccessTokenSecret(testOcmAgent)
+				updated, err := testOcmAgentHandler.ensureAccessTokenSecret(testconst.Context, testOcmAgent)
 				Expect(err).To(BeNil())
 				Expect(updated).To(BeFalse())
 				expectedMetric := `

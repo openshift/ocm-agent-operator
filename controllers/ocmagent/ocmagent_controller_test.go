@@ -60,7 +60,7 @@ var _ = Describe("OCMAgent Controller", func() {
 				gomock.InOrder(
 					mockClient.EXPECT().Get(gomock.Any(), testconst.OCMAgentNamespacedName, gomock.Any()).Times(1).SetArg(2, *testOcmAgent),
 					mockOcmAgentHandlerBuilder.EXPECT().New().Return(mockOcmAgentHandler, nil),
-					mockOcmAgentHandler.EXPECT().EnsureOCMAgentResourcesExist(*testOcmAgent).Times(1),
+					mockOcmAgentHandler.EXPECT().EnsureOCMAgentResourcesExist(gomock.Any(), *testOcmAgent).Times(1),
 					mockClient.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(
 						func(ctx context.Context, o *ocmagentv1alpha1.OcmAgent, opts ...client.UpdateOptions) error {
 							Expect(o.Finalizers).To(ContainElement(ctrlconst.ReconcileOCMAgentFinalizer))
@@ -84,7 +84,7 @@ var _ = Describe("OCMAgent Controller", func() {
 				gomock.InOrder(
 					mockClient.EXPECT().Get(gomock.Any(), testconst.OCMAgentNamespacedName, gomock.Any()).Times(1).SetArg(2, *testOcmAgent),
 					mockOcmAgentHandlerBuilder.EXPECT().New().Return(mockOcmAgentHandler, nil),
-					mockOcmAgentHandler.EXPECT().EnsureOCMAgentResourcesAbsent(gomock.Any()).Times(1),
+					mockOcmAgentHandler.EXPECT().EnsureOCMAgentResourcesAbsent(gomock.Any(), gomock.Any()).Times(1),
 					mockClient.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(
 						func(ctx context.Context, o *ocmagentv1alpha1.OcmAgent, opts ...client.UpdateOptions) error {
 							Expect(o.Finalizers).NotTo(ContainElement(ctrlconst.ReconcileOCMAgentFinalizer))

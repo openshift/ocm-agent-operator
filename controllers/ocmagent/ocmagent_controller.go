@@ -92,7 +92,7 @@ func (r *OcmAgentReconciler) Reconcile(ctx context.Context, request reconcile.Re
 	// Is the OCMAgent being deleted?
 	if !instance.DeletionTimestamp.IsZero() {
 		reqLogger.V(2).Info("Entering EnsureOCMAgentResourcesAbsent")
-		err := oaohandler.EnsureOCMAgentResourcesAbsent(instance)
+		err := oaohandler.EnsureOCMAgentResourcesAbsent(ctx, instance)
 		if err != nil {
 			reqLogger.Error(err, "Failed to remove OCMAgent. Will retry on next reconcile.")
 			return reconcile.Result{}, err
@@ -109,7 +109,7 @@ func (r *OcmAgentReconciler) Reconcile(ctx context.Context, request reconcile.Re
 	} else {
 		// There needs to be an OCM Agent
 		reqLogger.V(2).Info("Entering EnsureOCMAgentResourcesExist")
-		err := oaohandler.EnsureOCMAgentResourcesExist(instance)
+		err := oaohandler.EnsureOCMAgentResourcesExist(ctx, instance)
 		if err != nil {
 			reqLogger.Error(err, "Failed to create OCMAgent. Will retry on next reconcile.")
 			return reconcile.Result{}, err
