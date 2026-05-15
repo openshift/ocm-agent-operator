@@ -63,11 +63,13 @@ repos:
   # 2. SECRETS DETECTION  |  target < 5s  |  always blocking
   #    Scans all file types (YAML, shell, config) — gosec covers Go only.
   #    High-confidence findings block; configure .gitleaks.toml for allowlist.
+  #    Custom config: .gitleaks.toml (OCM-specific patterns, test fixtures)
   # ---------------------------------------------------------------------------
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.18.0                         # pinned immutable tag (golden rule 15)
     hooks:
       - id: gitleaks
+        args: ['--config=.gitleaks.toml']
 
   # ---------------------------------------------------------------------------
   # 3. STATIC ANALYSIS  |  target < 15s cached  |  error
