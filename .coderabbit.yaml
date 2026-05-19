@@ -1,0 +1,21 @@
+inheritance: true
+reviews:
+  path_filters:
+    # Exclude boilerplate and generated code
+    - "!boilerplate/**"
+    - "!hack/**"
+
+    # Exclude build artifacts and dependencies
+    - "!build/**"
+    - "!.venv/**"
+    - "!vendor/**"
+
+    # Exclude generated config code
+    - "!config/**/zz_generated.*.go"  
+
+    # Exclude generated API code
+    - "!api/**/zz_generated.*.go"
+
+    # Exclude test fixtures
+    - "!**/testdata/**"
+    - "!**/.test-fixtures/**"
