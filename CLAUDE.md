@@ -32,6 +32,12 @@ boilerplate/_lib/container-make        # Run make inside boilerplate container
 boilerplate/_lib/container-make generate  # Generate mocks in container environment
 ```
 
+## Development Workflow
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for complete setup instructions, validation commands, and testing procedures.
+
+**Note for Claude Code users:** The stop hook automatically runs `prek run --all-files` before Claude stops, catching validation issues early. Human developers should follow the setup in CONTRIBUTING.md to install pre-commit hooks.
+
 ## Architecture
 
 ### Core Components
