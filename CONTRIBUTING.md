@@ -15,7 +15,7 @@ Thank you for your interest in contributing! This guide provides comprehensive i
 - [Testing](#testing)
 - [Boilerplate Framework](#boilerplate-framework)
 - [CI/CD Integration](#cicd-integration)
-
+- [Additional Resources](#additional-resources)
 
 ## Code of Conduct
 
@@ -32,6 +32,12 @@ Before contributing, ensure you have the following tools installed:
 ## Setup
 
 ```bash
+# Install golangci-lint (macOS)
+brew install golangci-lint
+
+# Install golangci-lint (Linux)
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+
 # Install prek (macOS)
 brew install prek
 
@@ -117,6 +123,8 @@ make test
 make coverage
 ```
 
+*For detailed testing instructions for this specific operator, please see [docs/testing.md](docs/testing.md).*
+
 
 ## Boilerplate Framework
 
@@ -130,3 +138,8 @@ Key boilerplate targets:
 ## CI/CD Integration
 
 The project uses **OpenShift PROW** for continuous integration. Every pull request triggers a set of jobs defined in the `openshift/release` repository that execute `make validate`, `make lint`, and `make test`.
+
+## Additional Resources
+
+- [docs/development.md](docs/development.md)
+- [docs/design.md](docs/design.md)
