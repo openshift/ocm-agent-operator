@@ -120,7 +120,7 @@ The pre-commit gitleaks hook will block commits containing secrets.
 
 Use conventional commits style:
 
-```
+```text
 <type>: <short summary>
 
 <optional body>

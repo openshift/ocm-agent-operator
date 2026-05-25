@@ -46,7 +46,7 @@ Prow logs are stored at:
 - **Periodic jobs**: `gs://test-platform-results/logs/[JOB_NAME]/[JOB_ID]`
 
 **Viewing logs via web**:
-```
+```text
 https://prow.ci.openshift.org/view/gs/test-platform-results/pr-logs/pull/openshift_ocm-agent-operator/[PR_NUMBER]/[JOB_NAME]/[JOB_ID]
 ```
 
@@ -90,7 +90,7 @@ gh pr checks PR_NUMBER
 
 ### Step 2: Access Prow UI
 Open the Prow link from PR checks or construct manually:
-```
+```text
 https://prow.ci.openshift.org/?repo=openshift%2Focm-agent-operator&type=presubmit
 ```
 
@@ -159,11 +159,17 @@ gh pr checks <PR_NUMBER> | grep "pull-ci-openshift-ocm-agent-operator"
 # Check Tekton pipeline status
 gh pr view <PR_NUMBER> --json statusCheckRollup --jq '.statusCheckRollup[] | select(.context | contains("Tekton"))'
 
-# Open Prow dashboard for this repo
-open "https://prow.ci.openshift.org/?repo=openshift%2Focm-agent-operator"
+# Open Prow dashboard in browser (cross-platform)
+# Copy and paste this URL into your browser:
+# https://prow.ci.openshift.org/?repo=openshift%2Focm-agent-operator
 
-# View specific PR on Prow
-open "https://prow.ci.openshift.org/?repo=openshift%2Focm-agent-operator&type=presubmit&pull=<PR_NUMBER>"
+# Or use platform-specific command:
+# macOS: open "https://prow.ci.openshift.org/?repo=openshift%2Focm-agent-operator"
+# Linux: xdg-open "https://prow.ci.openshift.org/?repo=openshift%2Focm-agent-operator"
+# Windows: start "https://prow.ci.openshift.org/?repo=openshift%2Focm-agent-operator"
+
+# View specific PR on Prow (replace <PR_NUMBER>)
+# https://prow.ci.openshift.org/?repo=openshift%2Focm-agent-operator&type=presubmit&pull=<PR_NUMBER>
 ```
 
 ## Troubleshooting

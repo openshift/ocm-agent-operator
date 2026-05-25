@@ -8,7 +8,7 @@ This repository uses **prek** (git hook manager) for quality checks and validati
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────┐
 │   Developer / Claude Code Agent     │
 └──────────────┬──────────────────────┘
@@ -51,23 +51,51 @@ This repository uses **prek** (git hook manager) for quality checks and validati
 ## Available Hooks
 
 ### [stop-prek-validation.sh](./stop-prek-validation.sh)
-**Purpose**: Run prek validation every time Claude Code stops
+**Purpose**: Run prek validation when Claude makes changes (or always, if configured)
 
 **Triggers**: On Claude Code session stop (Stop hook)
 
 **Behavior**:
-- Runs `prek run --config hack/prek.ci.toml --all-files` automatically
+
+**Default mode** (recommended):
+- Only runs if there are uncommitted changes (staged, unstaged, or untracked files)
+- Skips validation for read-only queries (fast iteration)
+- Validates when Claude modifies code (before commit)
+
+**Strict mode** (opt-in):
+- Set environment variable: `export CLAUDE_LINT_ON_STOP=true`
+- Always runs validation on every stop, regardless of changes
+- Use when you want maximum quality enforcement
+- Slower but catches issues immediately
+
+**Common behavior**:
+- Runs `prek run --config hack/prek.ci.toml` on changed files
 - Uses CI-compatible config (skips network-dependent hooks like rh-pre-commit, gitleaks)
 - Blocks Claude from stopping if issues found
 - Feeds errors back to Claude for automatic fixes
 - Includes infinite loop guard (allows stop on retry)
 
 **Benefits**:
-- Catches issues between prompts (not just at commit time)
-- Enables longer autonomous work without human intervention
-- Shortens feedback loop for quality checks
+- **Default**: No performance impact on read-only queries (0s when no changes)
+- **Default**: Catches issues when Claude modifies code (before commit)
+- **Strict**: Maximum quality enforcement on every interaction
+- Fast validation (5-10s typical) - only checks changed files
+
+**Performance**:
+- Default mode, clean working directory: 0s (skipped)
+- Default mode, with changes: 5-10s typical (changed files only)
+- Strict mode (CLAUDE_LINT_ON_STOP=true): 5-10s every stop
 
 **Installation**: Configured in `.claude/settings.json`
+
+**Enable strict mode**:
+```bash
+# In your shell profile (~/.zshrc, ~/.bashrc)
+export CLAUDE_LINT_ON_STOP=true
+
+# Or for single session
+CLAUDE_LINT_ON_STOP=true claude
+```
 
 ---
 
@@ -89,15 +117,6 @@ This repository uses **prek** (git hook manager) for quality checks and validati
 ```bash
 .claude/hooks/pre-edit.sh path/to/file.go
 ```
-
----
-
-### [secret-scanner.sh](./secret-scanner.sh)
-**Purpose**: Legacy secret scanner script
-
-**Status**: Reference implementation (superseded by gitleaks in prek)
-
-**Modern Alternative**: Use `prek run gitleaks` or configure in `prek.toml`
 
 ---
 
@@ -283,16 +302,29 @@ cat prek.toml
 uv tool upgrade prek  # or pipx upgrade prek
 ```
 
-### Bypass Hook (Emergency Only)
-```bash
-# Skip specific hook
-SKIP=hook-id git commit
+### Hook Failures (DO NOT Bypass)
 
-# NEVER use (bypasses all validation)
-git commit --no-verify  # FORBIDDEN
+**NEVER bypass hooks:**
+```bash
+# FORBIDDEN - bypasses all validation
+git commit --no-verify
+
+# FORBIDDEN - bypasses specific hooks
+SKIP=hook-id git commit
 ```
 
-**Security hooks (gitleaks, rh-pre-commit) should NEVER be bypassed.**
+**If hooks are blocking your commit:**
+1. **Investigate and fix the root issue** - hooks catch real problems
+2. **If the hook or config is broken:**
+   - Fix the hook/config first
+   - Open an issue documenting the problem
+   - Request reviewer approval before merge
+3. **Re-run full validation:**
+   - `prek run --all-files` locally
+   - Ensure all required CI checks pass
+   - Get explicit code review approval
+
+**Security hooks (gitleaks, rh-pre-commit) must NEVER be bypassed under any circumstances.**
 
 ## Version Management
 

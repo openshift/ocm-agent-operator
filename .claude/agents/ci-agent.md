@@ -241,7 +241,7 @@ Escalate to human when:
 ## Output Format
 
 Report CI issues in this format:
-```
+```text
 CI Status: FAILING
 Pipeline: ocm-agent-operator-pull-request
 Stage: golangci-lint

@@ -15,6 +15,35 @@ if [[ -z "$FILE" ]]; then
   exit 1
 fi
 
+# Normalize file path to be repo-relative for consistent pattern matching
+# This ensures patterns like vendor/* work regardless of whether the input is absolute or relative
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
+if [[ "$FILE" = /* ]]; then
+  # Convert absolute path to repo-relative
+  FILE="${FILE#"$REPO_ROOT"/}"
+fi
+# Strip leading ./
+FILE="${FILE#./}"
+
+# Helper function for interactive confirmation
+confirm_or_exit() {
+  local prompt="$1"
+  echo "$prompt"
+
+  # Check if stdin is a TTY (interactive terminal)
+  if [[ ! -t 0 ]]; then
+    echo "❌ ERROR: Non-interactive environment detected"
+    echo "   This operation requires manual confirmation"
+    echo "   Run this script in an interactive terminal"
+    exit 1
+  fi
+
+  read -r response
+  if [[ ! "$response" =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
+}
+
 # =============================================================================
 # GENERATED FILES - BLOCK EDITS
 # =============================================================================
@@ -41,11 +70,7 @@ if [[ "$FILE" == deploy/crds/* ]] && [[ "$FILE" == *.yaml ]]; then
   echo "   Consider editing api/v1alpha1/*.go instead."
   echo "   To regenerate CRDs: make manifests"
   echo ""
-  echo "   Continue? (y/N)"
-  read -r response
-  if [[ ! "$response" =~ ^[Yy]$ ]]; then
-    exit 1
-  fi
+  confirm_or_exit "   Continue? (y/N)"
 fi
 
 # =============================================================================
@@ -55,11 +80,7 @@ fi
 if [[ "$FILE" == "go.sum" ]]; then
   echo "⚠️  WARNING: Editing go.sum directly"
   echo "   This file is managed by 'go mod tidy'."
-  echo "   Are you sure you want to edit it manually? (y/N)"
-  read -r response
-  if [[ ! "$response" =~ ^[Yy]$ ]]; then
-    exit 1
-  fi
+  confirm_or_exit "   Are you sure you want to edit it manually? (y/N)"
 fi
 
 # =============================================================================
@@ -73,15 +94,11 @@ if [[ "$FILE" == vendor/* ]]; then
   exit 1
 fi
 
-if [[ "$FILE" == boilerplate/* ]] && [[ "$FILE" != boilerplate/update ]]; then
+if [[ "$FILE" == boilerplate/* ]] && [[ "$FILE" != boilerplate/update* ]]; then
   echo "⚠️  WARNING: Editing boilerplate file: $FILE"
   echo "   Boilerplate is managed upstream."
   echo "   Local changes may be overwritten by 'make boilerplate-update'."
-  echo "   Continue? (y/N)"
-  read -r response
-  if [[ ! "$response" =~ ^[Yy]$ ]]; then
-    exit 1
-  fi
+  confirm_or_exit "   Continue? (y/N)"
 fi
 
 # =============================================================================
@@ -93,7 +110,7 @@ HIGH_RISK_PATTERNS=(
   "*/auth*.go"
   "*_rbac.yaml"
   "*/networkpolicy*.go"
-  "ClusterRole*.yaml"
+  "*ClusterRole*.yaml"
   ".tekton/*.yaml"
   "build/Dockerfile"
 )
@@ -108,11 +125,7 @@ for pattern in "${HIGH_RISK_PATTERNS[@]}"; do
     echo "   - Test coverage"
     echo "   - Security validation"
     echo ""
-    echo "   Continue? (y/N)"
-    read -r response
-    if [[ ! "$response" =~ ^[Yy]$ ]]; then
-      exit 1
-    fi
+    confirm_or_exit "   Continue? (y/N)"
     break
   fi
 done
@@ -127,11 +140,7 @@ if [[ -f "$FILE" ]]; then
   if (( LINES > 500 )); then
     echo "⚠️  LARGE FILE: $FILE ($LINES lines)"
     echo "   Prefer targeted edits over broad refactors."
-    echo "   Continue? (y/N)"
-    read -r response
-    if [[ ! "$response" =~ ^[Yy]$ ]]; then
-      exit 1
-    fi
+    confirm_or_exit "   Continue? (y/N)"
   fi
 fi
 

@@ -105,15 +105,17 @@ When `go.mod` changes (major versions), sync:
 ```bash
 # Good
 make go-build                 # Build the operator binary
-
-# Bad (no language tag)
 ```
+
+Bad (no language tag):
+\`\`\`
 make go-build
-```
+\`\`\`
 
-# Bad (placeholder)
+Bad (placeholder):
+\`\`\`
 make <target>
-```
+\`\`\`
 
 ### Link Format
 - Use relative paths for internal docs: `[Testing](./TESTING.md)`

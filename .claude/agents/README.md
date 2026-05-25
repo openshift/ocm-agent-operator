@@ -93,7 +93,7 @@ Specialized agents for OCM Agent Operator development workflows.
 
 ### Single Agent Invocation
 Use a specific agent when the task is clear:
-```
+```text
 "Run lint-agent to check formatting"
 "Use security-agent to scan for secrets"
 "Invoke test-agent on pkg/ocmagenthandler"
@@ -101,7 +101,7 @@ Use a specific agent when the task is clear:
 
 ### Multi-Agent Workflow
 Agents can work together for comprehensive validation:
-```
+```text
 1. lint-agent: Fix formatting and linting
 2. test-agent: Run affected tests
 3. security-agent: Scan for secrets and RBAC issues
@@ -111,7 +111,7 @@ Agents can work together for comprehensive validation:
 
 ### Pre-Commit Workflow
 Recommended agent sequence before committing:
-```
+```text
 1. security-agent (secrets, RBAC)
 2. lint-agent (formatting, linting)
 3. test-agent (targeted tests)
@@ -120,7 +120,7 @@ Recommended agent sequence before committing:
 
 ### Pre-PR Workflow
 Full validation before creating pull request:
-```
+```text
 1. lint-agent --all-files
 2. test-agent --full-suite
 3. security-agent --comprehensive
@@ -182,7 +182,7 @@ Agents complement (don't replace) pre-commit hooks:
 ## Output Format
 
 All agents should report findings consistently:
-```
+```text
 [AGENT] [SEVERITY] Location: Issue
 Example: [lint-agent] [ERROR] pkg/handler/deployment.go:42: unreachable code
 Example: [security-agent] [CRITICAL] deploy/role.yaml:15: Wildcard permission
@@ -224,7 +224,7 @@ To add a new agent:
 - `model`: Claude model to use (`sonnet`, `opus`, or `haiku`)
 
 **Agent file structure**:
-```
+```text
 .claude/agents/
 ├── README.md
 ├── ci-agent.md           # Frontmatter + markdown body

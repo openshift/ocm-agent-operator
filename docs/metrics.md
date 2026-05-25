@@ -25,6 +25,6 @@ Description: This gauge is set to `1` if OCM Agent Operator cannot find the `OCM
 or `0` if it can do so successfully.
 
 Example:
-```
+```text
 ocm_agent_operator_ocm_agent_resource_absent = 1
 ```

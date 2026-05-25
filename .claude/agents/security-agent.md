@@ -162,7 +162,7 @@ Custom allowlist in `.gitleaks.toml`:
 ## Output Format
 
 Report findings in this format:
-```
+```text
 [SEVERITY] [CATEGORY] Location: Issue
 Example: [HIGH] [SECRET] pkg/handler/auth.go:42: Hardcoded API key detected
 Example: [CRITICAL] [RBAC] deploy/role.yaml:15: Wildcard permission not allowed
@@ -179,9 +179,9 @@ Severity levels:
 Safe to auto-fix:
 - Removing trailing whitespace from manifests
 - Fixing YAML indentation
-- Adding missing security context in manifests
 
 NOT safe to auto-fix:
+- Adding or modifying security context in manifests (requires manual review)
 - Removing wildcards from RBAC (requires understanding requirements)
 - Removing secrets from code (requires alternative solution)
 - Changing authentication logic

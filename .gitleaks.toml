@@ -26,7 +26,6 @@ paths = [
   '''test/fixtures/.*''',
   '''test/deploy/.*''',
   '''.*_test\.go''',
-  '''.*\.md$''',  # Documentation examples
   '''boilerplate/.*''',
   '''vendor/.*''',
   '''zz_generated\..*\.go''',

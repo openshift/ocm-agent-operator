@@ -82,7 +82,7 @@ Key rules:
 ## Output Format
 
 Report issues in this format:
-```
+```text
 [FILE:LINE] [LINTER] Issue description
 Example: pkg/handler/deployment.go:42 [govet] unreachable code
 ```

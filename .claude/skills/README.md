@@ -30,7 +30,7 @@ Skills are reusable workflows that combine multiple tools and knowledge to accom
 ### Invoking Skills
 
 Skills can be referenced in Claude conversations:
-```
+```text
 "Use the prow-ci skill to investigate the failed test in PR #123"
 "Check Prow CI results for the latest build"
 ```
