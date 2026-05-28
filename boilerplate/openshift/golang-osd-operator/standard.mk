@@ -247,15 +247,11 @@ endif
 sync-pko-crds:
 ifneq (,$(wildcard deploy_pko))
 	@if [ -d deploy/crds ]; then \
-		yq_yaml_flag=""; \
-		if $(YQ) --version 2>&1 | grep -qE "^yq [0-9]"; then \
-			yq_yaml_flag="-y"; \
-		fi; \
 		for crd in deploy/crds/*.yaml; do \
 			[ -f "$$crd" ] || continue; \
 			name=$$($(YQ) -r '.metadata.name' "$$crd"); \
-			$(YQ) $$yq_yaml_flag '.metadata.annotations["package-operator.run/phase"] = "crds" | .metadata.annotations["package-operator.run/collision-protection"] = "IfNoController"' \
-				"$$crd" > "deploy_pko/CustomResourceDefinition-$$name.yaml"; \
+			$(YQ) eval '.metadata.annotations["package-operator.run/phase"] = "crds" | .metadata.annotations["package-operator.run/collision-protection"] = "IfNoController"' \
+				--indent 2 --no-doc "$$crd" > "deploy_pko/CustomResourceDefinition-$$name.yaml"; \
 			echo "Synced CRD $$name to deploy_pko/"; \
 		done; \
 	fi
