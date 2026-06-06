@@ -67,7 +67,7 @@ Specialized agents for OCM Agent Operator development workflows.
 **Key capabilities**:
 - Update docs after code changes
 - Ensure command examples work
-- Validate markdown formatting
+- Validate Markdown formatting
 - Keep docs synchronized
 
 ---

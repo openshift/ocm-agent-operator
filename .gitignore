@@ -93,3 +93,4 @@ LocalRegistryDockerfile
 # app-sre pipeline testing
 .docker/
 saas-ocm-agent-operator-bundle/
+.work/
