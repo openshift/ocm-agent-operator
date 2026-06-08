@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "github>MitaliBhalla/boilerplate#draft/rosa-745-gomod-batch-monday//.github/renovate.json"
+    "github>openshift/boilerplate//.github/renovate.json"
   ]
 }
