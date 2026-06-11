@@ -20,6 +20,15 @@
 #
 set -uo pipefail
 
+# Ensure we're running from the git repository root
+# This handles cases where Claude Code's CWD is in a subdirectory (e.g., .claude/skills/)
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+if [[ -z "$REPO_ROOT" ]]; then
+  jq -n '{"decision": "block", "reason": "Not in a git repository. Cannot run prek validation."}'
+  exit 0
+fi
+cd "$REPO_ROOT" || exit 1
+
 # Check for jq dependency
 if ! command -v jq &> /dev/null; then
   cat <<'EOF'
@@ -67,8 +76,16 @@ Retry the action once installed so validation can run." \
 fi
 
 # Run prek validation (using CI config to skip network-dependent hooks)
-# Only validate changed files for speed
-PREK_OUTPUT=$(prek run --config hack/prek.ci.toml 2>&1)
+# Validate changed files (staged + unstaged + untracked)
+CHANGED_FILES=$(git diff --name-only --diff-filter=d HEAD; git ls-files --others --exclude-standard)
+if [[ -z "$CHANGED_FILES" ]]; then
+  # No files changed, but we're here because git status showed changes
+  # Fall back to --all-files to catch any edge cases
+  PREK_OUTPUT=$(prek run --all-files --config hack/prek.ci.toml 2>&1)
+else
+  # Pass changed files explicitly to prek
+  PREK_OUTPUT=$(echo "$CHANGED_FILES" | xargs prek run --config hack/prek.ci.toml --files 2>&1)
+fi
 PREK_EXIT=$?
 
 if [[ $PREK_EXIT -eq 0 ]]; then
