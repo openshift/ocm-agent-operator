@@ -39,7 +39,7 @@ type FleetNotification struct {
 	// References useful for context or remediation - this could be links to documentation, KB articles, etc
 	References []NotificationReferenceType `json:"references,omitempty"`
 
-	// +kubebuilder:validation:Enum={"Debug","Info","Warning","Error","Fatal"}
+	// +kubebuilder:validation:Enum={"Debug","Info","Warning","Major","Critical","Error","Fatal"}
 	// Re-use the severity definitation in managednotification_types
 	Severity NotificationSeverity `json:"severity"`
 
