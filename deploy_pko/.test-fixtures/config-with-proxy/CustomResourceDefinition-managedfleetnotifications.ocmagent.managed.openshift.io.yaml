@@ -73,6 +73,8 @@ spec:
                         - Debug
                         - Info
                         - Warning
+                        - Major
+                        - Critical
                         - Error
                         - Fatal
                       type: string
