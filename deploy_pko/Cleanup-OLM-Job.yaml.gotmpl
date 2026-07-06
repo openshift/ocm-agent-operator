@@ -1,13 +1,5 @@
 ---
 # This Job cleans up old OLM resources after migrating to PKO
-# IMPORTANT: Review and customize this template before deploying!
-# 
-# Things to customize:
-# 1. Adjust the namespace if needed
-# 2. Modify resource filters (CSV names, labels, etc.)
-# 3. Review RBAC permissions
-# 4. Update the cleanup logic for your specific operator
-#
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -26,7 +18,6 @@ metadata:
     package-operator.run/phase: cleanup-rbac
     package-operator.run/collision-protection: IfNoController
 rules:
-  # CUSTOMIZE: Adjust permissions as needed for your cleanup tasks
   - apiGroups:
       - operators.coreos.com
     resources:
@@ -58,12 +49,12 @@ subjects:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: olm-cleanup
+  name: olm-cleanup-{{ .config.image | sha256sum | trunc 8 }}
   namespace: openshift-ocm-agent-operator
   annotations:
     package-operator.run/phase: cleanup-deploy
-    package-operator.run/collision-protection: IfNoController
 spec:
+  ttlSecondsAfterFinished: 172800
   template:
     metadata:
       annotations:
@@ -83,15 +74,7 @@ spec:
             - |
               #!/bin/sh
               set -euxo pipefail
-              # CUSTOMIZE: Update the label selector for your operator
-              # Example pattern: operators.coreos.com/OPERATOR_NAME.NAMESPACE
               oc -n openshift-ocm-agent-operator delete csv -l "operators.coreos.com/ocm-agent-operator.openshift-ocm-agent-operator" || true
-              
-              # CUSTOMIZE: Add any additional cleanup logic here
-              # Examples:
-              # - Delete subscriptions
-              # - Delete operator groups
-              # - Clean up custom resources
           resources:
             requests:
               cpu: 100m
