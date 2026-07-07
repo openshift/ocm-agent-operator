@@ -4,7 +4,7 @@ Thank you for your interest in contributing to the OCM Agent Operator project.
 
 ## Quick Start
 
-1. **Setup**: Install Go 1.22.7+, operator-sdk v1.21.0
+1. **Setup**: Install Go 1.26.0+, operator-sdk v1.21.0
 2. **Install tools**: `make tools`
 3. **Run pre-commit**: `pip install pre-commit && pre-commit install`
 4. **Build**: `make go-build`

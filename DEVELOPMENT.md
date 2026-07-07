@@ -4,7 +4,7 @@ Quick reference for developing the OCM Agent Operator.
 
 ## Prerequisites
 
-- **Go**: 1.22.7 or later
+- **Go**: 1.26.0 or later
 - **operator-sdk**: v1.21.0
 - **kubectl**: For cluster interaction
 - **pre-commit**: `pip install pre-commit`
