@@ -37,12 +37,24 @@ spec:
             memory: 40Mi
             cpu: 1m
           limits:
-            memory: 64Mi
-            cpu: 10m
+            memory: 200Mi
+            cpu: 50m
         command:
         - ocm-agent-operator
         imagePullPolicy: Always
         terminationMessagePolicy: FallbackToLogsOnError
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
         env:
         - name: WATCH_NAMESPACE
           value: openshift-ocm-agent-operator
