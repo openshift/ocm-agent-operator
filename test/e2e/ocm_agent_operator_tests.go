@@ -353,7 +353,7 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 			cm := &corev1.ConfigMap{}
 			err := client.Get(ctx, testOCMAgentConfigMap, namespace, cm)
 			return err != nil || string(cm.UID) != originalUID
-		}, 60*time.Second, waitInterval).Should(BeTrue(), "ConfigMap should be deleted or recreated")
+		}, waitTimeout, waitInterval).Should(BeTrue(), "ConfigMap should be deleted or recreated")
 
 		// Wait for operator to recreate
 		ginkgo.By("waiting for operator to recreate ConfigMap")
