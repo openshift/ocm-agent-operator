@@ -1,23 +1,128 @@
 ---
 name: prow-ci
-description: Access and analyze OpenShift Prow CI results for ocm-agent-operator
-trigger: prow, prow-ci, /prow-ci, ci results, check ci
+description: Fetch and analyze OpenShift Prow CI job failures with automated artifact download and failure pattern detection
+trigger: prow, prow-ci, /prow-ci, ci results, check ci, analyze ci failure
 ---
 
-# Prow CI Access for OCM Agent Operator
+# Prow CI Analysis for OCM Agent Operator
 
-This skill helps you access and analyze Prow CI results for the ocm-agent-operator repository.
+This skill fetches Prow CI job artifacts from Google Cloud Storage and provides automated failure analysis.
+
+## Prerequisites
+
+Before using this skill, verify gcloud CLI is installed:
+```bash
+which gcloud
+```
+
+If not installed, provide instructions from: https://cloud.google.com/sdk/docs/install
+
+**Note**: The `test-platform-results` GCS bucket is publicly accessible - no authentication required.
 
 ## Quick Start
 
 ```bash
-# Invoke the skill
-/prow-ci
+# Check PR status and get Prow job URLs
+gh pr checks <PR_NUMBER>
+
+# Analyze a failed job
+/prow-ci <prow-job-url>
 
 # Or ask naturally:
-"Check CI results for PR 255"
-"What Prow jobs are failing?"
-"Show me the CI status"
+"Analyze the lint failure in PR <NUMBER>"
+"Check why the validate job failed"
+"Show me what broke in the coverage job"
+```
+
+## Implementation
+
+When invoked, this skill:
+
+1. **Fetches artifacts** using `fetch_prow_artifacts.py`:
+   - Downloads **prowjob.json** (job metadata)
+   - Downloads **build-log.txt** (complete build output with all errors)
+   - Saves to `.work/prow-artifacts/<build-id>/`
+   - **Note**: Script is optimized to only download essential files. Optional artifacts (JUnit XML, per-target logs) are skipped as build-log.txt contains all needed information.
+
+2. **Analyzes failures** using `analyze_failure.py`:
+   - Parses build-log.txt for error patterns
+   - Detects common failure patterns (lint, build, timeout, OOM)
+   - Extracts error messages and stack traces
+   - Identifies compilation errors and test failures
+
+3. **Generates report**:
+   - Markdown format with failure summary
+   - Pattern detection (compilation errors, lint failures, timeouts)
+   - Top error messages and failures
+   - Actionable failure details
+
+## Usage Instructions
+
+### Step 1: Get Prow Job URL
+
+```bash
+# View PR checks to find failed jobs
+gh pr checks <PR_NUMBER>
+
+# Or get detailed status
+gh pr view <PR_NUMBER> --json statusCheckRollup --jq '.statusCheckRollup[] | select(.state == "FAILURE")'
+```
+
+Example Prow job URL:
+```text
+https://prow.ci.openshift.org/view/gs/test-platform-results/pr-logs/pull/openshift_ocm-agent-operator/<PR_NUMBER>/pull-ci-openshift-ocm-agent-operator-master-lint/<BUILD_ID>
+```
+
+### Step 2: Fetch and Analyze
+
+Run the fetch script from repository root:
+```bash
+# From repository root
+python3 .claude/skills/prow-ci/fetch_prow_artifacts.py "<prow-job-url>" -o .work/prow-artifacts
+```
+
+This downloads only the essential files:
+- `prowjob.json` - Job metadata (job name, state, type, URL)
+- `build-log.txt` - Complete build output (contains all errors, test failures, and output)
+
+### Step 3: Analyze Failures
+
+```bash
+python3 .claude/skills/prow-ci/analyze_failure.py .work/prow-artifacts/<build-id> -f markdown
+```
+
+Output includes:
+- Job information (name, state, URL)
+- Detected failure patterns (lint errors, build failures, timeouts)
+- Top error messages from build log
+- Failure details extracted from log
+
+### Step 4: Present Findings
+
+Create a clear summary for the user with:
+- Root cause identification
+- Detected patterns (lint, build, timeout, etc.)
+- Key error messages
+- Actionable next steps to fix the issue
+
+### Example Workflow
+
+```bash
+# User provides: "Analyze the lint failure in PR <NUMBER>"
+
+# 1. Get Prow job URL
+gh pr checks <PR_NUMBER> | grep lint
+
+# 2. Fetch artifacts
+python3 .claude/skills/prow-ci/fetch_prow_artifacts.py \
+  "https://prow.ci.openshift.org/view/gs/test-platform-results/pr-logs/pull/openshift_ocm-agent-operator/<PR_NUMBER>/pull-ci-openshift-ocm-agent-operator-master-lint/<BUILD_ID>"
+
+# 3. Analyze
+python3 .claude/skills/prow-ci/analyze_failure.py \
+  .work/prow-artifacts/<BUILD_ID> \
+  -f markdown
+
+# 4. Review the output and provide actionable summary
 ```
 
 ## Prow Resources
@@ -31,12 +136,11 @@ This skill helps you access and analyze Prow CI results for the ocm-agent-operat
 ### 1. Check Recent CI Results
 
 ```bash
-# View recent PR jobs
-curl -s "https://prow.ci.openshift.org/?repo=openshift%2Focm-agent-operator&type=presubmit" | grep -E "pull-ci-openshift-ocm-agent-operator"
-
 # Check latest job status for specific PR
-# Replace PR_NUMBER with actual PR number
 gh pr view PR_NUMBER --json statusCheckRollup --jq '.statusCheckRollup[] | select(.context | contains("prow"))'
+
+# Or view all checks for a PR
+gh pr checks PR_NUMBER
 ```
 
 ### 2. Access Build Logs
@@ -59,11 +163,8 @@ gh pr view PR_NUMBER --json statusCheckRollup
 # Find failed jobs
 gh pr checks PR_NUMBER | grep -i "fail"
 
-# Access specific job artifacts
-# Navigate to Prow UI and click on:
-# - Build Log (for compilation/test output)
-# - JUnit (for structured test results)
-# - Artifacts (for generated files, coverage, etc.)
+# Use this skill to fetch and analyze failures
+# The script downloads prowjob.json and build-log.txt for analysis
 ```
 
 ### 4. Common Job Names
@@ -111,8 +212,8 @@ make go-test
 
 # For linting (matches: pull-ci-...-lint)
 make go-check
-# OR use pre-commit for comprehensive linting
-pre-commit run --all-files
+# OR use prek for comprehensive linting
+prek run --all-files
 
 # For validation (matches: pull-ci-...-validate)
 make validate
@@ -135,7 +236,7 @@ This repo uses **both Prow and Tekton** for comprehensive CI:
 - Configuration: `ci-operator/config/openshift/ocm-agent-operator/openshift-ocm-agent-operator-master.yaml`
 - Runs: lint, test, validate, coverage, e2e-binary-build
 - Uses Codecov for coverage reporting (secret: `ocm-agent-operator-codecov-token`)
-- Skip rules: Changes to `.tekton/`, `.github/`, `.md` files, `OWNERS`, `LICENSE` don't trigger most jobs
+- Skip rules: Changes to `.tekton/`, GitHub (`.github/`), `.md` files, `OWNERS`, `LICENSE` don't trigger most jobs
 
 **Tekton Pipelines** (`.tekton/`):
 - Primary build pipeline using Pipelines as Code

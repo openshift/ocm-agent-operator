@@ -13,6 +13,10 @@
       "Bash(ginkgo -r ./...)",
       "Bash(pre-commit run)",
       "Bash(pre-commit run --all-files)",
+      "Bash(prek run)",
+      "Bash(prek run *)",
+      "Bash(prek install)",
+      "Bash(prek --version)",
       "Bash(boilerplate/_lib/container-make)",
       "Bash(boilerplate/_lib/container-make generate)",
       "Bash(git status)",
@@ -35,19 +39,43 @@
     ],
     "deny": [
       "Bash(git commit --no-verify)",
-      "Bash(git push --force origin master)",
-      "Bash(git push --force origin main)",
+      "Bash(git commit --no-verify *)",
+      "Bash(git commit -n)",
+      "Bash(git commit -n *)",
+      "Bash(git push --force)",
+      "Bash(git push --force *)",
+      "Bash(git push -f)",
+      "Bash(git push -f *)",
+      "Bash(git push * --force)",
+      "Bash(git push * --force *)",
+      "Bash(git push * -f)",
+      "Bash(git push * -f *)",
+      "Bash(git push --force-with-lease)",
+      "Bash(git push --force-with-lease *)",
+      "Bash(git push * --force-with-lease)",
+      "Bash(git push * --force-with-lease *)",
       "Bash(rm -rf /)",
       "Bash(chmod 777 *)"
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/session-start-prek-setup.sh\"",
+            "async": true
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/stop-prek-validation.sh"
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/stop-prek-validation.sh\""
           }
         ]
       }
