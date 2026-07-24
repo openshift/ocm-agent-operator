@@ -4,7 +4,6 @@ go 1.26.0
 
 require (
 	github.com/go-logr/logr v1.4.3
-	github.com/golang/mock v1.6.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.42.1
@@ -24,7 +23,7 @@ require (
 	sigs.k8s.io/e2e-framework v0.7.0
 )
 
-require go.uber.org/mock v0.6.0
+require go.uber.org/mock v0.5.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0 // indirect
