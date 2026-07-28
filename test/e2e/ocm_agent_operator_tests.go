@@ -19,6 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -72,15 +73,54 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 			deploymentName,
 			deploymentName + "-operator",
 		}
+
+		createdTestSecret bool
 	)
 
-	ginkgo.BeforeAll(func() {
-		// setup the k8s client
+	ginkgo.BeforeAll(func(ctx context.Context) {
 		cfg, err := config.GetConfig()
 		Expect(err).Should(BeNil(), "failed to get kubeconfig")
 		client, err = resources.New(cfg)
 		Expect(err).Should(BeNil(), "resources.New error")
 		Expect(monitoringv1.AddToScheme(client.GetScheme())).Should(BeNil(), "unable to register monitoringv1 api scheme")
+
+		// The ocm-access-token secret is a cluster prerequisite provisioned by
+		// Hive SyncSets. Some leased clusters don't have it, so create a dummy
+		// one to prevent the entire suite from cascade-failing.
+		ginkgo.By("ensuring ocm-access-token secret exists")
+		secret := &corev1.Secret{}
+		err = client.Get(ctx, secretName, namespace, secret)
+		if apierrors.IsNotFound(err) {
+			ginkgo.By("creating dummy ocm-access-token secret for e2e testing")
+			dummy := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: namespace,
+				},
+				Data: map[string][]byte{
+					"access_token": []byte("e2e-test-token"),
+				},
+			}
+			Expect(client.Create(ctx, dummy)).Should(BeNil(), "failed to create dummy ocm-access-token secret")
+			createdTestSecret = true
+		} else {
+			Expect(err).Should(BeNil(), "failed to check for ocm-access-token secret")
+		}
+	})
+
+	ginkgo.AfterAll(func(ctx context.Context) {
+		if createdTestSecret {
+			ginkgo.By("cleaning up dummy ocm-access-token secret")
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: namespace,
+				},
+			}
+			if err := client.Delete(ctx, secret); err != nil && !apierrors.IsNotFound(err) {
+				Expect(err).Should(BeNil(), "failed to delete dummy ocm-access-token secret")
+			}
+		}
 	})
 
 	cleanupOcmAgentCR := func(ctx context.Context, crName string, timeout, interval time.Duration) {
@@ -657,7 +697,7 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 			cleanupOcmAgentCRAfterTest(ctx, tc.crName, newOcmAgent, waitTimeout, waitInterval)
 		}
 	})
-	
+
 	ginkgo.It("validates ManagedFleetNotification has no controller behavior", func(ctx context.Context) {
 		ginkgo.By("ensuring test prerequisites")
 		Expect(client.Get(ctx, namespace, "", &corev1.Namespace{})).Should(BeNil(), "namespace %s must exist", namespace)
