@@ -24,7 +24,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
