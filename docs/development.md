@@ -94,3 +94,56 @@ To run lint, test and build in `app-sre/boilerplate` container, call `boilerplat
 ```shell
 $ boilerplate/_lib/container-make
 ```
+
+## Maintenance Updates
+
+A maintenance update script is provided to automate common tasks when
+updating the operator for a new OCP release. The script handles
+dependency updates, validation, and boilerplate updates.
+
+The script is located at `hack/maintenance-update.py`.
+
+### Usage
+
+Update latest-tracking dependencies and boilerplate only (no
+release-specific changes):
+
+```shell
+$ python hack/maintenance-update.py
+```
+
+Update dependencies for a specific OCP release:
+
+```shell
+$ python hack/maintenance-update.py --release release-4.19
+```
+
+Override the default dependency lists:
+
+```shell
+$ python hack/maintenance-update.py --release release-4.19 \
+    --version-deps github.com/openshift/api \
+    --latest-deps github.com/openshift/osde2e-common
+```
+
+### What the script does
+
+1. Updates version-pinned dependencies to the specified release branch
+   (when `--release` is provided)
+2. Updates the controller-runtime version for the target release
+3. Updates latest-tracking dependencies to their newest version
+4. Runs `go mod tidy`
+5. Validates changes using `boilerplate/_lib/container-make`
+6. Interactively stages and commits dependency changes
+7. Updates boilerplate via `make boilerplate-update`
+8. Validates and commits boilerplate changes
+
+### Default dependencies
+
+- **Version-pinned** (updated with `--release`):
+  `github.com/openshift/api`
+- **Latest-tracking** (always updated to latest):
+  `github.com/openshift/osde2e-common`
+
+These defaults can be overridden with `--version-deps` and
+`--latest-deps` flags.
