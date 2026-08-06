@@ -35,6 +35,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	corev1 "k8s.io/api/core/v1"
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -146,6 +147,18 @@ func main() {
 			DefaultNamespaces: map[string]cache.Config{
 				operatorNS: {},
 			},
+			ByObject: map[client.Object]cache.ByObject{
+				&corev1.Secret{}: {
+					Namespaces: map[string]cache.Config{
+						"openshift-config": {},
+					},
+				},
+				&corev1.ConfigMap{}: {
+					Namespaces: map[string]cache.Config{
+						"openshift-monitoring": {},
+					},
+				},
+			},
 		},
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -162,17 +175,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create a separate client for the OAH Builder
-	kubeConfig := ctrl.GetConfigOrDie()
-	handlerClient, err := client.New(kubeConfig, client.Options{Scheme: mgr.GetScheme()})
-	if err != nil {
-		os.Exit(1)
-	}
-
 	if err = (&ocmagent.OcmAgentReconciler{
 		Client:                 mgr.GetClient(),
 		Scheme:                 mgr.GetScheme(),
-		OCMAgentHandlerBuilder: ocmagenthandler.NewBuilder(handlerClient),
+		OCMAgentHandlerBuilder: ocmagenthandler.NewBuilder(mgr.GetClient()),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "OcmAgent")
 		os.Exit(1)
