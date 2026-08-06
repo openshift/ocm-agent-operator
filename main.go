@@ -37,6 +37,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/fields"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
@@ -150,12 +151,16 @@ func main() {
 			ByObject: map[client.Object]cache.ByObject{
 				&corev1.Secret{}: {
 					Namespaces: map[string]cache.Config{
-						"openshift-config": {},
+						"openshift-config": {
+							FieldSelector: fields.OneTermEqualSelector("metadata.name", "pull-secret"),
+						},
 					},
 				},
 				&corev1.ConfigMap{}: {
 					Namespaces: map[string]cache.Config{
-						"openshift-monitoring": {},
+						"openshift-monitoring": {
+							FieldSelector: fields.OneTermEqualSelector("metadata.name", "ocm-agent"),
+						},
 					},
 				},
 			},
