@@ -1,0 +1,94 @@
+name: fullsend Jira poll
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  poll:
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: fullsend-jira-poll
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install fullsend
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download --repo fullsend-ai/fullsend -p 'fullsend_*_linux_amd64.tar.gz' -O - | tar xz
+          sudo mv fullsend /usr/local/bin/
+
+      - name: Poll Jira
+        env:
+          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_BASE_URL: ${{ vars.JIRA_BASE_URL }}
+        run: |
+          fullsend poll \
+            --input-driver jira-poll \
+            --jira-url "${JIRA_BASE_URL}" \
+            --jql 'project = ROSAENG AND component = ocm-agent-operator AND issuetype in (Bug, Story, Feature) AND issuetype not in (Vulnerability, Weakness) AND labels not in (security, cve, embargo) AND status not in (Closed, Done, "Won'\''t Do")' \
+            --target-repo "${{ github.repository }}" \
+            --output dispatches.json \
+            --fullsend-dir .fullsend
+
+      - name: Dispatch agent workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JIRA_BASE_URL: ${{ vars.JIRA_BASE_URL }}
+        run: |
+          set -euo pipefail
+
+          if ! jq -e 'length > 0' dispatches.json > /dev/null 2>&1; then
+            echo "No dispatches to process."
+            exit 0
+          fi
+
+          dispatched=0
+          count=$(jq 'length' dispatches.json)
+
+          for i in $(seq 0 $((count - 1))); do
+            record=$(jq -c ".[$i]" dispatches.json)
+            STAGE=$(echo "$record" | jq -r '.stage')
+            RESOURCE_KEY=$(echo "$record" | jq -r '.resource_key')
+            EVENT_TYPE=$(echo "$record" | jq -r '.event_type')
+            ISSUE_ID=$(echo "$record" | jq -r '.iid // 0')
+
+            ISSUE_KEY="${RESOURCE_KEY#issue-}"
+            ISSUE_URL="${JIRA_BASE_URL}/browse/${ISSUE_KEY}"
+
+            EVENT_PAYLOAD=$(jq -nc \
+              --argjson number "$ISSUE_ID" \
+              --arg url "$ISSUE_URL" \
+              '{issue: {number: $number, html_url: $url}}')
+
+            WORKFLOW_NAME=""
+            for wf in .github/workflows/*.yml .github/workflows/*.yaml; do
+              [[ -f "$wf" ]] || continue
+              if grep -qxF "# fullsend-stage: ${STAGE}" "$wf"; then
+                WORKFLOW_NAME=$(basename "$wf")
+                break
+              fi
+            done
+            if [[ -z "$WORKFLOW_NAME" ]]; then
+              echo "::warning::No workflow found for stage ${STAGE}, skipping ${RESOURCE_KEY}"
+              continue
+            fi
+
+            echo "Dispatching ${WORKFLOW_NAME} for ${ISSUE_KEY} (${STAGE})"
+            gh workflow run "$WORKFLOW_NAME" \
+              -f event_type="$EVENT_TYPE" \
+              -f source_repo="${{ github.repository }}" \
+              -f event_payload="$EVENT_PAYLOAD"
+
+            dispatched=$((dispatched + 1))
+          done
+
+          echo "::notice::Dispatched ${dispatched} agent workflow(s)"
