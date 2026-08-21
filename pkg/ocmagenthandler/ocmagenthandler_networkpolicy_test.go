@@ -48,7 +48,9 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 	Context("When building an OCM Agent NetworkPolicy", func() {
 		BeforeEach(func() {
 			testNamespace = oah.NamespaceMonitorng
-			networkPolicy = buildNetworkPolicy(testOcmAgent, testNamespace)
+			var err error
+			networkPolicy, err = buildNetworkPolicy(testOcmAgent, testNamespace)
+			Expect(err).To(BeNil())
 		})
 
 		It("Should have the expected name, namespace and labels", func() {
@@ -58,16 +60,80 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 		})
 
 		It("Should include an ingress rule to allow traffic from the specified namespace", func() {
-			Expect(len(networkPolicy.Spec.Ingress)).To(Equal(1))
-			Expect(networkPolicy.Spec.Ingress[0].From).To(HaveLen(1))
+			Expect(len(networkPolicy.Spec.Ingress)).To(Equal(1), "monitoring namespace ingress contract: expected exactly one ingress rule")
+			Expect(networkPolicy.Spec.Ingress[0].From).To(HaveLen(1), "monitoring namespace ingress contract: expected exactly one From peer")
 
 			nsSelector := networkPolicy.Spec.Ingress[0].From[0].NamespaceSelector
-			Expect(nsSelector).NotTo(BeNil())
-			Expect(nsSelector.MatchLabels).To(HaveKeyWithValue("kubernetes.io/metadata.name", testNamespace))
+			Expect(nsSelector).NotTo(BeNil(), "monitoring namespace ingress contract: NamespaceSelector must be set")
+			Expect(nsSelector.MatchLabels).To(HaveKeyWithValue("kubernetes.io/metadata.name", testNamespace), "monitoring namespace ingress contract: NamespaceSelector must match namespace %q", testNamespace)
+		})
+
+		It("Should restrict ingress to alertmanager pods in the monitoring namespace", func() {
+			podSelector := networkPolicy.Spec.Ingress[0].From[0].PodSelector
+			Expect(podSelector).NotTo(BeNil(), "monitoring namespace ingress contract: PodSelector must be set")
+			Expect(podSelector.MatchLabels).To(HaveKeyWithValue(oah.AlertmanagerPodLabelKey, oah.AlertmanagerPodLabelValue), "monitoring namespace ingress contract: PodSelector must match alertmanager label %s=%s", oah.AlertmanagerPodLabelKey, oah.AlertmanagerPodLabelValue)
 		})
 
 		It("Should apply to pods with the correct app label", func() {
 			Expect(networkPolicy.Spec.PodSelector.MatchLabels).To(HaveKeyWithValue("app", testOcmAgent.Name))
+		})
+
+		Context("for the MUO namespace", func() {
+			BeforeEach(func() {
+				testNamespace = oah.NamespaceMUO
+				var err error
+				networkPolicy, err = buildNetworkPolicy(testOcmAgent, testNamespace)
+				Expect(err).To(BeNil())
+			})
+
+			It("Should restrict ingress to MUO pods only", func() {
+				podSelector := networkPolicy.Spec.Ingress[0].From[0].PodSelector
+				Expect(podSelector).NotTo(BeNil())
+				Expect(podSelector.MatchLabels).To(HaveKeyWithValue(oah.MUOPodLabelKey, oah.MUOPodLabelValue))
+			})
+		})
+
+		Context("for the RHOBS namespace (fleet mode)", func() {
+			BeforeEach(func() {
+				testNamespace = oah.NamespaceRHOBS
+				var err error
+				networkPolicy, err = buildNetworkPolicy(testFleetOcmAgent, testNamespace)
+				Expect(err).To(BeNil())
+			})
+
+			It("Should restrict ingress to RHOBS alertmanager pods only", func() {
+				podSelector := networkPolicy.Spec.Ingress[0].From[0].PodSelector
+				Expect(podSelector).NotTo(BeNil())
+				Expect(podSelector.MatchLabels).To(HaveKeyWithValue(oah.RHOBSPodLabelKey, oah.RHOBSPodLabelValue))
+			})
+
+			It("Should scope ingress to the OBO namespace, since RHOBS has no namespace of its own", func() {
+				nsSelector := networkPolicy.Spec.Ingress[0].From[0].NamespaceSelector
+				Expect(nsSelector).NotTo(BeNil())
+				Expect(nsSelector.MatchLabels).To(HaveKeyWithValue("kubernetes.io/metadata.name", oah.NamespaceOBO))
+			})
+		})
+
+		Context("for the OBO namespace (fleet mode)", func() {
+			BeforeEach(func() {
+				testNamespace = oah.NamespaceOBO
+				var err error
+				networkPolicy, err = buildNetworkPolicy(testFleetOcmAgent, testNamespace)
+				Expect(err).To(BeNil())
+			})
+
+			It("Should restrict ingress to OBO pods only", func() {
+				podSelector := networkPolicy.Spec.Ingress[0].From[0].PodSelector
+				Expect(podSelector).NotTo(BeNil())
+				Expect(podSelector.MatchLabels).To(HaveKeyWithValue(oah.OBOPodLabelKey, oah.OBOPodLabelValue))
+			})
+		})
+
+		Context("for an unrecognized namespace", func() {
+			It("returns an error instead of silently falling back to a namespace-wide policy", func() {
+				_, err := buildNetworkPolicy(testOcmAgent, "some-other-namespace")
+				Expect(err).To(HaveOccurred())
+			})
 		})
 	})
 
@@ -76,7 +142,9 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 		BeforeEach(func() {
 			testNamespace = oah.NamespaceOBO
 			testNamespacedName = buildNetworkPolicyName(testOcmAgent, testNamespace)
-			networkPolicy = buildNetworkPolicy(testOcmAgent, testNamespace)
+			var err error
+			networkPolicy, err = buildNetworkPolicy(testOcmAgent, testNamespace)
+			Expect(err).To(BeNil())
 		})
 		When("the network policy already exists", func() {
 			When("the network policy differs from what is expected", func() {
@@ -84,7 +152,8 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 					networkPolicy.Spec.PodSelector.MatchLabels = map[string]string{"fake": "fake"}
 				})
 				It("updates the networkpolicy", func() {
-					goldenNetworkPolicy := buildNetworkPolicy(testOcmAgent, testNamespace)
+					goldenNetworkPolicy, err := buildNetworkPolicy(testOcmAgent, testNamespace)
+					Expect(err).To(BeNil())
 					gomock.InOrder(
 						mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, networkPolicy),
 						mockClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -93,7 +162,7 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 								return nil
 							}),
 					)
-					err := testOcmAgentHandler.ensureNetworkPolicy(testconst.Context, testOcmAgent, testNamespace)
+					err = testOcmAgentHandler.ensureNetworkPolicy(testconst.Context, testOcmAgent, testNamespace)
 					Expect(err).To(BeNil())
 				})
 			})
@@ -136,10 +205,12 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 		})
 		When("network policy exists", func() {
 			It("should be able to delete the networkpolicy", func() {
-				networkPolicy = buildNetworkPolicy(testOcmAgent, testNamespace)
+				var err error
+				networkPolicy, err = buildNetworkPolicy(testOcmAgent, testNamespace)
+				Expect(err).To(BeNil())
 				mockClient.EXPECT().Get(gomock.Any(), testNamespacedName, gomock.Any()).SetArg(2, networkPolicy)
 				mockClient.EXPECT().Delete(gomock.Any(), gomock.Any())
-				err := testOcmAgentHandler.ensureNetworkPolicyDeleted(testconst.Context, testOcmAgent, testNamespace)
+				err = testOcmAgentHandler.ensureNetworkPolicyDeleted(testconst.Context, testOcmAgent, testNamespace)
 				Expect(err).To(BeNil())
 			})
 		})

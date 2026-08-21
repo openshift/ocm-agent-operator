@@ -82,8 +82,29 @@ const (
 	PDBSuffix          = "-pdb"
 	NamespaceMonitorng = "openshift-monitoring"
 	NamespaceMUO       = "openshift-managed-upgrade-operator"
-	NamespaceRHOBS     = "observatorium-mst-production"
-	NamespaceOBO       = "openshift-observability-operator"
+	// NamespaceRHOBS is a dispatch key, not a literal k8s namespace: RHOBS's fleet-mode
+	// Alertmanager actually runs in NamespaceOBO, alongside the OBO Alertmanager. There is no
+	// separate "observatorium-mst-production" namespace on either the Management or Service
+	// Cluster.
+	// Verified via: oc get ns observatorium-mst-production -> NotFound (on both MC and SC)
+	NamespaceRHOBS = "rhobs-alertmanager"
+	NamespaceOBO   = "openshift-observability-operator"
+
+	// AlertmanagerPodLabelKey/Value identifies the Alertmanager StatefulSet pods in openshift-monitoring
+	AlertmanagerPodLabelKey   = "alertmanager"
+	AlertmanagerPodLabelValue = "main"
+	// MUOPodLabelKey/Value identifies the managed-upgrade-operator pods
+	MUOPodLabelKey   = "name"
+	MUOPodLabelValue = "managed-upgrade-operator"
+	// RHOBSPodLabelKey/Value identifies the RHOBS Alertmanager pods in NamespaceOBO (fleet mode).
+	// Verified via: oc get po -n openshift-observability-operator -l alertmanager=rhobs-hypershift-monitoring-stack
+	// (confirmed present on both MC and SC)
+	RHOBSPodLabelKey   = "alertmanager"
+	RHOBSPodLabelValue = "rhobs-hypershift-monitoring-stack"
+	// OBOPodLabelKey/Value identifies the OBO Alertmanager pods in NamespaceOBO (fleet mode).
+	// Verified via: oc get po -n openshift-observability-operator -l alertmanager=hypershift-monitoring-stack
+	OBOPodLabelKey   = "alertmanager"
+	OBOPodLabelValue = "hypershift-monitoring-stack"
 )
 
 var (
