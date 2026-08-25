@@ -499,12 +499,13 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 				"tokenSecret":   "ocm-access-token",
 			}
 			newOcmAgent := createOcmAgentCR(ctx, tc.crName, spec)
+			crName, captured := tc.crName, newOcmAgent
+			ginkgo.DeferCleanup(func(ctx context.Context) {
+				cleanupOcmAgentCRAfterTest(ctx, crName, captured, waitTimeout, waitInterval)
+			})
 
 			// Wait for deployment to be ready
 			waitForDeploymentReady(ctx, tc.crName, tc.replicas, waitTimeout, waitInterval)
-
-			// Cleanup
-			cleanupOcmAgentCRAfterTest(ctx, tc.crName, newOcmAgent, waitTimeout, waitInterval)
 		}
 	})
 
@@ -549,6 +550,10 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 				"tokenSecret":   "ocm-access-token",
 			}
 			newOcmAgent := createOcmAgentCR(ctx, tc.crName, spec)
+			crName, captured := tc.crName, newOcmAgent
+			ginkgo.DeferCleanup(func(ctx context.Context) {
+				cleanupOcmAgentCRAfterTest(ctx, crName, captured, waitTimeout, waitInterval)
+			})
 
 			// Wait for the operator to reconcile and create the deployment with the correct image.
 			// We only verify the deployment spec, not pod readiness, since the image may not
@@ -564,9 +569,6 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 				return deploy.Spec.Template.Spec.Containers[0].Image == tc.ocmAgentImage
 			}, waitTimeout, waitInterval).Should(BeTrue(),
 				"Deployment should use the specified image")
-
-			// Cleanup
-			cleanupOcmAgentCRAfterTest(ctx, tc.crName, newOcmAgent, waitTimeout, waitInterval)
 		}
 	})
 
