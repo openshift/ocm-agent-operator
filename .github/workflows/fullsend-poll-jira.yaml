@@ -1,0 +1,153 @@
+---
+# fullsend Jira poll
+#
+# Scheduled workflow that polls Jira for actionable issues/comments and
+# dispatches the matching fullsend agent workflow for each one.
+#
+# Security model:
+#   - Runs only against this repo's trusted default-branch code (no PR
+#     checkout), so it is not exposed to "pwn request" style attacks.
+#   - The fullsend binary is pinned to a specific release and checksum-verified
+#     before it is given access to the Jira credentials.
+#   - Every Jira-derived value is validated against a strict allowlist before
+#     it flows into a gh CLI argument, URL, or workflow command, blocking GHA
+#     command injection from attacker-controlled issue content.
+#
+# Dispatch: agent workflows opt in by carrying a "# fullsend-stage: <stage>"
+# marker line. No such consumer workflows exist in this repo yet, so records
+# are logged and skipped until they land (tracked upstream in fullsend #2264).
+name: fullsend jira poll
+
+permissions:
+  actions: write
+  contents: read
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  poll:
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: fullsend-jira-poll
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Install fullsend
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FULLSEND_VERSION: v0.36.0
+        run: |
+          set -euo pipefail
+          asset="fullsend_${FULLSEND_VERSION#v}_linux_amd64.tar.gz"
+          gh release download "$FULLSEND_VERSION" --repo fullsend-ai/fullsend \
+            -p "$asset" -p checksums.txt
+          sha256sum --ignore-missing -c checksums.txt
+          tar xzf "$asset" fullsend
+          sudo mv fullsend /usr/local/bin/
+          rm -f "$asset" checksums.txt
+
+      - name: Poll Jira
+        env:
+          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_BASE_URL: ${{ vars.JIRA_BASE_URL }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${JIRA_BASE_URL:-}" ]]; then
+            echo "::error::JIRA_BASE_URL is not configured"
+            exit 1
+          fi
+          fullsend poll \
+            --input-driver jira-poll \
+            --jira-url "${JIRA_BASE_URL}" \
+            --jira-project ROSAENG \
+            --jql 'project = ROSAENG AND component = ocm-agent-operator AND issuetype in (Bug, Story, Feature) AND issuetype not in (Vulnerability, Weakness) AND (labels is EMPTY OR labels not in (security, cve, embargo)) AND status not in (Closed, Done, "Won'\''t Do")' \
+            --target-repo "${{ github.repository }}" \
+            --output dispatches.json \
+            --fullsend-dir .fullsend
+
+      - name: Dispatch agent workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JIRA_BASE_URL: ${{ vars.JIRA_BASE_URL }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${JIRA_BASE_URL:-}" ]]; then
+            echo "::error::JIRA_BASE_URL is not configured"
+            exit 1
+          fi
+
+          if ! jq -e 'length > 0' dispatches.json > /dev/null 2>&1; then
+            echo "No dispatches to process."
+            exit 0
+          fi
+
+          dispatched=0
+          count=$(jq 'length' dispatches.json)
+
+          for i in $(seq 0 $((count - 1))); do
+            record=$(jq -c ".[$i]" dispatches.json)
+            stage=$(echo "$record" | jq -r '.stage')
+            resource_key=$(echo "$record" | jq -r '.resource_key')
+            event_type=$(echo "$record" | jq -r '.event_type')
+            issue_id=$(echo "$record" | jq -r '(.iid // 0) | tonumber')
+            issue_key="${resource_key#issue-}"
+
+            # Validate every Jira-derived value against a strict allowlist before
+            # it reaches a gh CLI arg, URL, or workflow command. This fails
+            # closed on anything unexpected and blocks GHA command injection
+            # (embedded "::" or encoded newlines) from attacker-controlled data.
+            if [[ ! "$stage" =~ ^[a-z][a-z0-9-]*$ ]]; then
+              echo "::warning::Skipping record ${i}: invalid stage"
+              continue
+            fi
+            if [[ ! "$event_type" =~ ^[a-z][a-z0-9_-]*$ ]]; then
+              echo "::warning::Skipping record ${i}: invalid event_type"
+              continue
+            fi
+            if [[ ! "$issue_key" =~ ^[A-Z][A-Z0-9]*-[0-9]+$ ]]; then
+              echo "::warning::Skipping record ${i}: invalid issue key"
+              continue
+            fi
+
+            issue_url="${JIRA_BASE_URL%/}/browse/${issue_key}"
+            event_payload=$(jq -nc \
+              --argjson number "$issue_id" \
+              --arg url "$issue_url" \
+              '{issue: {number: $number, html_url: $url}}')
+
+            # Find the checked-in workflow that handles this stage, matched by a
+            # "# fullsend-stage: <stage>" marker line at any indentation.
+            workflow_name=""
+            for wf in .github/workflows/*.yml .github/workflows/*.yaml; do
+              [[ -f "$wf" ]] || continue
+              if grep -qF "# fullsend-stage: ${stage}" "$wf"; then
+                workflow_name=$(basename "$wf")
+                break
+              fi
+            done
+            if [[ -z "$workflow_name" ]]; then
+              echo "::warning::No workflow found for stage ${stage}, skipping ${issue_key}"
+              continue
+            fi
+
+            echo "Dispatching ${workflow_name} for ${issue_key} (${stage})"
+            # Don't let a single transient dispatch failure abort the rest.
+            if gh workflow run "$workflow_name" \
+              -f event_type="$event_type" \
+              -f source_repo="${{ github.repository }}" \
+              -f event_payload="$event_payload"; then
+              dispatched=$((dispatched + 1))
+            else
+              echo "::warning::Failed to dispatch ${workflow_name} for ${issue_key}"
+            fi
+          done
+
+          echo "::notice::Dispatched ${dispatched} agent workflow(s)"
