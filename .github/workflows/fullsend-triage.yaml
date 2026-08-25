@@ -1,0 +1,70 @@
+---
+# fullsend triage (stage consumer)
+#
+# Receives triage-stage dispatches produced by fullsend-poll-jira.yaml. The
+# poll dispatcher discovers this workflow by its "# fullsend-stage: triage"
+# marker line and triggers it with gh workflow run, passing the event details
+# as inputs.
+#
+# This is currently a plumbing stub: it validates and logs the dispatched
+# event so end-to-end dispatch can be verified. A real triage agent run
+# against a Jira work item is blocked upstream until the built-in agents
+# understand Jira payloads (fullsend #2264) — the agents expect a GitHub
+# issue number, not a Jira key.
+#
+# fullsend-stage: triage
+name: fullsend triage
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      event_type:
+        description: "Normalized event type (e.g. comment_added, label_changed)"
+        required: true
+        type: string
+      source_repo:
+        description: "Repository the dispatch originated from"
+        required: true
+        type: string
+      event_payload:
+        description: "JSON event payload, e.g. {\"issue\":{\"number\":N,\"html_url\":\"...\"}}"
+        required: true
+        type: string
+
+jobs:
+  triage:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Log dispatched event
+        env:
+          EVENT_TYPE: ${{ inputs.event_type }}
+          SOURCE_REPO: ${{ inputs.source_repo }}
+          EVENT_PAYLOAD: ${{ inputs.event_payload }}
+        run: |
+          set -euo pipefail
+
+          # Fail closed on a payload that isn't valid JSON rather than letting
+          # malformed input flow into later jq reads.
+          if ! echo "$EVENT_PAYLOAD" | jq -e . > /dev/null 2>&1; then
+            echo "::error::event_payload is not valid JSON"
+            exit 1
+          fi
+
+          issue_number=$(echo "$EVENT_PAYLOAD" | jq -r '.issue.number // "unknown"')
+          issue_url=$(echo "$EVENT_PAYLOAD" | jq -r '.issue.html_url // "unknown"')
+
+          {
+            echo "## fullsend triage stage (stub)"
+            echo ""
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| event_type | \`${EVENT_TYPE}\` |"
+            echo "| source_repo | \`${SOURCE_REPO}\` |"
+            echo "| issue number | \`${issue_number}\` |"
+            echo "| issue url | ${issue_url} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Received triage dispatch for ${issue_url} (${EVENT_TYPE})"
