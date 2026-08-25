@@ -7,6 +7,7 @@ package osde2etests
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -48,9 +50,49 @@ const (
 	mfnrTestName = "test-mfnr-stale-deletion"
 )
 
+func collectArtifacts(ctx context.Context, k8sClient *kubernetes.Clientset, ns string) {
+	artifactDir := os.Getenv("ARTIFACT_DIR")
+	if artifactDir == "" || k8sClient == nil {
+		return
+	}
+	tailLines := int64(500)
+	pods, err := k8sClient.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{})
+	if err == nil {
+		for i := range pods.Items {
+			pod := &pods.Items[i]
+			for _, container := range pod.Spec.Containers {
+				stream, streamErr := k8sClient.CoreV1().Pods(ns).GetLogs(pod.Name, &corev1.PodLogOptions{
+					Container: container.Name,
+					TailLines: &tailLines,
+				}).Stream(ctx)
+				if streamErr != nil {
+					continue
+				}
+				fname := fmt.Sprintf("%s/%s-%s.log", artifactDir, pod.Name, container.Name)
+				if f, fErr := os.Create(fname); fErr == nil {
+					_, _ = io.Copy(f, stream)
+					f.Close()
+				}
+				stream.Close()
+			}
+		}
+	}
+	events, err := k8sClient.CoreV1().Events(ns).List(ctx, metav1.ListOptions{})
+	if err == nil {
+		fname := fmt.Sprintf("%s/namespace-events.txt", artifactDir)
+		if f, fErr := os.Create(fname); fErr == nil {
+			for _, e := range events.Items {
+				fmt.Fprintf(f, "%s\t%s\t%s\t%s\n", e.LastTimestamp, e.InvolvedObject.Name, e.Reason, e.Message)
+			}
+			f.Close()
+		}
+	}
+}
+
 var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 	var (
 		client             *resources.Resources
+		k8sClientset       *kubernetes.Clientset
 		configMapName      = "ocm-agent-cm"
 		clusterRolePrefix  = "ocm-agent-operator"
 		deploymentName     = "ocm-agent"
@@ -83,6 +125,11 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		client, err = resources.New(cfg)
 		Expect(err).Should(BeNil(), "resources.New error")
 		Expect(monitoringv1.AddToScheme(client.GetScheme())).Should(BeNil(), "unable to register monitoringv1 api scheme")
+		if cs, csErr := kubernetes.NewForConfig(cfg); csErr == nil {
+			k8sClientset = cs
+		} else {
+			ginkgo.GinkgoWriter.Printf("warning: artifact collection unavailable: %v\n", csErr)
+		}
 
 		// The ocm-access-token secret is a cluster prerequisite provisioned by
 		// Hive SyncSets. Some leased clusters don't have it, so create a dummy
@@ -109,6 +156,7 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 	})
 
 	ginkgo.AfterAll(func(ctx context.Context) {
+		collectArtifacts(ctx, k8sClientset, namespace)
 		if createdTestSecret {
 			ginkgo.By("cleaning up dummy ocm-access-token secret")
 			secret := &corev1.Secret{
