@@ -23,6 +23,3 @@ create_issues:
         repos:
             - openshift/ocm-agent-operator
             - fullsend-ai/fullsend
-inference:
-    project: it-gcp-rosa
-    wif_provider: projects/275492645098/locations/global/workloadIdentityPools/fullsend-inference/providers/gh-openshift-ocm-agent-operator
