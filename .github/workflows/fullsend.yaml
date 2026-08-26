@@ -101,15 +101,15 @@ jobs:
                   admin|maintain|write) authorized=true ;;
                 esac
               else
-                echo "::warning::Permission API call failed for $COMMENT_USER_LOGIN: $(cat "$api_err")"
+                echo "::warning::Permission API call failed for the commenter; treating as unauthorized"
               fi
               rm -f "$api_err"
             else
-              echo "::warning::Failed to create temp file for permission check of $COMMENT_USER_LOGIN"
+              echo "::warning::Failed to create temp file for the commenter permission check"
             fi
           fi
           if [[ "$authorized" != "true" ]]; then
-            echo "::notice::User $COMMENT_USER_LOGIN is not authorized to stop the fix agent (requires write access or PR authorship)"
+            echo "::notice::Commenter is not authorized to stop the fix agent (requires write access or PR authorship)"
             exit 0
           fi
           gh label create "fullsend-no-fix" --repo "$REPO" \
