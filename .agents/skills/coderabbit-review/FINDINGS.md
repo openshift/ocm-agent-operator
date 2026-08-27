@@ -151,13 +151,28 @@ an upstream harness/policy change. S3 (`gh` ingest) is the sandbox-safe path.
 Recommended path total: **~2.5–4 weeks after the spike**, mostly harness /
 secrets / CI — not `SKILL.md` prose.
 
+## Verified during the spike
+
+- **S3 ingest works end-to-end.** `run-coderabbit.sh <PR>` (comment mode) run
+  against real `openshift/ocm-agent-operator` PRs returned actual CodeRabbit
+  findings — e.g. #316 (maintainability), #313 (functional correctness), and
+  #322 ("no actionable comments"). The `gh`-based path needs no CodeRabbit
+  credentials or egress.
+- **CodeRabbit is already active on this repo, and both reviewers run today.**
+  Comment authors on recent PRs include both `coderabbitai[bot]` and
+  `fullsend-ai-review[bot]`, so the **dual-review / double-comment situation is
+  live now**, not hypothetical. Production must mute one surface (mute
+  CodeRabbit's own PR comments and ingest via S3, or keep CodeRabbit's comments
+  and skip synthesis) to avoid two human-visible reviews.
+
 ## Open / unverified items
 
 - v0.32.0 pin: confirm config `agents:` + `base:` skill merge support before B.
-- Confirm CodeRabbit already posts on `openshift/ocm-agent-operator` PRs (this
-  checkout is a fork); if so, plan to mute its comments to avoid double reviews.
 - The review sandbox policy above is from upstream FullSend, not vendored here —
   re-verify against the installed package.
+- Skill *invocation* by the live `/fs-review` runtime is wired via `AGENTS.md`
+  but not yet observed end-to-end (requires a FullSend run); local discovery is
+  confirmed.
 - Parent epic ROSAENG-62415 not pulled (Atlassian MCP not authenticated).
 
 ## Out of scope
