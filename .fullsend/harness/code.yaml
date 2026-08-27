@@ -1,3 +1,4 @@
+base: https://raw.githubusercontent.com/fullsend-ai/agents/19f8eaba9d486d5325a6dde70f38b4c1f94f733a/harness/code.yaml#sha256=9581c975f02bb9d59d2fd1529e4aae1e1bdc764bd1289c1bad64b3d0ae3939b9
 trigger: >
   event.source.system == "jira"
     && (
