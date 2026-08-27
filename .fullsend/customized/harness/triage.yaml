@@ -1,0 +1,5 @@
+trigger: >
+  event.source.system == "jira"
+    && event.transition.kind == "comment_added"
+    && has(event.transition.comment.command)
+    && event.transition.comment.command == "/fs-triage"

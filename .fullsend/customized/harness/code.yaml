@@ -1,0 +1,10 @@
+trigger: >
+  event.source.system == "jira"
+    && (
+      (event.transition.kind == "comment_added"
+        && has(event.transition.comment.command)
+        && event.transition.comment.command == "/fs-code")
+      || (event.transition.kind == "label_changed"
+        && event.transition.label.name == "ready-to-code"
+        && event.transition.label.action == "added")
+    )
