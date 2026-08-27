@@ -1,3 +1,4 @@
+base: https://raw.githubusercontent.com/fullsend-ai/agents/19f8eaba9d486d5325a6dde70f38b4c1f94f733a/harness/triage.yaml#sha256=5e372727e8844d05918ac864294070be3c5588e57a6ac4e2bb2c41593a58c88b
 trigger: >
   event.source.system == "jira"
     && event.transition.kind == "comment_added"
