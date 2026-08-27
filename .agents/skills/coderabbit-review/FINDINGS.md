@@ -72,3 +72,96 @@ two that don't require sandbox changes.
   CodeRabbit's PR comments and maps them in — no extra network, binary, or
   secret. **Best first experiment.** Risks: a race (FullSend may finish before
   CodeRabbit posts) and duplicate human-visible comments if both bots post.
+
+**Spike prototypes A + S3.** Production implements B + S2 (if CLI-quality
+findings are needed), and should mute CodeRabbit's own PR comments so humans do
+not get two reviews.
+
+## Discoverability — discovery ≠ use
+
+- Skills live in `.agents/skills/`; `.claude/skills` is symlinked to it. Skill
+  precedence is Personal (`CLAUDE_CONFIG_DIR/skills/`, FullSend built-ins) >
+  Project (`.claude/skills/`, repo). A repo skill named the same as a built-in
+  (`code-review`, `pr-review`, …) is **shadowed**. We use the novel name
+  `coderabbit-review`, so it is always available.
+- **Discovery is not invocation.** The review agent is a fixed orchestrator; a
+  discoverable skill is not run automatically. To make it run:
+  - **Spike:** reference it by name from `AGENTS.md` (done) — the lightest lever.
+  - **Production:** add it to the derived harness `skills:` list (Pattern B) for
+    reliable, config-driven invocation.
+- This repo's migration (move `prow-ci` under `.agents/skills/`, add the
+  symlink) is already complete, so the symlink resolves and the skill is
+  discoverable today.
+
+## Constraints (sandbox / network / auth)
+
+Asserted from FullSend's review policy (`policies/github/review.yaml`, upstream —
+not vendored in this repo); confirm against the installed CLI before production.
+
+| Constraint | Effect |
+|---|---|
+| Network allowlist | Only `api.anthropic.com`, `*.googleapis.com`, `api.github.com`, `github.com`. No `api.coderabbit.ai` / `cli.coderabbit.ai` |
+| Binary allowlist | `claude`, `node`, `gh` only. No `coderabbit`, no `curl` |
+| Secrets | No `CODERABBIT_API_KEY` injected; a CodeRabbit *Agentic* API key would be needed on the runner, never committed |
+| Repo access | `readonly_repo: true` |
+| `allowed_remote_resources` | Config allows only `fullsend-ai/fullsend` + `fullsend-ai/agents` (so a Pattern B `base:` on `fullsend-ai/agents` is permitted) |
+| Image | `fullsend-code` does not ship the CodeRabbit CLI |
+| Timeout | Review harness ~20 min; CLI + dimensions may need a bump |
+| Result schema | `additionalProperties: false` — extra fields on the result are rejected; the skill must not emit the result JSON |
+
+Net effect: **skill discoverable = yes; in-sandbox CodeRabbit CLI = no** without
+an upstream harness/policy change. S3 (`gh` ingest) is the sandbox-safe path.
+
+## Pattern B specifics (for production)
+
+- Register a derived `review` in `.fullsend/config.yaml` under `agents:` with a
+  `harness/review.yaml` using `base:` (pinned SHA + `#sha256=` integrity hash)
+  and `coderabbit-review` added to `skills:` (merged by basename).
+- Config-registered agents win on name collision → this becomes the default
+  review agent while inheriting all base scripts, policies, `host_files`, plugins.
+- **Not inherited from `base:`:** `allowed_remote_resources`, `allow_runtime_fetch`,
+  `max_runtime_fetches` — the child must redeclare them.
+- Confirm the installed FullSend version supports config `agents:` + `base:`
+  skill merge-by-basename before implementing (this repo is pinned to v0.32.0).
+
+## Recommendation
+
+**Proceed — complementary, not replacement.**
+
+- **Spike (this card):** Pattern A skill + `AGENTS.md` wiring + document that the
+  in-sandbox CLI is blocked + optional S3 ingest on a test PR. Do **not** try to
+  make CodeRabbit the default via a `customized/skills/code-review/` overlay
+  (deprecated per ADR-0064).
+- **Production:** Pattern B derived review harness that keeps all built-in skills
+  and adds `coderabbit-review`; S2 runner pre-script if CLI-quality findings are
+  required, otherwise keep S3.
+- Do **not** do Pattern C unless product explicitly wants to retire FullSend
+  review.
+
+## Effort estimate (production-ready)
+
+| Slice | Estimate |
+|---|---|
+| Spike: skill + discovery proof + constraints write-up (this card) | 3–5 days |
+| S3 ingest + synthesis/severity mapping + tests on a real PR | +3–4 days |
+| Pattern B harness (`base:` + `agents:` pin + secret + S2 pre-script) | +1–1.5 weeks |
+| Dedup vs CodeRabbit App comments, severity mapping, timeout, failure modes | +3–5 days |
+| Pattern C full replacement (only if required) | 4–6 weeks, high regression risk |
+
+Recommended path total: **~2.5–4 weeks after the spike**, mostly harness /
+secrets / CI — not `SKILL.md` prose.
+
+## Open / unverified items
+
+- v0.32.0 pin: confirm config `agents:` + `base:` skill merge support before B.
+- Confirm CodeRabbit already posts on `openshift/ocm-agent-operator` PRs (this
+  checkout is a fork); if so, plan to mute its comments to avoid double reviews.
+- The review sandbox policy above is from upstream FullSend, not vendored here —
+  re-verify against the installed package.
+- Parent epic ROSAENG-62415 not pulled (Atlassian MCP not authenticated).
+
+## Out of scope
+
+Full production implementation, FullSend core changes, a
+`customized/skills/code-review` override, and integration with agents other than
+review.
