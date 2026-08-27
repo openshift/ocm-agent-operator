@@ -9,3 +9,9 @@ trigger: >
         && event.transition.label.name == "ready-to-code"
         && event.transition.label.action == "added")
     )
+env:
+  runner:
+    FULLSEND_TRACKER: jira
+    CODE_ALLOWED_TARGET_BRANCHES: master
+    JIRA_USER_EMAIL: "${JIRA_USER_EMAIL}"
+    JIRA_TOKEN: "${JIRA_TOKEN}"

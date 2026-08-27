@@ -4,3 +4,8 @@ trigger: >
     && event.transition.kind == "comment_added"
     && has(event.transition.comment.command)
     && event.transition.comment.command == "/fs-triage"
+env:
+  runner:
+    FULLSEND_TRACKER: jira
+    JIRA_USER_EMAIL: "${JIRA_USER_EMAIL}"
+    JIRA_TOKEN: "${JIRA_TOKEN}"
