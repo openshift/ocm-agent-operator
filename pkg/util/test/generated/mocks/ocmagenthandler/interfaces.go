@@ -22,6 +22,7 @@ import (
 type MockOcmAgentHandlerBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockOcmAgentHandlerBuilderMockRecorder
+	isgomock struct{}
 }
 
 // MockOcmAgentHandlerBuilderMockRecorder is the mock recorder for MockOcmAgentHandlerBuilder.
@@ -60,6 +61,7 @@ func (mr *MockOcmAgentHandlerBuilderMockRecorder) New() *gomock.Call {
 type MockOCMAgentHandler struct {
 	ctrl     *gomock.Controller
 	recorder *MockOCMAgentHandlerMockRecorder
+	isgomock struct{}
 }
 
 // MockOCMAgentHandlerMockRecorder is the mock recorder for MockOCMAgentHandler.
