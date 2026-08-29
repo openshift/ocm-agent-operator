@@ -17,3 +17,5 @@ updates:
         # don't upgrade boilerplate via these means
       - dependency-name: "openshift4/ose-operator-registry"
         # don't upgrade ose-operator-registry via these means
+      - dependency-name: "ubi9/ubi-minimal"
+        # UBI base image tag is managed by boilerplate update script via skopeo inspect
