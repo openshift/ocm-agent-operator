@@ -9,6 +9,7 @@ trigger: >
         && event.transition.label.name == "ready-to-code"
         && event.transition.label.action == "added")
     )
+policy: policies/code.yaml
 env:
   runner:
     FULLSEND_TRACKER: jira

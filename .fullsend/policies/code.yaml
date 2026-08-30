@@ -1,0 +1,92 @@
+version: 1
+
+# Sandbox policy for the code agent (Jira tracker).
+#
+# There is no upstream Jira code policy (only policies/jira/triage.yaml exists),
+# so this combines the code agent's standard needs (Vertex AI inference, GitHub
+# API for the target repo, Go package registries) with read-only Jira Cloud API
+# access. Jira access is read-only (curl only); all Jira mutations run host-side
+# outside this policy.
+
+filesystem_policy:
+  include_workdir: true
+  read_only: [/usr, /lib, /proc, /dev/urandom, /app, /etc, /var/log]
+  read_write: [/sandbox, /tmp, /dev/null]
+landlock:
+  compatibility: best_effort
+process:
+  run_as_user: sandbox
+  run_as_group: sandbox
+
+network_policies:
+  vertex_ai:
+    name: vertex-ai
+    endpoints:
+      - host: "api.anthropic.com"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-write
+      - host: "*.googleapis.com"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-write
+    binaries:
+      - path: "**/claude"
+      - path: "**/pi"
+      - path: "**/node"
+
+  github_api:
+    name: github-api
+    endpoints:
+      - host: "api.github.com"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+      - host: "github.com"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+      - host: "objects.githubusercontent.com"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+    binaries:
+      - path: "**/git"
+      - path: "**/node"
+
+  jira_api:
+    name: jira-api
+    endpoints:
+      - host: "*.atlassian.net"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+    binaries:
+      - path: "**/curl"
+
+  package_registries:
+    name: package-registries
+    endpoints:
+      - host: "proxy.golang.org"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+      - host: "sum.golang.org"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+      - host: "storage.googleapis.com"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+    binaries:
+      - path: "**/go"
