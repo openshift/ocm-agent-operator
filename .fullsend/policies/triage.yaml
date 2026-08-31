@@ -41,8 +41,12 @@ network_policies:
   jira_api:
     name: jira-api
     endpoints:
-      # Jira Cloud only (v1) — see design.md Decision 7.
-      - host: "*.atlassian.net"
+      # Exact host, not "*.atlassian.net": the SSRF pre-tool hook
+      # (ssrf_pretool.py) rejects wildcards and does exact hostname:port
+      # matching, so a wildcard fails closed on DNS resolution inside the
+      # sandbox. The L7 proxy layer accepts wildcards, but the SSRF hook does
+      # not — so pin the concrete Jira Cloud host.
+      - host: "redhat.atlassian.net"
         port: 443
         protocol: rest
         enforcement: enforce
