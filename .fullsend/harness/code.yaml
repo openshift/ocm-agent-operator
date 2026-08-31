@@ -29,6 +29,9 @@ env:
   # Runner env vars don't flow into the OpenShell sandbox automatically; pass
   # the Jira credentials through explicitly so the agent can reach Jira Cloud.
   sandbox:
+    # The base code harness references "${ISSUE_NUMBER}" in env.sandbox too (not
+    # just env.runner), so the sandbox scope needs its own placeholder override.
+    ISSUE_NUMBER: "0"
     JIRA_TOKEN: "${JIRA_TOKEN}"
     JIRA_USER_EMAIL: "${JIRA_USER_EMAIL}"
     JIRA_BASE_URL: "${JIRA_BASE_URL}"
