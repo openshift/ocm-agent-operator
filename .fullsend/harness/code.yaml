@@ -9,7 +9,7 @@
 base: https://raw.githubusercontent.com/fullsend-ai/agents/48511880eaea5ef01f80b69ba4f228147611db33/harness/code.yaml#sha256=4f0d9425d5ee1fa86e21d3b6d1ac9bd086da2f59de9d80a311f753c00d99303d
 
 trigger: >
-  event.source.system == "jira"
+  event.entity.kind == "work_item"
     && (
       (event.transition.kind == "comment_added"
         && has(event.transition.comment.command)
