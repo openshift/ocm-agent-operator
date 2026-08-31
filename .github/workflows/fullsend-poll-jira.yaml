@@ -57,7 +57,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download --repo fullsend-ai/fullsend -p 'fullsend_*_linux_amd64.tar.gz' -O - | tar xz
+          gh release download v0.38.0 --repo fullsend-ai/fullsend -p 'fullsend_*_linux_amd64.tar.gz' -O - | tar xz
           sudo mv fullsend /usr/local/bin/
 
       - name: Poll Jira
@@ -97,7 +97,7 @@ jobs:
   harness:
     name: Harness
     needs: poll
-    uses: fullsend-ai/fullsend/.github/workflows/reusable-dispatch.yml@84c8bbbb821ff85136854150b06740253709b3b8 # v0.37.0
+    uses: fullsend-ai/fullsend/.github/workflows/reusable-dispatch.yml@2db46c4db0caacbd4f29284b4eeda72e6c01b2b2 # v0.38.0
     with:
       matrix: ${{ needs.poll.outputs.matrix }}
       mint_url: ${{ vars.FULLSEND_MINT_URL }}
