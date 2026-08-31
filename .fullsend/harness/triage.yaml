@@ -4,6 +4,7 @@ trigger: >
     && event.transition.kind == "comment_added"
     && has(event.transition.comment.command)
     && event.transition.comment.command == "/fs-triage"
+policy: policies/triage.yaml
 env:
   runner:
     FULLSEND_TRACKER: jira

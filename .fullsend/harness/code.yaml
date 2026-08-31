@@ -9,9 +9,16 @@ trigger: >
         && event.transition.label.name == "ready-to-code"
         && event.transition.label.action == "added")
     )
+policy: policies/code.yaml
 env:
   runner:
     FULLSEND_TRACKER: jira
+    # Placeholder to satisfy the base code harness's ISSUE_NUMBER validation.
+    # The reusable-dispatch harness-run job doesn't map ISSUE_NUMBER from the
+    # pre-computed (jira-poll) matrix, so the base harness's "${ISSUE_NUMBER}"
+    # reference would fail. On the Jira path the issue is identified via
+    # FULLSEND_WORK_ITEM_URL / ISSUE_URL, not ISSUE_NUMBER.
+    ISSUE_NUMBER: "0"
     CODE_ALLOWED_TARGET_BRANCHES: master
     JIRA_USER_EMAIL: "${JIRA_USER_EMAIL}"
     JIRA_TOKEN: "${JIRA_TOKEN}"
