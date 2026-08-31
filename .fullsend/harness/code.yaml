@@ -32,6 +32,11 @@ env:
     # The base code harness references "${ISSUE_NUMBER}" in env.sandbox too (not
     # just env.runner), so the sandbox scope needs its own placeholder override.
     ISSUE_NUMBER: "0"
+    # The base code harness sets env.sandbox GIT_COMMITTER_EMAIL from
+    # "${GIT_BOT_EMAIL}", which isn't set as a host var on the jira-poll path.
+    # Override with a literal so the sandbox scope resolves.
+    GIT_COMMITTER_EMAIL: "fullsend[bot]@users.noreply.github.com"
+    CODE_ALLOWED_TARGET_BRANCHES: master
     JIRA_TOKEN: "${JIRA_TOKEN}"
     JIRA_USER_EMAIL: "${JIRA_USER_EMAIL}"
     JIRA_BASE_URL: "${JIRA_BASE_URL}"
