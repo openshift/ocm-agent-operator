@@ -10,3 +10,9 @@ env:
     FULLSEND_TRACKER: jira
     JIRA_USER_EMAIL: "${JIRA_USER_EMAIL}"
     JIRA_TOKEN: "${JIRA_TOKEN}"
+  # Runner env vars don't flow into the OpenShell sandbox automatically; pass
+  # the Jira credentials through explicitly so the agent can reach Jira Cloud.
+  sandbox:
+    JIRA_TOKEN: "${JIRA_TOKEN}"
+    JIRA_USER_EMAIL: "${JIRA_USER_EMAIL}"
+    JIRA_BASE_URL: "${JIRA_BASE_URL}"
