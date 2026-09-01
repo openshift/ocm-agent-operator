@@ -688,7 +688,7 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 						"summary":             "E2E Test MFN No Controller",
 						"notificationMessage": "Testing MFN has no controller behavior",
 						"severity":            "Info",
-						"resendWait":          1,
+						"resendInterval":      1,
 					},
 				},
 			},
@@ -713,7 +713,7 @@ var _ = ginkgo.Describe("ocm-agent-operator", ginkgo.Ordered, func() {
 		fleetNotif := spec["fleetNotification"].(map[string]interface{})
 		Expect(fleetNotif["name"]).To(Equal("test-notification-e2e"))
 		Expect(fleetNotif["severity"]).To(Equal("Info"))
-		Expect(fleetNotif["resendWait"]).To(Equal(int64(1)))
+		Expect(fleetNotif["resendInterval"]).To(Equal(int64(1)))
 
 		ginkgo.By("monitoring MFN for no controller activity over time")
 		Consistently(func() []interface{} {

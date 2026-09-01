@@ -36,7 +36,7 @@ type NotificationRecordByName struct {
 	// Name of the notification
 	NotificationName string `json:"notificationName"`
 	// Resend interval for the notification
-	ResendWait int32 `json:"resendWait"`
+	ResendWait int32 `json:"resendInterval"`
 	// Notification record item with the notification name
 	NotificationRecordItems []NotificationRecordItem `json:"notificationRecordItems"`
 }

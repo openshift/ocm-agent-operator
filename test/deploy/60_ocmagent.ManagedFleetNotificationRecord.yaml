@@ -8,7 +8,7 @@ status:
   managementCluster: xxx-yyy-zzz
   notificationRecordByName:
     - notificationName: notification A
-      resendWait: 60
+      resendInterval: 60
       notificationRecordItems:
         - hostedClusterID: 22b0n23htr7cbjhgmn3iihsrf18ii9ke
           serviceLogSentCount: 0
@@ -17,7 +17,7 @@ status:
           serviceLogSentCount: 5
           lastTransitionTime: "2023-03-07T23:45:03Z"
     - notificationName: notification B
-      resendWait: 60
+      resendInterval: 60
       notificationRecordItems:
         - hostedClusterID: 22b42c7dlht72ldnqs52ipc9b7hmldjk
           serviceLogSentCount: 0
