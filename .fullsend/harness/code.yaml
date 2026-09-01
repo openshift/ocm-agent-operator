@@ -21,3 +21,11 @@ trigger: >
     )
 
 allowed_remote_resources: [https://raw.githubusercontent.com/fullsend-ai/agents/]
+
+# The v0.38.0 base maps CODE_ALLOWED_TARGET_BRANCHES from a host variable of
+# the same name, but the Jira-poll dispatch path does not set it, so harness
+# env validation fails. Override it with a literal: the code agent may only
+# open PRs against master (this repo's default branch).
+env:
+  runner:
+    CODE_ALLOWED_TARGET_BRANCHES: master
