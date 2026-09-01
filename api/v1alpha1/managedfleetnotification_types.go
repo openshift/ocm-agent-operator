@@ -44,7 +44,7 @@ type FleetNotification struct {
 	Severity NotificationSeverity `json:"severity"`
 
 	// Measured in hours. The minimum time interval that must elapse between active notifications
-	ResendWait int32 `json:"resendInterval"`
+	ResendWait int32 `json:"resendWait"`
 
 	// Whether or not limited support should be sent for this notification
 	LimitedSupport bool `json:"limitedSupport,omitempty"`

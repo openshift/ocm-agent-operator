@@ -68,7 +68,7 @@ spec:
                       pattern: ^https?:\/\/.+$
                       type: string
                     type: array
-                  resendInterval:
+                  resendWait:
                     description: Measured in hours. The minimum time interval that
                       must elapse between active notifications
                     format: int32
@@ -90,7 +90,7 @@ spec:
                 required:
                 - name
                 - notificationMessage
-                - resendInterval
+                - resendWait
                 - severity
                 - summary
                 type: object

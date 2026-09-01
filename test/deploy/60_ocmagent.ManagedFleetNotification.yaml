@@ -10,4 +10,4 @@ spec:
     notificationMessage: |-
       This is a test notification for hypershift hosted clusters.
     severity: Warning
-    resendInterval: 60
+    resendWait: 60

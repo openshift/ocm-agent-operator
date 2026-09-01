@@ -78,14 +78,14 @@ spec:
                             - resolvedNotificationSentCount
                           type: object
                         type: array
-                      resendInterval:
+                      resendWait:
                         description: Resend interval for the notification
                         format: int32
                         type: integer
                     required:
                       - notificationName
                       - notificationRecordItems
-                      - resendInterval
+                      - resendWait
                     type: object
                   type: array
               required:
