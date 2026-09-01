@@ -79,19 +79,23 @@ not get two reviews.
 
 ## Discoverability — discovery ≠ use
 
-- Skills live in `.agents/skills/`; `.claude/skills` is symlinked to it. Skill
-  precedence is Personal (`CLAUDE_CONFIG_DIR/skills/`, FullSend built-ins) >
-  Project (`.claude/skills/`, repo). A repo skill named the same as a built-in
-  (`code-review`, `pr-review`, …) is **shadowed**. We use the novel name
-  `coderabbit-review`, so it is always available.
+- **Skills directory structure (no file moves required):**
+  - Skills live in `.agents/skills/` (actual content)
+  - `.claude/skills -> ../.agents/skills` (symlink for portability)
+  - **Rationale:** Different agent runtimes may look in `.claude/skills/` or
+    `.agents/skills/`. The symlink ensures both paths resolve without file
+    duplication. This is the standard harness engineering pattern for
+    multi-runtime portability.
+  - Migration already complete — no files need to be moved.
+- **Skill precedence:** Personal (`CLAUDE_CONFIG_DIR/skills/`, FullSend
+  built-ins) > Project (`.claude/skills/`, repo). A repo skill named the same as
+  a built-in (`code-review`, `pr-review`, …) is **shadowed**. We use the novel
+  name `coderabbit-review`, so it is always available.
 - **Discovery is not invocation.** The review agent is a fixed orchestrator; a
   discoverable skill is not run automatically. To make it run:
   - **Spike:** reference it by name from `AGENTS.md` (done) — the lightest lever.
   - **Production:** add it to the derived harness `skills:` list (Pattern B) for
     reliable, config-driven invocation.
-- This repo's migration (move `prow-ci` under `.agents/skills/`, add the
-  symlink) is already complete, so the symlink resolves and the skill is
-  discoverable today.
 
 ## Constraints (sandbox / network / auth)
 
