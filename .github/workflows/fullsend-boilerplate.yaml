@@ -1,0 +1,94 @@
+---
+# fullsend boilerplate update
+#
+# Scheduled workflow that runs the BYO `boilerplate` maintenance harness to keep
+# this repo's OpenShift boilerplate up to date and open a PR when it drifts.
+#
+# How it works:
+#   - The `prepare` job builds a single-record GHA matrix naming the
+#     `boilerplate` agent. Unlike the Jira poll, there is no entity to route:
+#     the boilerplate harness is trigger-less and does not act on an issue. The
+#     reusable-dispatch workflow at the pinned SHA still requires an
+#     `event_payload` with an issue html_url + number, so we supply an inert
+#     synthetic payload (issue #0). Nothing reads that issue — the agent's only
+#     inputs are the repo checkout and the boilerplate diff — and status
+#     comments are suppressed by keeping status_number at 0.
+#   - The `harness` job passes that matrix to fullsend's reusable-dispatch
+#     workflow (same pin/auth as fullsend-poll-jira.yaml). reusable-dispatch
+#     mints the per-role token, sets up GCP-WIF + the sandbox, and runs the
+#     harness pipeline: pre-boilerplate.sh (runs `make boilerplate-update`) ->
+#     the sandbox agent (verifies build/tests, fixes breakage) ->
+#     post-boilerplate.sh (opens the PR).
+#
+# Security model (mirrors fullsend-poll-jira.yaml):
+#   - Runs only against this repo's trusted default-branch code (no PR checkout).
+#   - The fullsend binary is pinned to a release and checksum-verified before it
+#     is given any credentials.
+#   - The reusable-dispatch workflow is pinned to a full commit SHA.
+name: fullsend boilerplate update
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # weekly, Mondays 06:00 UTC
+  workflow_dispatch: {}   # allow manual runs
+
+permissions:
+  actions: write
+  contents: write
+  id-token: write
+  issues: write
+  packages: read
+  pull-requests: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: fullsend-boilerplate
+      cancel-in-progress: false
+    outputs:
+      matrix: ${{ steps.build-matrix.outputs.matrix }}
+    steps:
+      - name: Build dispatch matrix
+        id: build-matrix
+        env:
+          TARGET_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Inert synthetic entity: the boilerplate harness does not act on an
+          # issue, but reusable-dispatch requires issue html_url + number to be
+          # present. Issue #0 is never read; status_number 0 suppresses comments.
+          EVENT_PAYLOAD=$(jq -cn --arg repo "${TARGET_REPO}" \
+            '{issue: {html_url: "https://github.com/\($repo)/issues/0", number: 0}}')
+          MATRIX=$(jq -cn \
+            --arg repo "${TARGET_REPO}" \
+            --arg payload "${EVENT_PAYLOAD}" \
+            '{include: [{
+              agent: "boilerplate",
+              role: "coder",
+              source_repo: $repo,
+              status_repo: $repo,
+              status_number: "0",
+              event_payload: $payload
+            }]}')
+          DELIM="MATRIX_$(openssl rand -hex 8)"
+          {
+            echo "matrix<<${DELIM}"
+            printf '%s' "${MATRIX}"
+            echo
+            echo "${DELIM}"
+          } >> "${GITHUB_OUTPUT}"
+
+  harness:
+    name: Harness
+    needs: prepare
+    uses: fullsend-ai/fullsend/.github/workflows/reusable-dispatch.yml@fc75e2ddb2e310a1a3233062484d7b61ea723e60 # main
+    with:
+      matrix: ${{ needs.prepare.outputs.matrix }}
+      mint_url: ${{ vars.FULLSEND_MINT_URL }}
+      gcp_region: ${{ vars.FULLSEND_GCP_REGION }}
+    secrets:
+      FULLSEND_GCP_WIF_PROVIDER: ${{ secrets.FULLSEND_GCP_WIF_PROVIDER }}
+      FULLSEND_GCP_PROJECT_ID: ${{ secrets.FULLSEND_GCP_PROJECT_ID }}
+      OTEL_EXPORTER_OTLP_TRACES_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_TRACES_HEADERS }}
+      OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}

@@ -1,0 +1,58 @@
+version: 1
+
+# Sandbox policy for the boilerplate maintenance agent.
+#
+# The agent verifies the build/tests after the runner has applied the
+# boilerplate update, so it needs the Go module proxy for dependency downloads
+# and Vertex AI / Anthropic for inference. It does NOT need Jira, gh, or push
+# access: the boilerplate update itself runs host-side in pre-boilerplate.sh,
+# and all git push / PR creation runs host-side in post-boilerplate.sh, outside
+# this policy.
+
+filesystem_policy:
+  include_workdir: true
+  read_only: [/usr, /lib, /proc, /dev/urandom, /app, /etc, /var/log]
+  read_write: [/sandbox, /tmp, /dev/null]
+landlock:
+  compatibility: best_effort
+process:
+  run_as_user: sandbox
+  run_as_group: sandbox
+
+network_policies:
+  vertex_ai:
+    name: vertex-ai
+    endpoints:
+      - host: "api.anthropic.com"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-write
+      - host: "*.googleapis.com"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-write
+    binaries:
+      - path: "**/claude"
+      - path: "**/pi"
+      - path: "**/node"
+
+  go_modules:
+    name: go-modules
+    endpoints:
+      # Go module resolution and checksum verification during `go build` /
+      # `go test`. Exact hosts, not wildcards: the SSRF pre-tool hook does
+      # exact hostname:port matching and fails closed on wildcards.
+      - host: "proxy.golang.org"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+      - host: "sum.golang.org"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+    binaries:
+      - path: "**/go"

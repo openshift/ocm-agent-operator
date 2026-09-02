@@ -1,0 +1,50 @@
+# .fullsend/harness/boilerplate.yaml
+#
+# BYO (fully self-contained, no `base:`) maintenance agent that keeps this
+# repo's OpenShift boilerplate up to date.
+#
+# Flow (standard fullsend pre -> sandbox -> post pipeline):
+#   pre_script  : runs `make boilerplate-update` on the trusted runner (needs
+#                 network + git). If nothing changed, exits 78 (neutral skip)
+#                 so the sandbox is never created. Otherwise records the diff.
+#   agent       : reviews the applied boilerplate diff, runs build/tests, fixes
+#                 any breakage the update introduced. Never pushes / opens PRs.
+#   post_script : commits, pushes a branch, and opens the PR (only stage with
+#                 the PUSH_TOKEN).
+#
+# Trigger: intentionally omitted. A harness with no trigger is manual-only and
+# is never auto-selected by event dispatch; it is invoked on a timer by
+# .github/workflows/fullsend-boilerplate.yaml via `fullsend run boilerplate`.
+#
+# Role: reuses the mint-served `coder` role (it carries the PR-write permissions
+# the post-script needs). A bespoke `boilerplate` role would require running a
+# standalone mint (docs/guides/infrastructure/standalone-mint.md).
+agent: agents/boilerplate.md
+role: coder
+slug: fullsend-ai-boilerplate
+model: opus
+effort: high
+
+# Reuse the code agent image: it ships Go, git, gh, and node, which the build/
+# test verification needs.
+image: ghcr.io/fullsend-ai/fullsend-code@sha256:7b2bcbdb40b2c0ca6d3f93a0d64b18fbdbb66a62354a3572fae4c9e9f8919ca3
+
+policy: policies/boilerplate.yaml
+
+providers:
+  - vertex-ai
+
+pre_script: scripts/pre-boilerplate.sh
+post_script: scripts/post-boilerplate.sh
+
+timeout_minutes: 30
+
+env:
+  runner:
+    # Branch the post-script pushes the update to and opens the PR from.
+    BOILERPLATE_BRANCH: "chore/boilerplate-update"
+    CODE_ALLOWED_TARGET_BRANCHES: master
+    GIT_BOT_EMAIL: "fullsend[bot]@users.noreply.github.com"
+  sandbox:
+    GOFLAGS: "-mod=mod"
+    GIT_COMMITTER_EMAIL: "fullsend[bot]@users.noreply.github.com"

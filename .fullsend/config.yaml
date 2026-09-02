@@ -23,6 +23,8 @@ agents:
       source: harness/triage.yaml
     - name: code
       source: harness/code.yaml
+    - name: boilerplate
+      source: harness/boilerplate.yaml
 create_issues:
     allow_targets:
         repos:
