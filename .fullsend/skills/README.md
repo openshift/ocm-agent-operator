@@ -79,16 +79,16 @@ To add a new skill:
 5. Update this README
 6. Test the skill workflow
 
-**Directory structure** (skills live in `.agents/skills/`; `.claude/skills` is a
+**Directory structure** (skills live in `.fullsend/skills/`; `.claude/skills` is a
 symlink to it for portability across agent runtimes):
 ```
-.agents/skills/
+.fullsend/skills/
 ├── README.md
 └── skillname/
     ├── SKILL.md          # Required: skill definition
     ├── scripts/          # Optional: supporting scripts
     └── reference/        # Optional: supporting docs
-.claude/skills -> ../.agents/skills
+.claude/skills -> ../.fullsend/skills
 ```
 
 ## Integration with Other Components

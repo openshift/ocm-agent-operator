@@ -26,7 +26,7 @@ and to recommend an integration pattern. Parent epic: ROSAENG-62415.
 | Criterion | Status |
 |---|---|
 | Document most viable integration pattern (A/B/C) | Done — see below |
-| Prototype a `coderabbit-review` skill in `.agents/skills/` | Done — `SKILL.md` + `scripts/run-coderabbit.sh` |
+| Prototype a `coderabbit-review` skill in `.fullsend/skills/` | Done — `SKILL.md` + `scripts/run-coderabbit.sh` |
 | Validate skill is discoverable by the review agent | Done — novel name, symlink resolves, referenced from `AGENTS.md` |
 | Confirm CodeRabbit invocation in the sandbox | Done — in-sandbox CLI blocked; `gh` ingest (S3) works |
 | Document sandbox / network / auth constraints | Done — see part 2 |
@@ -37,7 +37,7 @@ and to recommend an integration pattern. Parent epic: ROSAENG-62415.
 
 | Pattern | What it is | Viable for spike? | Viable as "default"? |
 |---|---|---|---|
-| **A — Parallel skill** | `.agents/skills/coderabbit-review/` with a unique name, referenced by `AGENTS.md` | **Yes** — proves discovery + ingest | **No** — the review agent won't treat it as the default; in-sandbox CLI fails |
+| **A — Parallel skill** | `.fullsend/skills/coderabbit-review/` with a unique name, referenced by `AGENTS.md` | **Yes** — proves discovery + ingest | **No** — the review agent won't treat it as the default; in-sandbox CLI fails |
 | **B — Agent registration** | Thin `harness/review.yaml` with `base:` + the extra skill, registered as `review` in `.fullsend/config.yaml` | Partial — needs more than a `SKILL.md` | **Yes** — config-registered agents win on name collision, so this becomes the default review agent |
 | **C — BYOA replacement** | A new custom agent that replaces FullSend review | Overkill | **No** — you lose the built-in dimensions, schema, labels, and `/fs-fix` loop |
 
@@ -79,14 +79,13 @@ not get two reviews.
 
 ## Discoverability — discovery ≠ use
 
-- **Skills directory structure (no file moves required):**
-  - Skills live in `.agents/skills/` (actual content)
-  - `.claude/skills -> ../.agents/skills` (symlink for portability)
+- **Skills directory structure (migrated to FullSend standard):**
+  - Skills live in `.fullsend/skills/` (actual content)
+  - `.claude/skills -> ../.fullsend/skills` (symlink for portability)
   - **Rationale:** Different agent runtimes may look in `.claude/skills/` or
-    `.agents/skills/`. The symlink ensures both paths resolve without file
-    duplication. This is the standard harness engineering pattern for
-    multi-runtime portability.
-  - Migration already complete — no files need to be moved.
+    `.fullsend/skills/`. The symlink ensures both paths resolve without file
+    duplication. This follows the standard FullSend framework pattern (ADR 0033).
+  - Migration complete — files moved to standard location.
 - **Skill precedence:** Personal (`CLAUDE_CONFIG_DIR/skills/`, FullSend
   built-ins) > Project (`.claude/skills/`, repo). A repo skill named the same as
   a built-in (`code-review`, `pr-review`, …) is **shadowed**. We use the novel
