@@ -11,7 +11,7 @@ reviews:
     - "!vendor/**"
 
     # Exclude generated config code
-    - "!config/**/zz_generated.*.go"  
+    - "!config/**/zz_generated.*.go"
 
     # Exclude generated API code
     - "!api/**/zz_generated.*.go"

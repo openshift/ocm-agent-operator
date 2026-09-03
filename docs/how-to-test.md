@@ -24,6 +24,5 @@ find test/deploy -type f -name '*.yaml' -exec oc create -f {} \;
 
 ## Running directly on-cluster using make
 
-- Login to the cluster as cluster admin using `oc login` command. 
+- Login to the cluster as cluster admin using `oc login` command.
 - Run `make run` to deploy local changes
- 
