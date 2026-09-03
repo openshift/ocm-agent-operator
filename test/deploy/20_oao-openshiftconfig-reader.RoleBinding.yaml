@@ -11,4 +11,3 @@ roleRef:
   kind: Role
   name: oao-openshiftconfig-reader
   apiGroup: rbac.authorization.k8s.io
-

@@ -8,13 +8,13 @@ few things FullSend agents should know beyond that.
 
 ## Repo skills
 
-Repo skills live in `.agents/skills/` (with `.claude/skills` symlinked to it).
+Repo skills live in `.fullsend/skills/` (with `.claude/skills` symlinked to it).
 They extend the built-in FullSend skills; they do not replace them.
 
 ## Code review
 
 When reviewing a pull request, also consult the **`coderabbit-review`** skill
-(`.agents/skills/coderabbit-review/`) as a complementary finding source:
+(`.fullsend/skills/coderabbit-review/`) as a complementary finding source:
 
 - Treat CodeRabbit findings as **advisory input** to synthesise alongside the
   built-in review dimensions — not as a replacement for `pr-review`/`code-review`
