@@ -36,8 +36,8 @@ skills:
 #   export PR_NUMBER="123"
 #   export GH_TOKEN="$(gh auth token)"
 #
-# Future: for S2 (CLI mode), add host_files mapping:
-# host_files:
-#   - src: /tmp/workspace/coderabbit-findings.json
-#     dest: /sandbox/workspace/coderabbit-findings.json
-#     optional: true
+# S2 (CLI mode) host_files mapping for CodeRabbit findings:
+host_files:
+  - src: /tmp/workspace/coderabbit-findings.json
+    dest: /sandbox/workspace/coderabbit-findings.json
+    optional: true
