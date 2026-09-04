@@ -29,13 +29,13 @@ allowed_remote_resources: [https://raw.githubusercontent.com/fullsend-ai/agents/
 skills:
   - skills/coderabbit-review
 
-env:
-  runner:
-    # Placeholder for future CODERABBIT_API_KEY if S2 (CLI pre-script) is needed
-    REVIEW_ALLOWED_TARGET_BRANCHES: master
-  sandbox:
-    REVIEW_ALLOWED_TARGET_BRANCHES: master
-
+# Note: Required env vars should be set before running fullsend:
+#   export PRIOR_REVIEW_SHA=""
+#   export PRIOR_REVIEW_PROVENANCE="none"
+#   export REPO_FULL_NAME="openshift/ocm-agent-operator"
+#   export PR_NUMBER="123"
+#   export GH_TOKEN="$(gh auth token)"
+#
 # Future: for S2 (CLI mode), add host_files mapping:
 # host_files:
 #   - src: /tmp/workspace/coderabbit-findings.json
