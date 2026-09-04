@@ -23,6 +23,23 @@ Reusable workflow skills for OCM Agent Operator development.
 - [Prow Dashboard](https://prow.ci.openshift.org/)
 - [CI Search](https://github.com/openshift/ci-search)
 
+### [coderabbit-review](./coderabbit-review/SKILL.md)
+**Purpose**: Ingest CodeRabbit findings for a PR and synthesise them with the built-in FullSend review (complementary, not a replacement)
+
+**When to use**:
+- During `/fs-review` on a PR, to fold CodeRabbit's findings into the review
+- When a second, independent AI review is wanted alongside the built-in dimensions
+
+**Key capabilities**:
+- Read CodeRabbit PR comments via read-only `gh` (sandbox-safe, S3)
+- Or read a runner-injected `coderabbit-findings.json` (S2)
+- Map findings into FullSend review findings, tagged `coderabbit-*`
+- Respect `.coderabbit.yaml` path exclusions; fail-soft if unavailable
+
+**Resources**:
+- [CodeRabbit](https://coderabbit.ai)
+- [FINDINGS.md](./coderabbit-review/FINDINGS.md) - spike write-up and recommendation
+
 ## Usage
 
 Skills are reusable workflows that combine multiple tools and knowledge to accomplish specific tasks.
@@ -62,13 +79,16 @@ To add a new skill:
 5. Update this README
 6. Test the skill workflow
 
-**Directory structure**:
+**Directory structure** (skills live in `.fullsend/skills/`; `.claude/skills` is a
+symlink to it for portability across agent runtimes):
 ```
-.claude/skills/
+.fullsend/skills/
 ├── README.md
 └── skillname/
     ├── SKILL.md          # Required: skill definition
+    ├── scripts/          # Optional: supporting scripts
     └── reference/        # Optional: supporting docs
+.claude/skills -> ../.fullsend/skills
 ```
 
 ## Integration with Other Components
@@ -119,5 +139,5 @@ Planned skills for this repository:
 ## References
 
 - [CLAUDE.md](../../CLAUDE.md) - Agent behavioral rules
-- [.claude/agents/](../agents/) - Specialized agents
-- [.claude/hooks/](../hooks/) - Security and validation hooks
+- [.claude/agents/](../../.claude/agents/) - Specialized agents
+- [.claude/hooks/](../../.claude/hooks/) - Security and validation hooks

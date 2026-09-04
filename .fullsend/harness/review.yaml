@@ -1,0 +1,43 @@
+# .fullsend/harness/review.yaml
+#
+# Composes the upstream fullsend review harness (pinned to agents v0.38.0) and
+# adds the local coderabbit-review skill as a complementary finding source.
+# v0.38.0 review harness includes all built-in dimensions (correctness, protected
+# paths, intent/coherence, challenger pass). This harness extends it to also
+# ingest CodeRabbit findings via GitHub comments (S3 pattern) for synthesis.
+#
+# CodeRabbit findings are mapped with coderabbit-* category prefixes so the
+# synthesizer can dedupe and attribute them properly. The built-in review
+# dimensions remain authoritative for the verdict.
+base: https://raw.githubusercontent.com/fullsend-ai/agents/48511880eaea5ef01f80b69ba4f228147611db33/harness/review.yaml#sha256=260bf4939f52ef173911d3d788f85bd62b26802f09711d8dcdcce8dbb24c5f04
+
+trigger: >
+  event.entity.kind == "work_item"
+    && (
+      (event.transition.kind == "comment_added"
+        && has(event.transition.comment.command)
+        && event.transition.comment.command == "/fs-review")
+      ||
+      (event.transition.kind == "label_changed"
+        && event.transition.label.name == "ready-for-review"
+        && event.transition.label.action == "added")
+    )
+
+allowed_remote_resources: [https://raw.githubusercontent.com/fullsend-ai/agents/]
+
+# Extend base skills with repo-specific coderabbit-review skill
+skills:
+  - skills/coderabbit-review
+
+# Note: Required env vars should be set before running fullsend:
+#   export PRIOR_REVIEW_SHA=""
+#   export PRIOR_REVIEW_PROVENANCE="none"
+#   export REPO_FULL_NAME="openshift/ocm-agent-operator"
+#   export PR_NUMBER="123"
+#   export GH_TOKEN="$(gh auth token)"
+#
+# S2 (CLI mode) host_files mapping for CodeRabbit findings:
+host_files:
+  - src: /tmp/workspace/coderabbit-findings.json
+    dest: /sandbox/workspace/coderabbit-findings.json
+    optional: true
