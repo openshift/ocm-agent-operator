@@ -30,7 +30,7 @@ env:
     # pre-computed (jira-poll) matrix, so the base harness's "${ISSUE_NUMBER}"
     # reference would fail. On the Jira path the issue is identified via
     # FULLSEND_WORK_ITEM_URL / ISSUE_URL, not ISSUE_NUMBER.
-    ISSUE_NUMBER: "0"
+    ISSUE_NUMBER: "${ISSUE_NUMBER}"
     CODE_ALLOWED_TARGET_BRANCHES: master
     # The base code harness sets GIT_COMMITTER_EMAIL from GIT_BOT_EMAIL, which
     # the GitHub code job normally sets from the App bot identity but the
@@ -43,7 +43,7 @@ env:
   sandbox:
     # The base code harness references "${ISSUE_NUMBER}" in env.sandbox too (not
     # just env.runner), so the sandbox scope needs its own placeholder override.
-    ISSUE_NUMBER: "0"
+    ISSUE_NUMBER: "${ISSUE_NUMBER}"
     # The base code harness sets env.sandbox GIT_COMMITTER_EMAIL from
     # "${GIT_BOT_EMAIL}", which isn't set as a host var on the jira-poll path.
     # Override with a literal so the sandbox scope resolves.
