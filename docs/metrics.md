@@ -1,6 +1,6 @@
 # Metrics
 
-OCM Agent Operator will create a metrics `Service` and `ServiceMonitor` named
+OCM Agent Operator will create a metrics `Service` and `ServiceMonitor` named 
 `ocm-agent-operator-metrics` hosted on port 8686.
 
 The following metrics are produced.
@@ -21,7 +21,7 @@ ocm_agent_operator_pull_secret_invalid{ocmagent_name="ocmagent"} = 0
 
 Type: Gauge
 
-Description: This gauge is set to `1` if OCM Agent Operator cannot find the `OCM Agent` custom resource,
+Description: This gauge is set to `1` if OCM Agent Operator cannot find the `OCM Agent` custom resource, 
 or `0` if it can do so successfully.
 
 Example:
