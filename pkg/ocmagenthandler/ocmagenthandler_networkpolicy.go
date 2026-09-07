@@ -28,6 +28,8 @@ func buildNetworkPolicyName(ocmAgent ocmagentv1alpha1.OcmAgent, namespace string
 		namespacedName = oah.BuildNamespacedName(ocmAgent.Name + oah.OCMAgentMUONetworkPolicySuffix)
 	case oah.NamespaceOBO:
 		namespacedName = oah.BuildNamespacedName(ocmAgent.Name + oah.OCMAgentOBONetworkPolicySuffix)
+	case oah.NamespacePrometheus:
+		namespacedName = oah.BuildNamespacedName(ocmAgent.Name + oah.OCMAgentPrometheusNetworkPolicySuffix)
 	}
 
 	return namespacedName
@@ -57,6 +59,10 @@ func callerPodSelector(namespace string) (*metav1.LabelSelector, error) {
 		return &metav1.LabelSelector{
 			MatchLabels: map[string]string{oah.OBOPodLabelKey: oah.OBOPodLabelValue},
 		}, nil
+	case oah.NamespacePrometheus:
+		return &metav1.LabelSelector{
+			MatchLabels: map[string]string{oah.PrometheusPodLabelKey: oah.PrometheusPodLabelValue},
+		}, nil
 	default:
 		return nil, fmt.Errorf("callerPodSelector: no pod selector defined for namespace %q", namespace)
 	}
@@ -67,10 +73,14 @@ func callerPodSelector(namespace string) (*metav1.LabelSelector, error) {
 // Alertmanager runs in NamespaceOBO alongside the OBO Alertmanager, not in a namespace of its
 // own (oah.NamespaceRHOBS is a dispatch key, not a literal namespace - see its doc comment).
 func callerNamespace(namespace string) string {
-	if namespace == oah.NamespaceRHOBS {
+	switch namespace {
+	case oah.NamespaceRHOBS:
 		return oah.NamespaceOBO
+	case oah.NamespacePrometheus:
+		return oah.NamespaceMonitorng
+	default:
+		return namespace
 	}
-	return namespace
 }
 
 func buildNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent, namespace string) (netv1.NetworkPolicy, error) {
@@ -115,9 +125,9 @@ func buildNetworkPolicy(ocmAgent ocmagentv1alpha1.OcmAgent, namespace string) (n
 func (o *ocmAgentHandler) ensureAllNetworkPolicies(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	var namespaces []string
 	if ocmAgent.Spec.FleetMode {
-		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceRHOBS, oah.NamespaceOBO)
+		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceRHOBS, oah.NamespaceOBO, oah.NamespacePrometheus)
 	} else {
-		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceMUO)
+		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceMUO, oah.NamespacePrometheus)
 	}
 	for _, ns := range namespaces {
 		err := o.ensureNetworkPolicy(ctx, ocmAgent, ns)
@@ -184,9 +194,9 @@ func (o *ocmAgentHandler) ensureNetworkPolicy(ctx context.Context, ocmAgent ocma
 func (o *ocmAgentHandler) ensureAllNetworkPoliciesDeleted(ctx context.Context, ocmAgent ocmagentv1alpha1.OcmAgent) error {
 	var namespaces []string
 	if ocmAgent.Spec.FleetMode {
-		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceRHOBS, oah.NamespaceOBO)
+		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceRHOBS, oah.NamespaceOBO, oah.NamespacePrometheus)
 	} else {
-		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceMUO)
+		namespaces = append(namespaces, oah.NamespaceMonitorng, oah.NamespaceMUO, oah.NamespacePrometheus)
 	}
 	for _, ns := range namespaces {
 		err := o.ensureNetworkPolicyDeleted(ctx, ocmAgent, ns)
