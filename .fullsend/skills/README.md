@@ -81,7 +81,7 @@ To add a new skill:
 
 **Directory structure** (skills live in `.fullsend/skills/`; `.claude/skills` is a
 symlink to it for portability across agent runtimes):
-```
+```text
 .fullsend/skills/
 ├── README.md
 └── skillname/
