@@ -50,7 +50,7 @@ case "$MODE" in
     command -v coderabbit >/dev/null || die "coderabbit CLI not found (runner-only; use MODE=comment in-sandbox)"
     [ -n "${CODERABBIT_API_KEY:-}" ] || die "CODERABBIT_API_KEY not set (never inject this into the sandbox)"
     # --plain keeps output parseable; adjust flags to the installed CLI version.
-    coderabbit review --plain --pr "$PR"
+    coderabbit review --plain --pr "$PR" --api-key "$CODERABBIT_API_KEY"
     ;;
   *)
     die "unknown CODERABBIT_MODE: $MODE (expected 'comment' or 'cli')"
