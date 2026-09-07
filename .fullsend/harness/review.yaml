@@ -9,19 +9,10 @@
 # CodeRabbit findings are mapped with coderabbit-* category prefixes so the
 # synthesizer can dedupe and attribute them properly. The built-in review
 # dimensions remain authoritative for the verdict.
+#
+# Trigger: Inherits from base harness (no override needed - /fs-review works
+# automatically for generated PRs per https://fullsend.sh/docs/guides/user/bugfix-workflow#slash-commands)
 base: https://raw.githubusercontent.com/fullsend-ai/agents/48511880eaea5ef01f80b69ba4f228147611db33/harness/review.yaml#sha256=260bf4939f52ef173911d3d788f85bd62b26802f09711d8dcdcce8dbb24c5f04
-
-trigger: >
-  event.entity.kind == "work_item"
-    && (
-      (event.transition.kind == "comment_added"
-        && has(event.transition.comment.command)
-        && event.transition.comment.command == "/fs-review")
-      ||
-      (event.transition.kind == "label_changed"
-        && event.transition.label.name == "ready-for-review"
-        && event.transition.label.action == "added")
-    )
 
 allowed_remote_resources: [https://raw.githubusercontent.com/fullsend-ai/agents/]
 
@@ -35,6 +26,27 @@ skills:
 #   export REPO_FULL_NAME="openshift/ocm-agent-operator"
 #   export PR_NUMBER="123"
 #   export GH_TOKEN="$(gh auth token)"
+#
+# S2 (CLI mode) - CodeRabbit API key configuration:
+#   The CODERABBIT_API_KEY must be set as a CI secret in your pipeline
+#   (OpenShift Prow, Tekton, GitHub Actions, etc.) and exposed to the
+#   runner-side pre-script that generates coderabbit-findings.json.
+#   NEVER inject this secret into the sandbox - only the runner-side
+#   pre-script should have access to it.
+#
+#   Example Tekton secret:
+#     apiVersion: v1
+#     kind: Secret
+#     metadata:
+#       name: coderabbit-api-key
+#     data:
+#       api-key: <base64-encoded-key>
+#
+#   Example pre-script invocation in CI:
+#     export CODERABBIT_API_KEY="$(cat /path/to/secret)"
+#     export CODERABBIT_MODE="cli"
+#     .fullsend/skills/coderabbit-review/scripts/run-coderabbit.sh "$PR_NUMBER" \
+#       > /tmp/workspace/coderabbit-findings.json
 #
 # S2 (CLI mode) host_files mapping for CodeRabbit findings:
 host_files:

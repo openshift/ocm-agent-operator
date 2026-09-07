@@ -36,10 +36,24 @@ Instead it reads findings that already exist:
    `/sandbox/workspace/coderabbit-findings.json` exists, read it. A runner-side
    pre-script produced it outside the sandbox; the API key never enters the
    sandbox.
+   
+   **CI Setup for S2 mode:**
+   - Store `CODERABBIT_API_KEY` as a secret in your CI system (OpenShift Prow,
+     Tekton, GitHub Actions, etc.)
+   - In your CI pipeline, before the review harness runs, execute the pre-script:
+     ```bash
+     export CODERABBIT_API_KEY="$(cat /path/to/secret)"
+     export CODERABBIT_MODE="cli"
+     .fullsend/skills/coderabbit-review/scripts/run-coderabbit.sh "$PR_NUMBER" \
+       > /tmp/workspace/coderabbit-findings.json
+     ```
+   - The `host_files` mapping in `review.yaml` copies this into the sandbox
+   - **Never** pass the API key into the sandbox environment
+
 2. **GitHub ingest (S3, spike default):** otherwise run
    `scripts/run-coderabbit.sh <PR_NUMBER>`, which uses the read-only `gh` client
    already available to the review agent to pull CodeRabbit's existing PR review
-   comments. No extra network, binary, or secret.
+   comments. No extra network, binary, or secret required.
 
 If neither source yields findings, emit a short informational note and continue.
 **Do not fail the whole review because CodeRabbit was unavailable.**
