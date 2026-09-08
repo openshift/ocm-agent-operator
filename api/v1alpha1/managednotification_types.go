@@ -28,12 +28,16 @@ type NotificationSeverity string
 
 const (
 	SeverityDebug    NotificationSeverity = "Debug"
-	SeverityWarning  NotificationSeverity = "Warning"
-	SeverityInfo     NotificationSeverity = "Info"
-	SeverityMajor    NotificationSeverity = "Major"
+	SeverityWarning  NotificationSeverity = "Warning" // Deprecated: use SeverityModerate
+	SeverityInfo     NotificationSeverity = "Info"    // Deprecated: use SeverityLow
+	SeverityMajor    NotificationSeverity = "Major"   // Deprecated: use SeverityImportant
 	SeverityCritical NotificationSeverity = "Critical"
 	SeverityError    NotificationSeverity = "Error"
 	SeverityFatal    NotificationSeverity = "Fatal"
+
+	SeverityImportant NotificationSeverity = "Important"
+	SeverityModerate  NotificationSeverity = "Moderate"
+	SeverityLow       NotificationSeverity = "Low"
 )
 
 // +kubebuilder:validation:Pattern=`^https?:\/\/.+$`
@@ -59,7 +63,7 @@ type Notification struct {
 	// References useful for context or remediation - this could be links to documentation, KB articles, etc
 	References []NotificationReferenceType `json:"references,omitempty"`
 
-	// +kubebuilder:validation:Enum={"Debug","Info","Warning","Major","Critical","Error","Fatal"}
+	// +kubebuilder:validation:Enum={"Debug","Info","Warning","Major","Critical","Error","Fatal","Important","Moderate","Low"}
 	// The severity of the Service Log notification
 	Severity NotificationSeverity `json:"severity"`
 
