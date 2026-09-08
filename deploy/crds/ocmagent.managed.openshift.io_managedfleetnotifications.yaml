@@ -83,6 +83,9 @@ spec:
                     - Critical
                     - Error
                     - Fatal
+                    - Important
+                    - Moderate
+                    - Low
                     type: string
                   summary:
                     description: The summary line of the notification
