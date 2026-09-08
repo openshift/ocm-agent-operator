@@ -20,6 +20,8 @@ const (
 	OCMAgentOBONetworkPolicySuffix = "-allow-obo-alertmanager"
 	// OCMAgentMUONetworkPolicySuffix is the name of the network policy to restrict OA for MUO
 	OCMAgentMUONetworkPolicySuffix = "-allow-muo-communication"
+	// OCMAgentPrometheusNetworkPolicySuffix is the name of the network policy to allow Prometheus metrics scraping
+	OCMAgentPrometheusNetworkPolicySuffix = "-allow-prometheus-metrics"
 	// OCMAgentPortName is the name of the OCM Agent service port used in the OCM Agent Deployment
 	OCMAgentPortName = "ocm-agent"
 	// OCMAgentPort is the container port number used by the agent for exposing its services
@@ -89,6 +91,10 @@ const (
 	// Verified via: oc get ns observatorium-mst-production -> NotFound (on both MC and SC)
 	NamespaceRHOBS = "rhobs-alertmanager"
 	NamespaceOBO   = "openshift-observability-operator"
+	// NamespacePrometheus is a dispatch key, not a literal k8s namespace: Prometheus runs in
+	// NamespaceMonitorng (openshift-monitoring). This key is used to create a separate
+	// NetworkPolicy allowing prometheus-k8s pods to scrape metrics on port 8383.
+	NamespacePrometheus = "prometheus-k8s"
 
 	// AlertmanagerPodLabelKey/Value identifies the Alertmanager StatefulSet pods in openshift-monitoring
 	AlertmanagerPodLabelKey   = "alertmanager"
@@ -105,6 +111,10 @@ const (
 	// Verified via: oc get po -n openshift-observability-operator -l alertmanager=hypershift-monitoring-stack
 	OBOPodLabelKey   = "alertmanager"
 	OBOPodLabelValue = "hypershift-monitoring-stack"
+	// PrometheusPodLabelKey/Value identifies the Prometheus pods in openshift-monitoring.
+	// Verified via: oc get po -n openshift-monitoring -l app.kubernetes.io/name=prometheus
+	PrometheusPodLabelKey   = "app.kubernetes.io/name"
+	PrometheusPodLabelValue = "prometheus"
 )
 
 var (

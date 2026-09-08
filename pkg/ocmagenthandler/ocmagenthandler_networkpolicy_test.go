@@ -129,6 +129,27 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 			})
 		})
 
+		Context("for the Prometheus dispatch key", func() {
+			BeforeEach(func() {
+				testNamespace = oah.NamespacePrometheus
+				var err error
+				networkPolicy, err = buildNetworkPolicy(testOcmAgent, testNamespace)
+				Expect(err).To(BeNil())
+			})
+
+			It("Should restrict ingress to Prometheus pods only", func() {
+				podSelector := networkPolicy.Spec.Ingress[0].From[0].PodSelector
+				Expect(podSelector).NotTo(BeNil())
+				Expect(podSelector.MatchLabels).To(HaveKeyWithValue(oah.PrometheusPodLabelKey, oah.PrometheusPodLabelValue))
+			})
+
+			It("Should scope ingress to the monitoring namespace, since NamespacePrometheus is a dispatch key", func() {
+				nsSelector := networkPolicy.Spec.Ingress[0].From[0].NamespaceSelector
+				Expect(nsSelector).NotTo(BeNil())
+				Expect(nsSelector.MatchLabels).To(HaveKeyWithValue("kubernetes.io/metadata.name", oah.NamespaceMonitorng))
+			})
+		})
+
 		Context("for an unrecognized namespace", func() {
 			It("returns an error instead of silently falling back to a namespace-wide policy", func() {
 				_, err := buildNetworkPolicy(testOcmAgent, "some-other-namespace")
@@ -226,17 +247,17 @@ var _ = Describe("OCM Agent NetworkPolicy Handler", func() {
 
 	Context("ensure all the required networkpolicies created", func() {
 		When("creating a non-fleet ocm-agent", func() {
-			It("should have the 2 networkpolicies created", func() {
-				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(2)
-				mockClient.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).MinTimes(2)
+			It("should have the 3 networkpolicies created", func() {
+				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(3)
+				mockClient.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).MinTimes(3)
 				err := testOcmAgentHandler.ensureAllNetworkPolicies(testconst.Context, testOcmAgent)
 				Expect(err).To(BeNil())
 			})
 		})
 		When("creating a fleet ocm-agent", func() {
-			It("should have the 3 networkpolicies created", func() {
-				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(3)
-				mockClient.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Times(3)
+			It("should have the 4 networkpolicies created", func() {
+				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(4)
+				mockClient.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Times(4)
 				err := testOcmAgentHandler.ensureAllNetworkPolicies(testconst.Context, testFleetOcmAgent)
 				Expect(err).To(BeNil())
 			})
