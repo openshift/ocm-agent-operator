@@ -11,5 +11,5 @@ spec:
     resendWait: 24
     resolvedBody: |-
       This is a test notification when an alert is resolved.
-    severity: Info
+    severity: Low
     summary: 'Action Required: Test Notification'

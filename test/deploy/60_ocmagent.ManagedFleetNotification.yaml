@@ -9,5 +9,5 @@ spec:
     summary: 'Action Required: Test Notification'
     notificationMessage: |-
       This is a test notification for hypershift hosted clusters.
-    severity: Warning
+    severity: Moderate
     resendWait: 60
