@@ -1,0 +1,37 @@
+# chai-bot scheduled task definition for ocm-agent-operator.
+#
+# This is the source-of-truth record for the schedule. It mirrors the
+# `scheduled:` entry that must exist in ship-help-bot's rosa persona
+# (config/groups/rosa/personas/rosa_engineering_public.yaml). The runtime reads
+# the prompt from this repo via a %include of the raw GitHub URL below, so the
+# behaviour lives here and only the wiring lives in ship-help-bot.
+#
+# See README.md in this folder for how the two halves connect.
+
+scheduled:
+  name: ocm_agent_operator_jira_label_triage
+  # Post triage comments and open PRs; keep it visible in #sre-operators.
+  channel_alias: sre-operators
+  effort: high
+  max_llm_calls: 1500
+  timeout_seconds: 3600
+  run_on_request: true
+  managers: [ocm_agent_operator_jira_triage_managers]
+  # 08:00 and 14:00 UTC on weekdays. Adjust cadence as needed.
+  cron: "0 8,14 * * 1-5"
+  # ship-help-bot's prompt file just %include()s this repo's .chai-bot prompt:
+  # https://raw.githubusercontent.com/openshift/ocm-agent-operator/refs/heads/master/.chai-bot/ocm_agent_operator_jira_label_triage.md
+  file: ship_help_bot/shared/instructions/scheduled/ocm_agent_operator_jira_label_triage.md
+  # Task-scoped grants so the run may fork and open PRs against this repo.
+  # PRs still require human /lgtm and /approve.
+  policy_grants:
+    - tag: privileged_operation
+      metadata:
+        operation: scm_ensure_fork
+        args: {host: github.com, repo: "openshift/ocm-agent-operator"}
+        set_require: null
+    - tag: privileged_operation
+      metadata:
+        operation: scm_create_change_request
+        args: {host: github.com, repo: "openshift/ocm-agent-operator"}
+        set_require: null
