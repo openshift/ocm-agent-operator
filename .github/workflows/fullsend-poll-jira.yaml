@@ -42,6 +42,9 @@ permissions:
 
 jobs:
   poll:
+    # This Jira poller must only run in the trusted upstream repository.
+    # Scheduled workflows are also enabled on forks, so hard-gate every job.
+    if: ${{ github.repository == 'openshift/ocm-agent-operator' }}
     runs-on: ubuntu-24.04
     concurrency:
       group: fullsend-jira-poll
@@ -97,6 +100,8 @@ jobs:
   harness:
     name: Harness
     needs: poll
+    # Keep the reusable fullsend harness from running on forks or repository copies.
+    if: ${{ github.repository == 'openshift/ocm-agent-operator' }}
     uses: fullsend-ai/fullsend/.github/workflows/reusable-dispatch.yml@d5f36921ac754705619f38c637ef692873809fbc # v0.43.0
     with:
       matrix: ${{ needs.poll.outputs.matrix }}
