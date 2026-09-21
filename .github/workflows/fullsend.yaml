@@ -34,7 +34,8 @@ permissions: {}
 jobs:
   dispatch:
     if: >-
-      (github.event_name != 'pull_request_target' && github.event_name != 'pull_request_review'
+      github.repository == 'openshift/ocm-agent-operator'
+      && (github.event_name != 'pull_request_target' && github.event_name != 'pull_request_review'
        || github.event.pull_request.head.ref != 'fullsend/scaffold-install')
       && (github.event_name != 'issue_comment'
        || github.event.comment.user.type != 'Bot')
@@ -66,7 +67,8 @@ jobs:
     # hatch) is made in the step below, so a maintainer whose author_association
     # is not MEMBER (e.g. private org membership) is not filtered out (ADR 0054).
     if: >-
-      github.event_name == 'issue_comment'
+      github.repository == 'openshift/ocm-agent-operator'
+        && github.event_name == 'issue_comment'
         && github.event.issue.pull_request
         && github.event.comment.user.type != 'Bot'
         && github.event.comment.body == '/fs-fix-stop'
