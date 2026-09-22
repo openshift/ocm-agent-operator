@@ -74,13 +74,18 @@ func (r *OcmAgentReconciler) Reconcile(ctx context.Context, request reconcile.Re
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
+			reqLogger.V(2).Info("OCMAgent resource not found, marking as absent")
 			localmetrics.UpdateMetricOcmAgentResourceAbsent()
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		reqLogger.Error(err, "Failed to retrieve OCMAgent. Will retry on next reconcile.")
+		reqLogger.Error(err, "Failed to retrieve OCMAgent from API server. Will retry on next reconcile.",
+			"namespace", request.Namespace, "name", request.Name)
 		return reconcile.Result{}, err
 	}
+	reqLogger.V(2).Info("Successfully retrieved OCMAgent resource",
+		"replicas", instance.Spec.Replicas,
+		"fleetMode", instance.Spec.FleetMode)
 	localmetrics.ResetMetricOcmAgentResourceAbsent()
 
 	oaohandler, err := r.OCMAgentHandlerBuilder.New()
