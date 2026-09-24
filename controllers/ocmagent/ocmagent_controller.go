@@ -106,22 +106,22 @@ func (r *OcmAgentReconciler) Reconcile(ctx context.Context, request reconcile.Re
 			}
 		}
 		return reconcile.Result{}, nil
-	} else {
-		// There needs to be an OCM Agent
-		reqLogger.V(2).Info("Entering EnsureOCMAgentResourcesExist")
-		err := oaohandler.EnsureOCMAgentResourcesExist(ctx, instance)
-		if err != nil {
-			reqLogger.Error(err, "Failed to create OCMAgent. Will retry on next reconcile.")
-			return reconcile.Result{}, err
-		}
+	}
 
-		// The OCM Agent is deployed, so set a finalizer on the resource
-		if !controllerutil.ContainsFinalizer(&instance, ctrlconst.ReconcileOCMAgentFinalizer) {
-			controllerutil.AddFinalizer(&instance, ctrlconst.ReconcileOCMAgentFinalizer)
-			if err := r.Client.Update(ctx, &instance); err != nil {
-				reqLogger.Error(err, "Failed to apply finalizer to OCMAgent resource. Will retry on next reconcile.")
-				return reconcile.Result{}, err
-			}
+	// There needs to be an OCM Agent
+	reqLogger.V(2).Info("Entering EnsureOCMAgentResourcesExist")
+	err = oaohandler.EnsureOCMAgentResourcesExist(ctx, instance)
+	if err != nil {
+		reqLogger.Error(err, "Failed to create OCMAgent. Will retry on next reconcile.")
+		return reconcile.Result{}, err
+	}
+
+	// The OCM Agent is deployed, so set a finalizer on the resource
+	if !controllerutil.ContainsFinalizer(&instance, ctrlconst.ReconcileOCMAgentFinalizer) {
+		controllerutil.AddFinalizer(&instance, ctrlconst.ReconcileOCMAgentFinalizer)
+		if err := r.Client.Update(ctx, &instance); err != nil {
+			reqLogger.Error(err, "Failed to apply finalizer to OCMAgent resource. Will retry on next reconcile.")
+			return reconcile.Result{}, err
 		}
 	}
 
