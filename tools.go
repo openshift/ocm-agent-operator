@@ -7,7 +7,7 @@ package tools
 
 import (
 	_ "github.com/golang/mock/mockgen"
-	_ "github.com/onsi/ginkgo"
+	_ "github.com/onsi/ginkgo/v2"
 	_ "k8s.io/kube-openapi/cmd/openapi-gen"
 	_ "sigs.k8s.io/controller-tools/cmd/controller-gen"
 )
