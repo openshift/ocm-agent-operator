@@ -125,17 +125,12 @@ func (r *OcmAgentReconciler) Reconcile(ctx context.Context, request reconcile.Re
 		}
 	}
 
-	// Periodically reconcile to check for pull-secret changes
-	// Since we can't watch openshift-config/pull-secret (due to RBAC/cache issues),
-	// we reconcile every 5 minutes to detect changes
+	// Periodically reconcile to detect pull-secret or proxy config drift
 	return reconcile.Result{RequeueAfter: ctrlconst.SyncPeriodDefault}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *OcmAgentReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// Note: We use periodic reconciliation instead of watching pull-secret
-	// due to RBAC/cache issues with openshift-config namespace
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ocmagentv1alpha1.OcmAgent{}).
 		Owns(&netv1.NetworkPolicy{}).
