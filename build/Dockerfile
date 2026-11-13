@@ -1,4 +1,4 @@
-FROM quay.io/redhat-services-prod/openshift/boilerplate:latest AS builder
+FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v20261030 AS builder
 
 RUN mkdir -p /workdir
 WORKDIR /workdir
@@ -8,7 +8,7 @@ COPY . .
 RUN make go-build
 
 ####
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8-1791898448
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.9-1794467051
 
 ENV USER_UID=1001 \
     USER_NAME=ocm-agent-operator
