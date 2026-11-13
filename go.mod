@@ -10,19 +10,19 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.42.1
-	github.com/openshift/api v0.0.0-20260317095243-5c75e62da3e7
+	github.com/openshift/api 950d0a970cb7
 	github.com/openshift/operator-custom-metrics v0.5.1
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.67.1
-	github.com/prometheus/client_golang v1.23.2
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.95.1
+	github.com/prometheus/client_golang v1.25.0
 	github.com/sykesm/zap-logfmt v0.0.4
 	go.uber.org/zap v1.28.0
 	golang.org/x/net v0.56.0 // indirect
-	k8s.io/api v0.36.0
-	k8s.io/apimachinery v0.36.0
-	k8s.io/client-go v0.36.0
-	k8s.io/kube-openapi v0.0.0-20260427204847-8949caaa1199
-	sigs.k8s.io/controller-runtime v0.23.3
-	sigs.k8s.io/controller-tools v0.21.0
+	k8s.io/api v0.37.2
+	k8s.io/apimachinery v0.37.2
+	k8s.io/client-go v0.37.2
+	k8s.io/kube-openapi v0.0.0-20261104182252-5bee61fc5225
+	sigs.k8s.io/controller-runtime v0.25.2
+	sigs.k8s.io/controller-tools v0.23.0
 	sigs.k8s.io/e2e-framework v0.7.0
 )
 
@@ -88,7 +88,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
-	github.com/openshift/osde2e-common v0.0.0-20260618165637-751e0d23bb9d
+	github.com/openshift/osde2e-common v0.0.0-20261009161925-ad86af2152ac
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.69.0 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
@@ -116,10 +116,10 @@ require (
 )
 
 replace (
-	github.com/openshift/api => github.com/openshift/api v0.0.0-20250929151534-41627d81e9c1
-	k8s.io/api => k8s.io/api v0.35.2
-	k8s.io/apimachinery => k8s.io/apimachinery v0.35.2
-	k8s.io/client-go => k8s.io/client-go v0.35.2
-	sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws v0.2.1-0.20201125052318-b85a18cbf338
-	sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.0.0-20210209143830-3442c7a36c1e
+	github.com/openshift/api => github.com/openshift/api 950d0a970cb7
+	k8s.io/api => k8s.io/api v0.37.2
+	k8s.io/apimachinery => k8s.io/apimachinery v0.37.2
+	k8s.io/client-go => k8s.io/client-go v0.37.2
+	sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws 203b1a2417ee
+	sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3
 )
