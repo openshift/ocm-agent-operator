@@ -1,4 +1,4 @@
-FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v20261030 AS builder
+FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v8.4.4 AS builder
 
 RUN mkdir -p /workdir
 WORKDIR /workdir

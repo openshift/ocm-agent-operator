@@ -3,7 +3,7 @@ export KONFLUX_BUILDS=true
 # this is unset, and latest was rebuilt on ubi 9.9 with Go 1.27, which breaks
 # golangci-lint 2.7.2 and GOEXPERIMENT=boringcrypto. Remove this pin once
 # boilerplate supports Go 1.27.
-export LATEST_IMAGE_TAG := image-v20261030
+export LATEST_IMAGE_TAG := image-v8.4.4
 FIPS_ENABLED=true
 include boilerplate/generated-includes.mk
 
